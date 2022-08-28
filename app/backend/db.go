@@ -4,10 +4,12 @@ import (
 	"bitbucket.org/itskovich/core/pkg/core"
 	"encoding/json"
 	"os"
+	"palm/app/entities"
 	"path"
 )
 
 type Accounts map[int]*core.Account
+type Contacts map[int]*entities.Contact
 
 type IDBService interface {
 	Save(fileName string) error
@@ -17,6 +19,7 @@ type IDBService interface {
 
 type DBContent struct {
 	Accounts Accounts
+	Contacts map[int]Contacts
 }
 
 type InMemoryDemoDBServiceImpl struct {

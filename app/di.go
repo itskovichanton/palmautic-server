@@ -25,6 +25,7 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewGrpcController)
 	container.Provide(c.NewUserRepo)
 	container.Provide(c.NewDBService)
+	container.Provide(c.NewContactRepo)
 }
 
 func (c *DI) NewDBService(config *core.Config) (backend.IDBService, error) {
@@ -36,6 +37,12 @@ func (c *DI) NewDBService(config *core.Config) (backend.IDBService, error) {
 		return nil, err
 	}
 	return r, nil
+}
+
+func (c *DI) NewContactRepo(dbService backend.IDBService) backend.IContactRepo {
+	return &backend.ContactRepoImpl{
+		DBService: dbService,
+	}
 }
 
 func (c *DI) NewUserRepo(dbService backend.IDBService) backend.IUserRepo {
