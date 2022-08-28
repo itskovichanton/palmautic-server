@@ -1,0 +1,6 @@
+out/*
+!workdir
+workdir/prod
+workdir/dev
+.idea
+palm-server

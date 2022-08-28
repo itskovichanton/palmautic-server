@@ -1,0 +1,38 @@
+app:
+  version: 1.0.0
+  name: palm-server
+
+email:
+  username: finstart.mailer
+  password: Shaxz0da201306
+  host: mail.molbulak.com
+  address: mail.molbulak.com:25
+
+fr:
+  url: http://46.148.231.73:8091
+  developerId: 106567582
+
+actions:
+  defaultLang: ru
+  apiMethodSystems: mbpayments
+
+server:
+  grpcPort: 3001
+  port: 8001
+  http:
+    ssl:
+      network: tcp4
+      certFile: common/ssl/molbulak.com.crt
+      keyFile: common/ssl/molbulak.com.key
+      enabled: false
+    multipart:
+      maxRequestSizeBytes: 5MB
+
+profile: dev
+
+prod:
+  mainServiceUrl: http://192.168.200.85:5002
+
+dev:
+  mainServiceUrl: http://192.168.200.85:5005
+

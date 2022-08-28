@@ -1,0 +1,28 @@
+{
+  "Accounts": {
+    "1001": {
+      "id": 1001,
+      "cid": 0,
+      "mclId": 0,
+      "username": "a.itskovich",
+      "lang": "ru",
+      "fullName": "Ицкович Антон Евгеньевич",
+      "sessionToken": "user-1",
+      "role": "user",
+      "password": "92559255",
+      "ip": ""
+    },
+    "1002": {
+      "id": 1002,
+      "cid": 0,
+      "mclId": 0,
+      "username": "shlomo",
+      "lang": "ru",
+      "fullName": "Шломо",
+      "sessionToken": "user-2",
+      "role": "user",
+      "password": "f92559255dfs",
+      "ip": ""
+    }
+  }
+}

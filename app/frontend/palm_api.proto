@@ -1,0 +1,52 @@
+syntax = "proto3";
+import "google/protobuf/any.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "gen.frontend;servergrpc";
+
+package frontend;
+
+message Account {
+  string username = 1;
+  string fullName = 2;
+  int32 id = 3;
+  string password = 4;
+}
+
+service Users {
+  rpc login(google.protobuf.Empty)returns(LoginResult){}
+}
+
+message LoginResult {
+  BaseError error = 1;
+  Account account = 2;
+  Session session = 3;
+}
+
+// common types
+message ValidationError {
+  string param = 1;
+  string message = 2;
+  google.protobuf.Any value = 3;
+}
+
+message UpdateRequiredError {
+  int32 requiredVersion = 2;
+}
+
+message CommonErrors {
+  ValidationError validationError = 1;
+  UpdateRequiredError updateRequiredError = 3;
+}
+
+message BaseError {
+  CommonErrors commonErrors = 1;
+  string message = 2;
+  string code = 3;
+  string reason = 4;
+  string details = 5;
+}
+
+message Session {
+  string Token = 1;
+}
