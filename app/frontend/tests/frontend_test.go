@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"bitbucket.org/itskovich/goava/pkg/goava/httputils"
 	"bitbucket.org/itskovich/goava/pkg/goava/utils"
 	"context"
 	"fmt"
@@ -23,10 +22,10 @@ func TestLoginUser(t *testing.T) {
 
 	client := frontend.NewUsersClient(conn)
 	ctx := context.Background()
-	username := "a.itskovich"
-	password := "92559255"
+	//username := "a.itskovich"
+	//password := "92559255"
 	ctx = metadata.AppendToOutgoingContext(ctx, "caller-version-code", "1",
-		"caller-version-name", "1.0.0", "caller-type", "tester", "lang", "ru", "authorization", httputils.CalcBasicAuth(username, password))
+		"caller-version-name", "1.0.0", "caller-type", "tester", "lang", "ru")
 
 	r, err := client.Login(ctx, &empty.Empty{})
 	if err != nil {

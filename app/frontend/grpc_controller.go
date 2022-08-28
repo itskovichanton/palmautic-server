@@ -40,12 +40,16 @@ func (c *PalmGrpcControllerImpl) toSession(s *core.Session) *Session {
 	return &Session{Token: s.Token}
 }
 
-func (c *PalmGrpcControllerImpl) execute(ctx context.Context, r interface{}, actions ...pipeline.IAction) interface{} {
+type Meta struct {
+	RequiresAuth bool
+}
+
+func (c *PalmGrpcControllerImpl) execute(ctx context.Context, r interface{}, m *Meta, actions ...pipeline.IAction) interface{} {
 	actionResult := c.RunByActionProvider(ctx, func(cp *core.CallParams) pipeline.IAction {
 		return &pipeline.ChainedActionImpl{
 			Actions: utils.Concat([]pipeline.IAction{
 				c.ValidateCallerAction,
-				c.getGetUserActionIfSessionPresent(cp),
+				c.getGetUserActionIfSessionPresent(cp, m.RequiresAuth),
 			}, actions),
 		}
 	})
@@ -59,8 +63,8 @@ func (c *PalmGrpcControllerImpl) execute(ctx context.Context, r interface{}, act
 
 }
 
-func (c *PalmGrpcControllerImpl) getGetUserActionIfSessionPresent(args *core.CallParams) pipeline.IAction {
-	if args.Caller.AuthArgs != nil {
+func (c *PalmGrpcControllerImpl) getGetUserActionIfSessionPresent(args *core.CallParams, requiresAuth bool) pipeline.IAction {
+	if args.Caller.AuthArgs != nil || requiresAuth {
 		return c.GetUserAction
 	} else {
 		return c.NopAction

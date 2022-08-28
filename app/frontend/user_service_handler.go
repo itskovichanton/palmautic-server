@@ -8,7 +8,7 @@ import (
 
 func (c *PalmGrpcControllerImpl) Login(ctx context.Context, in *empty.Empty) (*LoginResult, error) {
 	r := &LoginResult{}
-	result := c.execute(ctx, r)
+	result := c.execute(ctx, r, &Meta{RequiresAuth: true})
 	if result != nil {
 		cp := result.(*core.CallParams)
 		r.Account = c.toFrontAccount(cp.Caller.Session.Account)
