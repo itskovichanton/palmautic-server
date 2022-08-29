@@ -9,6 +9,7 @@ type IContactService interface {
 	Search(filter *entities.Contact) []*entities.Contact
 	Delete(filter *entities.Contact)
 	CreateOrUpdate(contact *entities.Contact) error
+	Upload(accountId entities.ID, iterator ContactIterator) (int, error)
 }
 
 type ContactServiceImpl struct {
@@ -26,14 +27,26 @@ func (c *ContactServiceImpl) Delete(filter *entities.Contact) {
 }
 
 func (c *ContactServiceImpl) CreateOrUpdate(contact *entities.Contact) error {
-	_, err := validation.CheckNotEmptyStr("contact.name", contact.Name)
-	if err != nil {
-		return err
-	}
-	_, err = validation.CheckEmail("contact.email", contact.Email)
-	if err != nil {
+	if err := validation.CheckFirst("contact", contact); err != nil {
 		return err
 	}
 	c.ContactRepo.CreateOrUpdate(contact)
 	return nil
+}
+
+func (c *ContactServiceImpl) Upload(accountId entities.ID, iterator ContactIterator) (int, error) {
+	uploaded := 0
+	for {
+		contract, err := iterator.Next()
+		if err != nil {
+			return uploaded, err
+		}
+		if contract == nil {
+			break
+		}
+		contract.AccountId = accountId
+		c.ContactRepo.CreateOrUpdate(contract)
+		uploaded++
+	}
+	return uploaded, nil
 }

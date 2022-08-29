@@ -6,8 +6,10 @@ import (
 	"bitbucket.org/itskovich/core/pkg/core/logger"
 	"bitbucket.org/itskovich/server/pkg/server/users"
 	"log"
+	"os"
 	"palm/app/backend"
 	"palm/app/frontend"
+	"path/filepath"
 )
 
 type PalmApp struct {
@@ -21,6 +23,7 @@ type PalmApp struct {
 	opsLogger      *log.Logger
 	GrpcController *frontend.PalmGrpcControllerImpl
 	UserRepo       backend.IUserRepo
+	ContactService backend.IContactService
 }
 
 func (c *PalmApp) Run() error {
@@ -36,6 +39,9 @@ func (c *PalmApp) Run() error {
 }
 
 func (c *PalmApp) tests() {
+	f, err := os.Open(filepath.Join(c.Config.GetDir(), "db.csv"))
+	println(err)
+	c.ContactService.Upload(1001, backend.NewCSVIterator(f))
 }
 
 func (c *PalmApp) registerUsers() {

@@ -36,7 +36,7 @@ func TestLoginUser(t *testing.T) {
 
 	contactsClient := frontend.NewContactsClient(conn)
 	contact := &frontend.Contact{
-		Name:  "Владимир Иванов",
+		//Name:  "Владимир Иванов",
 		Email: "v.ivanovmail.com",
 		Phone: "+7929553901",
 	}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path"
+	"time"
 )
 
 type IDBService interface {
@@ -18,6 +19,20 @@ type InMemoryDemoDBServiceImpl struct {
 
 	data   *DBContent
 	Config *core.Config
+}
+
+func (c *InMemoryDemoDBServiceImpl) Init() {
+	go func() {
+		for {
+			time.Sleep(30 * time.Second)
+			err := c.Save("")
+			if err == nil {
+				println("DB auto-saved successfully")
+			} else {
+				println("DB auto-save failed: " + err.Error())
+			}
+		}
+	}()
 }
 
 func (c *InMemoryDemoDBServiceImpl) DBContent() *DBContent {

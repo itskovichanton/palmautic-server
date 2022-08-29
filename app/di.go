@@ -39,6 +39,7 @@ func (c *DI) NewDBService(config *core.Config) (backend.IDBService, error) {
 	if err != nil {
 		return nil, err
 	}
+	r.Init()
 	return r, nil
 }
 
@@ -67,7 +68,7 @@ func (c *DI) NewGrpcController(grpcController *pipeline.GrpcControllerImpl, crea
 	}
 }
 
-func (c *DI) NewApp(authService users.IAuthService, userRepo backend.IUserRepo, grpcController *frontend.PalmGrpcControllerImpl, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
+func (c *DI) NewApp(contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, grpcController *frontend.PalmGrpcControllerImpl, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
 	return &PalmApp{
 		Config:         config,
 		EmailService:   emailService,
@@ -76,6 +77,7 @@ func (c *DI) NewApp(authService users.IAuthService, userRepo backend.IUserRepo, 
 		AuthService:    authService,
 		GrpcController: grpcController,
 		UserRepo:       userRepo,
+		ContactService: contactService,
 	}
 }
 

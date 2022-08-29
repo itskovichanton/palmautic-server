@@ -22,5 +22,7 @@ func (c BaseEntity) GetAccountId() ID {
 
 type Contact struct {
 	BaseEntity
-	Phone, Name, Email string
+	Phone string `check:"phone"`
+	Name  string `check:"notempty"`
+	Email string `check:"notempty,email"`
 }
