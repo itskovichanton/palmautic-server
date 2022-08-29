@@ -34,6 +34,7 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewDeleteContactAction)
 	container.Provide(c.NewSearchContactAction)
 	container.Provide(c.NewDeleteTaskAction)
+	container.Provide(c.NewContactGrpcHandler)
 
 }
 
@@ -66,15 +67,23 @@ func (c *DI) NewUserRepo(dbService backend.IDBService) backend.IUserRepo {
 	}
 }
 
-func (c *DI) NewGrpcController(deleteTaskAction *frontend.DeleteTaskAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, grpcController *pipeline.GrpcControllerImpl, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction) *frontend.PalmGrpcControllerImpl {
-	return &frontend.PalmGrpcControllerImpl{
-		GrpcControllerImpl:          *grpcController,
-		NopAction:                   &pipeline.NopActionImpl{},
+func (c *DI) NewContactGrpcHandler(searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, grpcController *pipeline.GrpcControllerImpl, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction) *frontend.ContactGrpcHandler {
+	return &frontend.ContactGrpcHandler{
 		CreateOrUpdateContactAction: createOrUpdateContactAction,
 		DeleteContactAction:         deleteContactAction,
 		SearchContactAction:         searchContactAction,
-		DeleteTaskAction:            deleteTaskAction,
 	}
+}
+
+func (c *DI) NewGrpcController(contactGrpcHandler *frontend.ContactGrpcHandler, deleteTaskAction *frontend.DeleteTaskAction, grpcController *pipeline.GrpcControllerImpl) *frontend.PalmGrpcControllerImpl {
+	r := frontend.PalmGrpcControllerImpl{
+		GrpcControllerImpl: *grpcController,
+		NopAction:          &pipeline.NopActionImpl{},
+		ContactGrpcHandler: contactGrpcHandler,
+		DeleteTaskAction:   deleteTaskAction,
+	}
+	r.ContactGrpcHandler.PalmGrpcControllerImpl = r
+	return &r
 }
 
 func (c *DI) NewApp(contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, grpcController *frontend.PalmGrpcControllerImpl, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {

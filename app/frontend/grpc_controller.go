@@ -13,14 +13,10 @@ import (
 type PalmGrpcControllerImpl struct {
 	pipeline.GrpcControllerImpl
 	UnimplementedUsersServer
-	UnimplementedContactsServer
-	UnimplementedTasksServer
 
-	NopAction                   *pipeline.NopActionImpl
-	CreateOrUpdateContactAction *CreateOrUpdateContactAction
-	DeleteContactAction         *DeleteContactAction
-	SearchContactAction         *SearchContactAction
-	DeleteTaskAction            *DeleteTaskAction
+	NopAction          *pipeline.NopActionImpl
+	ContactGrpcHandler *ContactGrpcHandler
+	DeleteTaskAction   *DeleteTaskAction
 }
 
 func (c *PalmGrpcControllerImpl) Start() error {
@@ -31,8 +27,8 @@ func (c *PalmGrpcControllerImpl) Start() error {
 func (c *PalmGrpcControllerImpl) init() {
 	c.AddRouterModifier(func(s *grpc.Server) {
 		RegisterUsersServer(s, c)
-		RegisterContactsServer(s, c)
-		RegisterTasksServer(s, c)
+		RegisterContactsServer(s, c.ContactGrpcHandler)
+		//RegisterTasksServer(s, c)
 	})
 }
 
