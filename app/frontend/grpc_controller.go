@@ -5,15 +5,19 @@ import (
 	"bitbucket.org/itskovich/goava/pkg/goava/utils"
 	"bitbucket.org/itskovich/server/pkg/server/pipeline"
 	"context"
+	"github.com/jinzhu/copier"
 	"google.golang.org/grpc"
+	"palm/app/entities"
 	"reflect"
 )
 
 type PalmGrpcControllerImpl struct {
 	pipeline.GrpcControllerImpl
 	UnimplementedUsersServer
+	UnimplementedContactsServer
 
-	NopAction *pipeline.NopActionImpl
+	NopAction                   *pipeline.NopActionImpl
+	CreateOrUpdateContactAction *CreateOrUpdateContactAction
 }
 
 func (c *PalmGrpcControllerImpl) Start() error {
@@ -24,6 +28,7 @@ func (c *PalmGrpcControllerImpl) Start() error {
 func (c *PalmGrpcControllerImpl) init() {
 	c.AddRouterModifier(func(s *grpc.Server) {
 		RegisterUsersServer(s, c)
+		RegisterContactsServer(s, c)
 	})
 }
 
@@ -31,7 +36,7 @@ func (c *PalmGrpcControllerImpl) toFrontAccount(a *core.Account) *Account {
 	return &Account{
 		Username: a.Username,
 		FullName: a.FullName,
-		Id:       int32(a.ID),
+		Id:       a.ID,
 		Password: a.Password,
 	}
 }
@@ -69,4 +74,16 @@ func (c *PalmGrpcControllerImpl) getGetUserActionIfSessionPresent(args *core.Cal
 	} else {
 		return c.NopAction
 	}
+}
+
+func (c *PalmGrpcControllerImpl) toContact(a *entities.Contact) *Contact {
+	r := Contact{}
+	copier.Copy(&r, a)
+	return &r
+}
+
+func (c *PalmGrpcControllerImpl) ToContactModel(a *Contact) *entities.Contact {
+	r := entities.Contact{}
+	copier.Copy(&r, a)
+	return &r
 }

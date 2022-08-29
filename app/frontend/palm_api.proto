@@ -9,7 +9,7 @@ package frontend;
 message Account {
   string username = 1;
   string fullName = 2;
-  int32 id = 3;
+  int64 id = 3;
   string password = 4;
 }
 
@@ -27,11 +27,12 @@ message LoginResult {
 message ValidationError {
   string param = 1;
   string message = 2;
-  google.protobuf.Any value = 3;
+  string reason = 3;
+  google.protobuf.Any value = 4;
 }
 
 message UpdateRequiredError {
-  int32 requiredVersion = 2;
+  int64 requiredVersion = 2;
 }
 
 message CommonErrors {
@@ -42,11 +43,36 @@ message CommonErrors {
 message BaseError {
   CommonErrors commonErrors = 1;
   string message = 2;
-  string code = 3;
-  string reason = 4;
-  string details = 5;
+  string reason = 3;
+  string details = 4;
 }
 
 message Session {
   string Token = 1;
+}
+
+// Contacts
+
+message Contact {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+  string phone = 4;
+  int64 accountId = 5;
+}
+
+service Contacts {
+  rpc createOrUpdate(Contact)returns(ContactResult){}
+  rpc delete(Contact)returns(BaseError){}
+  rpc search(Contact)returns(ContactListResult){}
+}
+
+message ContactListResult {
+  repeated Contact items = 1;
+  BaseError error = 2;
+}
+
+message ContactResult {
+  Contact result = 1;
+  BaseError error = 2;
 }

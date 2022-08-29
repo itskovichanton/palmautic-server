@@ -26,6 +26,9 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewUserRepo)
 	container.Provide(c.NewDBService)
 	container.Provide(c.NewContactRepo)
+	container.Provide(c.NewIDGenerator)
+	container.Provide(c.NewCreateOrUpdateContactAction)
+	container.Provide(c.NewContactService)
 }
 
 func (c *DI) NewDBService(config *core.Config) (backend.IDBService, error) {
@@ -39,9 +42,14 @@ func (c *DI) NewDBService(config *core.Config) (backend.IDBService, error) {
 	return r, nil
 }
 
-func (c *DI) NewContactRepo(dbService backend.IDBService) backend.IContactRepo {
+func (c *DI) NewIDGenerator() backend.IDGenerator {
+	return &backend.IDGeneratorImpl{}
+}
+
+func (c *DI) NewContactRepo(idGenerator backend.IDGenerator, dbService backend.IDBService) backend.IContactRepo {
 	return &backend.ContactRepoImpl{
-		DBService: dbService,
+		DBService:   dbService,
+		IDGenerator: idGenerator,
 	}
 }
 
@@ -51,10 +59,11 @@ func (c *DI) NewUserRepo(dbService backend.IDBService) backend.IUserRepo {
 	}
 }
 
-func (c *DI) NewGrpcController(grpcController *pipeline.GrpcControllerImpl) *frontend.PalmGrpcControllerImpl {
+func (c *DI) NewGrpcController(grpcController *pipeline.GrpcControllerImpl, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction) *frontend.PalmGrpcControllerImpl {
 	return &frontend.PalmGrpcControllerImpl{
-		GrpcControllerImpl: *grpcController,
-		NopAction:          &pipeline.NopActionImpl{},
+		GrpcControllerImpl:          *grpcController,
+		NopAction:                   &pipeline.NopActionImpl{},
+		CreateOrUpdateContactAction: createOrUpdateContactAction,
 	}
 }
 
@@ -67,5 +76,17 @@ func (c *DI) NewApp(authService users.IAuthService, userRepo backend.IUserRepo, 
 		AuthService:    authService,
 		GrpcController: grpcController,
 		UserRepo:       userRepo,
+	}
+}
+
+func (c *DI) NewCreateOrUpdateContactAction(contactService backend.IContactService) *frontend.CreateOrUpdateContactAction {
+	return &frontend.CreateOrUpdateContactAction{
+		ContactService: contactService,
+	}
+}
+
+func (c *DI) NewContactService(contactRepo backend.IContactRepo) backend.IContactService {
+	return &backend.ContactServiceImpl{
+		ContactRepo: contactRepo,
 	}
 }

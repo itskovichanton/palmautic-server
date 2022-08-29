@@ -14,7 +14,6 @@ func toBaseError(err *pipeline.Err) *BaseError {
 	return &BaseError{
 		CommonErrors: getCommonErrors(err),
 		Message:      err.Message,
-		Code:         "",
 		Reason:       err.Reason,
 		Details:      err.Details,
 	}
@@ -27,6 +26,7 @@ func getCommonErrors(err *pipeline.Err) *CommonErrors {
 	case *validation.ValidationError:
 		empty = false
 		r.ValidationError = &ValidationError{
+			Reason:  e.Reason,
 			Param:   e.Param,
 			Message: e.Message,
 			Value: &any.Any{

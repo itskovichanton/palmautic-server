@@ -98,5 +98,163 @@ var Users_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "palm/palm_api.proto",
+	Metadata: "palm_api.proto",
+}
+
+// ContactsClient is the client API for Contacts service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ContactsClient interface {
+	CreateOrUpdate(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*ContactResult, error)
+	Delete(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*BaseError, error)
+	Search(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*ContactListResult, error)
+}
+
+type contactsClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewContactsClient(cc grpc.ClientConnInterface) ContactsClient {
+	return &contactsClient{cc}
+}
+
+func (c *contactsClient) CreateOrUpdate(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*ContactResult, error) {
+	out := new(ContactResult)
+	err := c.cc.Invoke(ctx, "/frontend.Contacts/createOrUpdate", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contactsClient) Delete(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*BaseError, error) {
+	out := new(BaseError)
+	err := c.cc.Invoke(ctx, "/frontend.Contacts/delete", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contactsClient) Search(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*ContactListResult, error) {
+	out := new(ContactListResult)
+	err := c.cc.Invoke(ctx, "/frontend.Contacts/search", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ContactsServer is the server API for Contacts service.
+// All implementations must embed UnimplementedContactsServer
+// for forward compatibility
+type ContactsServer interface {
+	CreateOrUpdate(context.Context, *Contact) (*ContactResult, error)
+	Delete(context.Context, *Contact) (*BaseError, error)
+	Search(context.Context, *Contact) (*ContactListResult, error)
+	mustEmbedUnimplementedContactsServer()
+}
+
+// UnimplementedContactsServer must be embedded to have forward compatible implementations.
+type UnimplementedContactsServer struct {
+}
+
+func (UnimplementedContactsServer) CreateOrUpdate(context.Context, *Contact) (*ContactResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateOrUpdate not implemented")
+}
+func (UnimplementedContactsServer) Delete(context.Context, *Contact) (*BaseError, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
+}
+func (UnimplementedContactsServer) Search(context.Context, *Contact) (*ContactListResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Search not implemented")
+}
+func (UnimplementedContactsServer) mustEmbedUnimplementedContactsServer() {}
+
+// UnsafeContactsServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ContactsServer will
+// result in compilation errors.
+type UnsafeContactsServer interface {
+	mustEmbedUnimplementedContactsServer()
+}
+
+func RegisterContactsServer(s grpc.ServiceRegistrar, srv ContactsServer) {
+	s.RegisterService(&Contacts_ServiceDesc, srv)
+}
+
+func _Contacts_CreateOrUpdate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Contact)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContactsServer).CreateOrUpdate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/frontend.Contacts/createOrUpdate",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContactsServer).CreateOrUpdate(ctx, req.(*Contact))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Contacts_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Contact)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContactsServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/frontend.Contacts/delete",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContactsServer).Delete(ctx, req.(*Contact))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Contacts_Search_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Contact)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContactsServer).Search(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/frontend.Contacts/search",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContactsServer).Search(ctx, req.(*Contact))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Contacts_ServiceDesc is the grpc.ServiceDesc for Contacts service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Contacts_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "frontend.Contacts",
+	HandlerType: (*ContactsServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "createOrUpdate",
+			Handler:    _Contacts_CreateOrUpdate_Handler,
+		},
+		{
+			MethodName: "delete",
+			Handler:    _Contacts_Delete_Handler,
+		},
+		{
+			MethodName: "search",
+			Handler:    _Contacts_Search_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "palm_api.proto",
 }
