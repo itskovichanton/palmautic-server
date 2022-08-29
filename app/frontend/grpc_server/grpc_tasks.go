@@ -37,7 +37,7 @@ func (c *TaskGrpcHandler) Search(ctx context.Context, task *Task) (*TaskListResu
 	r := &TaskListResult{}
 	result := c.execute(ctx, r, &Meta{RequiresAuth: true}, &convertToTaskModel{task: task}, c.SearchTaskAction)
 	if result != nil {
-		//r.Items = toFrontTask(result.(*entities.Task))
+		r.Items = toFrontTaskSlice(result.([]*entities.Task))
 	}
 	return r, nil
 }

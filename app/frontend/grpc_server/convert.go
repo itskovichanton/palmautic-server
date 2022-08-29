@@ -11,6 +11,22 @@ import (
 	"palm/app/entities"
 )
 
+func toFrontContactSlice(a []*entities.Contact) []*Contact {
+	var r []*Contact
+	for _, p := range a {
+		r = append(r, toFrontContact(p))
+	}
+	return r
+}
+
+func toFrontTaskSlice(a []*entities.Task) []*Task {
+	var r []*Task
+	for _, p := range a {
+		r = append(r, toFrontTask(p))
+	}
+	return r
+}
+
 func toFrontContact(a *entities.Contact) *Contact {
 	r := Contact{}
 	copier.Copy(&r, a)

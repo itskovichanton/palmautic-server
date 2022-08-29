@@ -3,7 +3,7 @@ import "google/protobuf/any.proto";
 import "google/protobuf/empty.proto";
 //import "google/protobuf/timestamp.proto";
 
-option go_package = "gen.frontend;frontend";
+option go_package = "gen.frontend;grpc_server";
 
 package frontend;
 

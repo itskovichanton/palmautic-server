@@ -28,8 +28,7 @@ func (c *ContactGrpcHandler) Search(ctx context.Context, filter *Contact) (*Cont
 	r := &ContactListResult{}
 	result := c.execute(ctx, r, &Meta{RequiresAuth: true}, &convertToContactModel{contact: filter}, c.SearchContactAction)
 	if result != nil {
-		//result.([]*entities.Contact)
-		//r.Result = toFrontContact(result.([]*entities.Contact))
+		r.Items = toFrontContactSlice(result.([]*entities.Contact))
 	}
 	return r, nil
 }

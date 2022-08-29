@@ -13,6 +13,20 @@ import (
 )
 
 func TestLoginUser(t *testing.T) {
+
+	//v1 := []entities.Task{{
+	//	BaseEntity:  entities.BaseEntity{},
+	//	Title:       "11",
+	//	Description: "22",
+	//	Type:        0,
+	//	Status:      0,
+	//	Timeout:     0,
+	//}}
+	//r1 := utils.MapSlice(v1, func(x string) string {
+	//	return x + "1"
+	//})
+	//println(r1)
+
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 	conn, err := grpc.Dial("127.0.0.1:3001", opts...)
 	if err != nil {
@@ -26,7 +40,8 @@ func TestLoginUser(t *testing.T) {
 	username := "a.itskovich"
 	password := "92559255"
 	ctx = metadata.AppendToOutgoingContext(ctx, "caller-version-code", "1",
-		"caller-version-name", "1.0.0", "caller-type", "tester", "lang", "ru", "authorization", httputils.CalcBasicAuth(username, password))
+		"caller-version-name", "1.0.0", "caller-type", "tester", "lang", "ru",
+		"authorization", httputils.CalcBasicAuth(username, password))
 
 	r, err := client.Login(ctx, &empty.Empty{})
 	if err != nil {
