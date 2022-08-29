@@ -8,7 +8,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"palm/app/frontend"
+	"palm/app/frontend/grpc_server"
 	"testing"
 )
 
@@ -21,7 +21,7 @@ func TestLoginUser(t *testing.T) {
 	}
 	defer conn.Close()
 
-	client := frontend.NewUsersClient(conn)
+	client := grpc_server.NewAccountsClient(conn)
 	ctx := context.Background()
 	username := "a.itskovich"
 	password := "92559255"
@@ -34,9 +34,9 @@ func TestLoginUser(t *testing.T) {
 		return
 	}
 
-	contactsClient := frontend.NewContactsClient(conn)
+	contactsClient := grpc_server.NewContactsClient(conn)
 
-	contact := &frontend.Contact{
+	contact := &grpc_server.Contact{
 		Name:  "Владимир Иванов",
 		Email: "v.ivanovmail@gmail.com",
 		Phone: "+7929553901",

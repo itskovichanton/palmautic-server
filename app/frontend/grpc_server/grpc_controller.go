@@ -1,4 +1,4 @@
-package frontend
+package grpc_server
 
 import (
 	"bitbucket.org/itskovich/core/pkg/core"
@@ -12,11 +12,11 @@ import (
 
 type PalmGrpcControllerImpl struct {
 	pipeline.GrpcControllerImpl
-	UnimplementedUsersServer
 
 	NopAction          *pipeline.NopActionImpl
 	ContactGrpcHandler *ContactGrpcHandler
-	DeleteTaskAction   *DeleteTaskAction
+	AccountGrpcHandler *AccountGrpcHandler
+	TaskGrpcHandler    *TaskGrpcHandler
 }
 
 func (c *PalmGrpcControllerImpl) Start() error {
@@ -26,9 +26,9 @@ func (c *PalmGrpcControllerImpl) Start() error {
 
 func (c *PalmGrpcControllerImpl) init() {
 	c.AddRouterModifier(func(s *grpc.Server) {
-		RegisterUsersServer(s, c)
+		RegisterAccountsServer(s, c.AccountGrpcHandler)
 		RegisterContactsServer(s, c.ContactGrpcHandler)
-		//RegisterTasksServer(s, c)
+		RegisterTasksServer(s, c.TaskGrpcHandler)
 	})
 }
 

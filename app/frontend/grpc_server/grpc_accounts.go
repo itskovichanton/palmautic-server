@@ -1,4 +1,4 @@
-package frontend
+package grpc_server
 
 import (
 	"bitbucket.org/itskovich/core/pkg/core"
@@ -6,7 +6,12 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 )
 
-func (c *PalmGrpcControllerImpl) Login(ctx context.Context, in *empty.Empty) (*LoginResult, error) {
+type AccountGrpcHandler struct {
+	UnimplementedAccountsServer
+	PalmGrpcControllerImpl
+}
+
+func (c *AccountGrpcHandler) Login(ctx context.Context, in *empty.Empty) (*LoginResult, error) {
 	r := &LoginResult{}
 	result := c.execute(ctx, r, &Meta{RequiresAuth: true})
 	if result != nil {

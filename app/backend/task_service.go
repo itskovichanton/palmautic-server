@@ -36,10 +36,25 @@ func (c *TaskServiceImpl) Delete(filter *entities.Task) (*entities.Task, error) 
 	return deleted, nil
 }
 
-func (c *TaskServiceImpl) CreateOrUpdate(Task *entities.Task) error {
-	if err := validation.CheckFirst("task", Task); err != nil {
+func (c *TaskServiceImpl) CreateOrUpdate(task *entities.Task) error {
+
+	if task.ReadyForSearch() { // update
+		foundTasks := c.TaskRepo.Search(task)
+		if len(foundTasks) == 0 {
+			return errs.NewBaseErrorWithReason("Задача не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
+		}
+		foundTask := foundTasks[0]
+		if task.Status != foundTask.Status {
+			foundTask.Status = task.Status
+			// оповести eventbus
+		}
+		return nil
+	}
+
+	// Create
+	if err := validation.CheckFirst("task", task); err != nil {
 		return err
 	}
-	c.TaskRepo.CreateOrUpdate(Task)
+	c.TaskRepo.CreateOrUpdate(task)
 	return nil
 }

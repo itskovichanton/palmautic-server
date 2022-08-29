@@ -1,11 +1,21 @@
-package frontend
+package grpc_server
 
 import (
 	"context"
 	"palm/app/entities"
+	"palm/app/frontend"
 )
 
-func (c *ContactGrpcHandler) CreateOrUpdateContact(ctx context.Context, contact *Contact) (*ContactResult, error) {
+type ContactGrpcHandler struct {
+	UnimplementedContactsServer
+	PalmGrpcControllerImpl
+
+	CreateOrUpdateContactAction *frontend.CreateOrUpdateContactAction
+	DeleteContactAction         *frontend.DeleteContactAction
+	SearchContactAction         *frontend.SearchContactAction
+}
+
+func (c *ContactGrpcHandler) CreateOrUpdate(ctx context.Context, contact *Contact) (*ContactResult, error) {
 	r := &ContactResult{}
 	result := c.execute(ctx, r, &Meta{RequiresAuth: true}, &convertToContactModel{contact: contact}, c.CreateOrUpdateContactAction)
 	if result != nil {
@@ -14,7 +24,7 @@ func (c *ContactGrpcHandler) CreateOrUpdateContact(ctx context.Context, contact 
 	return r, nil
 }
 
-func (c *ContactGrpcHandler) SearchContacts(ctx context.Context, filter *Contact) (*ContactListResult, error) {
+func (c *ContactGrpcHandler) Search(ctx context.Context, filter *Contact) (*ContactListResult, error) {
 	r := &ContactListResult{}
 	result := c.execute(ctx, r, &Meta{RequiresAuth: true}, &convertToContactModel{contact: filter}, c.SearchContactAction)
 	if result != nil {
@@ -24,7 +34,7 @@ func (c *ContactGrpcHandler) SearchContacts(ctx context.Context, filter *Contact
 	return r, nil
 }
 
-func (c *ContactGrpcHandler) DeleteContact(ctx context.Context, filter *Contact) (*ContactResult, error) {
+func (c *ContactGrpcHandler) Delete(ctx context.Context, filter *Contact) (*ContactResult, error) {
 	r := &ContactResult{}
 	result := c.execute(ctx, r, &Meta{RequiresAuth: true}, &convertToContactModel{contact: filter}, c.DeleteContactAction)
 	if result != nil {

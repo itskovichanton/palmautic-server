@@ -14,6 +14,10 @@ type BaseEntity struct {
 	Id, AccountId ID
 }
 
+func (c BaseEntity) ReadyForSearch() bool {
+	return c.Id != 0 && c.AccountId != 0
+}
+
 func (c BaseEntity) GetId() ID {
 	return c.Id
 }

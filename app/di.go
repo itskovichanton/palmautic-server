@@ -10,6 +10,7 @@ import (
 	"go.uber.org/dig"
 	"palm/app/backend"
 	"palm/app/frontend"
+	"palm/app/frontend/grpc_server"
 )
 
 type DI struct {
@@ -35,6 +36,8 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewSearchContactAction)
 	container.Provide(c.NewDeleteTaskAction)
 	container.Provide(c.NewContactGrpcHandler)
+	container.Provide(c.NewAccountGrpcHandler)
+	container.Provide(c.NewTaskGrpcHandler)
 
 }
 
@@ -67,26 +70,37 @@ func (c *DI) NewUserRepo(dbService backend.IDBService) backend.IUserRepo {
 	}
 }
 
-func (c *DI) NewContactGrpcHandler(searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, grpcController *pipeline.GrpcControllerImpl, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction) *frontend.ContactGrpcHandler {
-	return &frontend.ContactGrpcHandler{
+func (c *DI) NewTaskGrpcHandler(deleteTaskAction *frontend.DeleteTaskAction) *grpc_server.TaskGrpcHandler {
+	return &grpc_server.TaskGrpcHandler{
+		DeleteTaskAction: deleteTaskAction,
+	}
+}
+
+func (c *DI) NewAccountGrpcHandler() *grpc_server.AccountGrpcHandler {
+	return &grpc_server.AccountGrpcHandler{}
+}
+
+func (c *DI) NewContactGrpcHandler(searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction) *grpc_server.ContactGrpcHandler {
+	return &grpc_server.ContactGrpcHandler{
 		CreateOrUpdateContactAction: createOrUpdateContactAction,
 		DeleteContactAction:         deleteContactAction,
 		SearchContactAction:         searchContactAction,
 	}
 }
 
-func (c *DI) NewGrpcController(contactGrpcHandler *frontend.ContactGrpcHandler, deleteTaskAction *frontend.DeleteTaskAction, grpcController *pipeline.GrpcControllerImpl) *frontend.PalmGrpcControllerImpl {
-	r := frontend.PalmGrpcControllerImpl{
+func (c *DI) NewGrpcController(accountGrpcHandler *grpc_server.AccountGrpcHandler, contactGrpcHandler *grpc_server.ContactGrpcHandler, deleteTaskAction *frontend.DeleteTaskAction, grpcController *pipeline.GrpcControllerImpl) *grpc_server.PalmGrpcControllerImpl {
+	r := grpc_server.PalmGrpcControllerImpl{
 		GrpcControllerImpl: *grpcController,
 		NopAction:          &pipeline.NopActionImpl{},
 		ContactGrpcHandler: contactGrpcHandler,
-		DeleteTaskAction:   deleteTaskAction,
+		AccountGrpcHandler: accountGrpcHandler,
 	}
-	r.ContactGrpcHandler.PalmGrpcControllerImpl = r
+	accountGrpcHandler.PalmGrpcControllerImpl = r
+	contactGrpcHandler.PalmGrpcControllerImpl = r
 	return &r
 }
 
-func (c *DI) NewApp(contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, grpcController *frontend.PalmGrpcControllerImpl, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
+func (c *DI) NewApp(contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, grpcController *grpc_server.PalmGrpcControllerImpl, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
 	return &PalmApp{
 		Config:         config,
 		EmailService:   emailService,

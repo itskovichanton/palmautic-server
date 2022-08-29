@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 	"palm/app/backend"
-	"palm/app/frontend"
+	"palm/app/frontend/grpc_server"
 	"path/filepath"
 )
 
@@ -21,7 +21,7 @@ type PalmApp struct {
 	LoggerService  logger.ILoggerService
 	AuthService    users.IAuthService
 	opsLogger      *log.Logger
-	GrpcController *frontend.PalmGrpcControllerImpl
+	GrpcController *grpc_server.PalmGrpcControllerImpl
 	UserRepo       backend.IUserRepo
 	ContactService backend.IContactService
 }

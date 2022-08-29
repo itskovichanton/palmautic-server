@@ -14,7 +14,7 @@ message Account {
   string password = 4;
 }
 
-service Users {
+service Accounts {
   rpc login(google.protobuf.Empty)returns(LoginResult){}
 }
 
@@ -63,9 +63,9 @@ message Contact {
 }
 
 service Contacts {
-  rpc createOrUpdateContact(Contact)returns(ContactResult){}
-  rpc deleteContact(Contact)returns(ContactResult){}
-  rpc searchContacts(Contact)returns(ContactListResult){}
+  rpc createOrUpdate(Contact)returns(ContactResult){}
+  rpc delete(Contact)returns(ContactResult){}
+  rpc search(Contact)returns(ContactListResult){}
 }
 
 message ContactListResult {
@@ -99,9 +99,9 @@ message Task {
 }
 
 service Tasks {
-  rpc deleteTask(Task)returns(TaskResult){}
-  rpc searchTasks(Task)returns(TaskListResult){}
-  rpc setTaskStatus(Task)returns(TaskResult){}
+  rpc delete(Task)returns(TaskResult){}
+  rpc search(Task)returns(TaskListResult){}
+  rpc createOrUpdate(Task)returns(TaskResult){}
 }
 
 message TaskResult {

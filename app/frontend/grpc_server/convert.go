@@ -1,4 +1,4 @@
-package frontend
+package grpc_server
 
 import (
 	"bitbucket.org/itskovich/core/pkg/core"
