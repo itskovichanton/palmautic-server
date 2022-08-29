@@ -11,8 +11,8 @@ func (c *PalmGrpcControllerImpl) Login(ctx context.Context, in *empty.Empty) (*L
 	result := c.execute(ctx, r, &Meta{RequiresAuth: true})
 	if result != nil {
 		cp := result.(*core.CallParams)
-		r.Account = c.toFrontAccount(cp.Caller.Session.Account)
-		r.Session = c.toSession(cp.Caller.Session)
+		r.Account = toFrontAccount(cp.Caller.Session.Account)
+		r.Session = toFrontSession(cp.Caller.Session)
 	}
 	return r, nil
 }

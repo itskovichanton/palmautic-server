@@ -1,5 +1,7 @@
 package entities
 
+import "time"
+
 type ID int64
 
 type IBaseEntity interface {
@@ -26,3 +28,27 @@ type Contact struct {
 	Name  string `check:"notempty"`
 	Email string `check:"notempty,email"`
 }
+
+type Task struct {
+	BaseEntity
+	Title       string `check:"notempty"`
+	Description string `check:"notempty"`
+	Type        TaskType
+	Status      TaskStatus
+	Timeout     time.Duration
+}
+
+type TaskType int
+
+const (
+	WriteLetter TaskType = iota
+	DoSomething
+)
+
+type TaskStatus int
+
+const (
+	ClosedPositive TaskStatus = iota
+	ClosedNegative
+	Active
+)

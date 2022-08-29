@@ -35,17 +35,20 @@ func TestLoginUser(t *testing.T) {
 	}
 
 	contactsClient := frontend.NewContactsClient(conn)
+
 	contact := &frontend.Contact{
-		//Name:  "Владимир Иванов",
-		Email: "v.ivanovmail.com",
+		Name:  "Владимир Иванов",
+		Email: "v.ivanovmail@gmail.com",
 		Phone: "+7929553901",
+		Id:    1,
 	}
-	cr, err := contactsClient.CreateOrUpdate(ctx, contact)
+	be, err := contactsClient.Delete(ctx, contact)
 	if err != nil {
 		t.Error(err.Error())
 		return
 	}
-	contact = cr.Result
+	println(be)
+	//contact = cr.Result
 
 	if r.Error != nil {
 		// Обработка ошибок

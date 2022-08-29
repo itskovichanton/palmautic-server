@@ -5,7 +5,6 @@ import (
 	"bitbucket.org/itskovich/goava/pkg/goava/utils"
 	"bitbucket.org/itskovich/server/pkg/server/pipeline"
 	"context"
-	"github.com/jinzhu/copier"
 	"google.golang.org/grpc"
 	"palm/app/entities"
 	"reflect"
@@ -15,9 +14,13 @@ type PalmGrpcControllerImpl struct {
 	pipeline.GrpcControllerImpl
 	UnimplementedUsersServer
 	UnimplementedContactsServer
+	UnimplementedTasksServer
 
 	NopAction                   *pipeline.NopActionImpl
 	CreateOrUpdateContactAction *CreateOrUpdateContactAction
+	DeleteContactAction         *DeleteContactAction
+	SearchContactAction         *SearchContactAction
+	DeleteTaskAction            *DeleteTaskAction
 }
 
 func (c *PalmGrpcControllerImpl) Start() error {
@@ -29,20 +32,8 @@ func (c *PalmGrpcControllerImpl) init() {
 	c.AddRouterModifier(func(s *grpc.Server) {
 		RegisterUsersServer(s, c)
 		RegisterContactsServer(s, c)
+		RegisterTasksServer(s, c)
 	})
-}
-
-func (c *PalmGrpcControllerImpl) toFrontAccount(a *core.Account) *Account {
-	return &Account{
-		Username: a.Username,
-		FullName: a.FullName,
-		Id:       a.ID,
-		Password: a.Password,
-	}
-}
-
-func (c *PalmGrpcControllerImpl) toSession(s *core.Session) *Session {
-	return &Session{Token: s.Token}
 }
 
 type Meta struct {
@@ -76,14 +67,28 @@ func (c *PalmGrpcControllerImpl) getGetUserActionIfSessionPresent(args *core.Cal
 	}
 }
 
-func (c *PalmGrpcControllerImpl) toContact(a *entities.Contact) *Contact {
-	r := Contact{}
-	copier.Copy(&r, a)
-	return &r
+type convertToContactModel struct {
+	pipeline.BaseActionImpl
+
+	contact *Contact
 }
 
-func (c *PalmGrpcControllerImpl) ToContactModel(a *Contact) *entities.Contact {
-	r := entities.Contact{}
-	copier.Copy(&r, a)
-	return &r
+func (c *convertToContactModel) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*core.CallParams)
+	contractEntity := toContactModel(c.contact)
+	contractEntity.AccountId = entities.ID(cp.Caller.Session.Account.ID)
+	return contractEntity, nil
+}
+
+type convertToTaskModel struct {
+	pipeline.BaseActionImpl
+
+	task *Task
+}
+
+func (c *convertToTaskModel) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*core.CallParams)
+	contractEntity := toTaskModel(c.task)
+	contractEntity.AccountId = entities.ID(cp.Caller.Session.Account.ID)
+	return contractEntity, nil
 }

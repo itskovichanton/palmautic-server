@@ -1,8 +1,9 @@
 syntax = "proto3";
 import "google/protobuf/any.proto";
 import "google/protobuf/empty.proto";
+//import "google/protobuf/timestamp.proto";
 
-option go_package = "gen.frontend;servergrpc";
+option go_package = "gen.frontend;frontend";
 
 package frontend;
 
@@ -62,9 +63,9 @@ message Contact {
 }
 
 service Contacts {
-  rpc createOrUpdate(Contact)returns(ContactResult){}
-  rpc delete(Contact)returns(BaseError){}
-  rpc search(Contact)returns(ContactListResult){}
+  rpc createOrUpdateContact(Contact)returns(ContactResult){}
+  rpc deleteContact(Contact)returns(ContactResult){}
+  rpc searchContacts(Contact)returns(ContactListResult){}
 }
 
 message ContactListResult {
@@ -74,5 +75,41 @@ message ContactListResult {
 
 message ContactResult {
   Contact result = 1;
+  BaseError error = 2;
+}
+
+enum TaskStatus {
+  CLOSED_POSITIVE = 0;
+  CLOSED_NEGATIVE = 1;
+  ACTIVE = 3;
+}
+
+enum TaskType {
+  WRITE_LETTER = 0;
+}
+
+message Task {
+  int64 id = 1;
+  string title = 2;
+  string description = 3;
+  TaskType type = 4;
+  int64 accountId = 5;
+  int64 timeoutSec = 6;
+  TaskStatus status = 7;
+}
+
+service Tasks {
+  rpc deleteTask(Task)returns(TaskResult){}
+  rpc searchTasks(Task)returns(TaskListResult){}
+  rpc setTaskStatus(Task)returns(TaskResult){}
+}
+
+message TaskResult {
+  Task result = 1;
+  BaseError error = 2;
+}
+
+message TaskListResult {
+  repeated Task items = 1;
   BaseError error = 2;
 }

@@ -26,9 +26,15 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewUserRepo)
 	container.Provide(c.NewDBService)
 	container.Provide(c.NewContactRepo)
+	container.Provide(c.NewTaskRepo)
 	container.Provide(c.NewIDGenerator)
 	container.Provide(c.NewCreateOrUpdateContactAction)
 	container.Provide(c.NewContactService)
+	container.Provide(c.NewTaskService)
+	container.Provide(c.NewDeleteContactAction)
+	container.Provide(c.NewSearchContactAction)
+	container.Provide(c.NewDeleteTaskAction)
+
 }
 
 func (c *DI) NewDBService(config *core.Config) (backend.IDBService, error) {
@@ -60,11 +66,14 @@ func (c *DI) NewUserRepo(dbService backend.IDBService) backend.IUserRepo {
 	}
 }
 
-func (c *DI) NewGrpcController(grpcController *pipeline.GrpcControllerImpl, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction) *frontend.PalmGrpcControllerImpl {
+func (c *DI) NewGrpcController(deleteTaskAction *frontend.DeleteTaskAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, grpcController *pipeline.GrpcControllerImpl, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction) *frontend.PalmGrpcControllerImpl {
 	return &frontend.PalmGrpcControllerImpl{
 		GrpcControllerImpl:          *grpcController,
 		NopAction:                   &pipeline.NopActionImpl{},
 		CreateOrUpdateContactAction: createOrUpdateContactAction,
+		DeleteContactAction:         deleteContactAction,
+		SearchContactAction:         searchContactAction,
+		DeleteTaskAction:            deleteTaskAction,
 	}
 }
 
@@ -87,8 +96,39 @@ func (c *DI) NewCreateOrUpdateContactAction(contactService backend.IContactServi
 	}
 }
 
+func (c *DI) NewDeleteContactAction(contactService backend.IContactService) *frontend.DeleteContactAction {
+	return &frontend.DeleteContactAction{
+		ContactService: contactService,
+	}
+}
+
+func (c *DI) NewSearchContactAction(contactService backend.IContactService) *frontend.SearchContactAction {
+	return &frontend.SearchContactAction{
+		ContactService: contactService,
+	}
+}
+
 func (c *DI) NewContactService(contactRepo backend.IContactRepo) backend.IContactService {
 	return &backend.ContactServiceImpl{
 		ContactRepo: contactRepo,
+	}
+}
+
+func (c *DI) NewTaskService(taskRepo backend.ITaskRepo) backend.ITaskService {
+	return &backend.TaskServiceImpl{
+		TaskRepo: taskRepo,
+	}
+}
+
+func (c *DI) NewTaskRepo(idGenerator backend.IDGenerator, dbService backend.IDBService) backend.ITaskRepo {
+	return &backend.TaskRepoImpl{
+		DBService:   dbService,
+		IDGenerator: idGenerator,
+	}
+}
+
+func (c *DI) NewDeleteTaskAction(taskService backend.ITaskService) *frontend.DeleteTaskAction {
+	return &frontend.DeleteTaskAction{
+		TaskService: taskService,
 	}
 }

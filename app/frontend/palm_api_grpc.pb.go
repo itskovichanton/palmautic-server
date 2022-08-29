@@ -105,9 +105,9 @@ var Users_ServiceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ContactsClient interface {
-	CreateOrUpdate(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*ContactResult, error)
-	Delete(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*BaseError, error)
-	Search(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*ContactListResult, error)
+	CreateOrUpdateContact(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*ContactResult, error)
+	DeleteContact(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*ContactResult, error)
+	SearchContacts(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*ContactListResult, error)
 }
 
 type contactsClient struct {
@@ -118,27 +118,27 @@ func NewContactsClient(cc grpc.ClientConnInterface) ContactsClient {
 	return &contactsClient{cc}
 }
 
-func (c *contactsClient) CreateOrUpdate(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*ContactResult, error) {
+func (c *contactsClient) CreateOrUpdateContact(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*ContactResult, error) {
 	out := new(ContactResult)
-	err := c.cc.Invoke(ctx, "/frontend.Contacts/createOrUpdate", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/frontend.Contacts/createOrUpdateContact", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *contactsClient) Delete(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*BaseError, error) {
-	out := new(BaseError)
-	err := c.cc.Invoke(ctx, "/frontend.Contacts/delete", in, out, opts...)
+func (c *contactsClient) DeleteContact(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*ContactResult, error) {
+	out := new(ContactResult)
+	err := c.cc.Invoke(ctx, "/frontend.Contacts/deleteContact", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *contactsClient) Search(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*ContactListResult, error) {
+func (c *contactsClient) SearchContacts(ctx context.Context, in *Contact, opts ...grpc.CallOption) (*ContactListResult, error) {
 	out := new(ContactListResult)
-	err := c.cc.Invoke(ctx, "/frontend.Contacts/search", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/frontend.Contacts/searchContacts", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -149,9 +149,9 @@ func (c *contactsClient) Search(ctx context.Context, in *Contact, opts ...grpc.C
 // All implementations must embed UnimplementedContactsServer
 // for forward compatibility
 type ContactsServer interface {
-	CreateOrUpdate(context.Context, *Contact) (*ContactResult, error)
-	Delete(context.Context, *Contact) (*BaseError, error)
-	Search(context.Context, *Contact) (*ContactListResult, error)
+	CreateOrUpdateContact(context.Context, *Contact) (*ContactResult, error)
+	DeleteContact(context.Context, *Contact) (*ContactResult, error)
+	SearchContacts(context.Context, *Contact) (*ContactListResult, error)
 	mustEmbedUnimplementedContactsServer()
 }
 
@@ -159,14 +159,14 @@ type ContactsServer interface {
 type UnimplementedContactsServer struct {
 }
 
-func (UnimplementedContactsServer) CreateOrUpdate(context.Context, *Contact) (*ContactResult, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateOrUpdate not implemented")
+func (UnimplementedContactsServer) CreateOrUpdateContact(context.Context, *Contact) (*ContactResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateOrUpdateContact not implemented")
 }
-func (UnimplementedContactsServer) Delete(context.Context, *Contact) (*BaseError, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
+func (UnimplementedContactsServer) DeleteContact(context.Context, *Contact) (*ContactResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteContact not implemented")
 }
-func (UnimplementedContactsServer) Search(context.Context, *Contact) (*ContactListResult, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Search not implemented")
+func (UnimplementedContactsServer) SearchContacts(context.Context, *Contact) (*ContactListResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SearchContacts not implemented")
 }
 func (UnimplementedContactsServer) mustEmbedUnimplementedContactsServer() {}
 
@@ -181,56 +181,56 @@ func RegisterContactsServer(s grpc.ServiceRegistrar, srv ContactsServer) {
 	s.RegisterService(&Contacts_ServiceDesc, srv)
 }
 
-func _Contacts_CreateOrUpdate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Contacts_CreateOrUpdateContact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Contact)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ContactsServer).CreateOrUpdate(ctx, in)
+		return srv.(ContactsServer).CreateOrUpdateContact(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/frontend.Contacts/createOrUpdate",
+		FullMethod: "/frontend.Contacts/createOrUpdateContact",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ContactsServer).CreateOrUpdate(ctx, req.(*Contact))
+		return srv.(ContactsServer).CreateOrUpdateContact(ctx, req.(*Contact))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Contacts_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Contacts_DeleteContact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Contact)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ContactsServer).Delete(ctx, in)
+		return srv.(ContactsServer).DeleteContact(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/frontend.Contacts/delete",
+		FullMethod: "/frontend.Contacts/deleteContact",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ContactsServer).Delete(ctx, req.(*Contact))
+		return srv.(ContactsServer).DeleteContact(ctx, req.(*Contact))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Contacts_Search_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Contacts_SearchContacts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Contact)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ContactsServer).Search(ctx, in)
+		return srv.(ContactsServer).SearchContacts(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/frontend.Contacts/search",
+		FullMethod: "/frontend.Contacts/searchContacts",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ContactsServer).Search(ctx, req.(*Contact))
+		return srv.(ContactsServer).SearchContacts(ctx, req.(*Contact))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -243,16 +243,174 @@ var Contacts_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ContactsServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "createOrUpdate",
-			Handler:    _Contacts_CreateOrUpdate_Handler,
+			MethodName: "createOrUpdateContact",
+			Handler:    _Contacts_CreateOrUpdateContact_Handler,
 		},
 		{
-			MethodName: "delete",
-			Handler:    _Contacts_Delete_Handler,
+			MethodName: "deleteContact",
+			Handler:    _Contacts_DeleteContact_Handler,
 		},
 		{
-			MethodName: "search",
-			Handler:    _Contacts_Search_Handler,
+			MethodName: "searchContacts",
+			Handler:    _Contacts_SearchContacts_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "palm_api.proto",
+}
+
+// TasksClient is the client API for Tasks service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type TasksClient interface {
+	DeleteTask(ctx context.Context, in *Task, opts ...grpc.CallOption) (*TaskResult, error)
+	SearchTasks(ctx context.Context, in *Task, opts ...grpc.CallOption) (*TaskListResult, error)
+	SetTaskStatus(ctx context.Context, in *Task, opts ...grpc.CallOption) (*TaskResult, error)
+}
+
+type tasksClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewTasksClient(cc grpc.ClientConnInterface) TasksClient {
+	return &tasksClient{cc}
+}
+
+func (c *tasksClient) DeleteTask(ctx context.Context, in *Task, opts ...grpc.CallOption) (*TaskResult, error) {
+	out := new(TaskResult)
+	err := c.cc.Invoke(ctx, "/frontend.Tasks/deleteTask", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *tasksClient) SearchTasks(ctx context.Context, in *Task, opts ...grpc.CallOption) (*TaskListResult, error) {
+	out := new(TaskListResult)
+	err := c.cc.Invoke(ctx, "/frontend.Tasks/searchTasks", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *tasksClient) SetTaskStatus(ctx context.Context, in *Task, opts ...grpc.CallOption) (*TaskResult, error) {
+	out := new(TaskResult)
+	err := c.cc.Invoke(ctx, "/frontend.Tasks/setTaskStatus", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// TasksServer is the server API for Tasks service.
+// All implementations must embed UnimplementedTasksServer
+// for forward compatibility
+type TasksServer interface {
+	DeleteTask(context.Context, *Task) (*TaskResult, error)
+	SearchTasks(context.Context, *Task) (*TaskListResult, error)
+	SetTaskStatus(context.Context, *Task) (*TaskResult, error)
+	mustEmbedUnimplementedTasksServer()
+}
+
+// UnimplementedTasksServer must be embedded to have forward compatible implementations.
+type UnimplementedTasksServer struct {
+}
+
+func (UnimplementedTasksServer) DeleteTask(context.Context, *Task) (*TaskResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteTask not implemented")
+}
+func (UnimplementedTasksServer) SearchTasks(context.Context, *Task) (*TaskListResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SearchTasks not implemented")
+}
+func (UnimplementedTasksServer) SetTaskStatus(context.Context, *Task) (*TaskResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetTaskStatus not implemented")
+}
+func (UnimplementedTasksServer) mustEmbedUnimplementedTasksServer() {}
+
+// UnsafeTasksServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to TasksServer will
+// result in compilation errors.
+type UnsafeTasksServer interface {
+	mustEmbedUnimplementedTasksServer()
+}
+
+func RegisterTasksServer(s grpc.ServiceRegistrar, srv TasksServer) {
+	s.RegisterService(&Tasks_ServiceDesc, srv)
+}
+
+func _Tasks_DeleteTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Task)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TasksServer).DeleteTask(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/frontend.Tasks/deleteTask",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TasksServer).DeleteTask(ctx, req.(*Task))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Tasks_SearchTasks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Task)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TasksServer).SearchTasks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/frontend.Tasks/searchTasks",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TasksServer).SearchTasks(ctx, req.(*Task))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Tasks_SetTaskStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Task)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TasksServer).SetTaskStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/frontend.Tasks/setTaskStatus",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TasksServer).SetTaskStatus(ctx, req.(*Task))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Tasks_ServiceDesc is the grpc.ServiceDesc for Tasks service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Tasks_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "frontend.Tasks",
+	HandlerType: (*TasksServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "deleteTask",
+			Handler:    _Tasks_DeleteTask_Handler,
+		},
+		{
+			MethodName: "searchTasks",
+			Handler:    _Tasks_SearchTasks_Handler,
+		},
+		{
+			MethodName: "setTaskStatus",
+			Handler:    _Tasks_SetTaskStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
