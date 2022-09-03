@@ -9,6 +9,7 @@ import (
 	"os"
 	"palm/app/backend"
 	"palm/app/frontend/grpc_server"
+	"palm/app/frontend/http_server"
 	"path/filepath"
 )
 
@@ -24,11 +25,18 @@ type PalmApp struct {
 	GrpcController *grpc_server.PalmGrpcControllerImpl
 	UserRepo       backend.IUserRepo
 	ContactService backend.IContactService
+	HttpController *http_server.PalmHttpController
 }
 
 func (c *PalmApp) Run() error {
 	c.registerUsers()
-	c.tests()
+	//c.tests()
+	go func() {
+		err := c.HttpController.Start()
+		if err != nil {
+			panic(err)
+		}
+	}()
 	err := c.GrpcController.Start()
 	if err != nil {
 		c.ErrorHandler.Handle(err, true)

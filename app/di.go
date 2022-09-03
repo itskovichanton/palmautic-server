@@ -11,6 +11,7 @@ import (
 	"palm/app/backend"
 	"palm/app/frontend"
 	"palm/app/frontend/grpc_server"
+	"palm/app/frontend/http_server"
 )
 
 type DI struct {
@@ -38,6 +39,7 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewContactGrpcHandler)
 	container.Provide(c.NewAccountGrpcHandler)
 	container.Provide(c.NewTaskGrpcHandler)
+	container.Provide(c.NewHttpController)
 
 }
 
@@ -100,8 +102,18 @@ func (c *DI) NewGrpcController(accountGrpcHandler *grpc_server.AccountGrpcHandle
 	return &r
 }
 
-func (c *DI) NewApp(contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, grpcController *grpc_server.PalmGrpcControllerImpl, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
+func (c *DI) NewHttpController(createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmHttpController {
+	r := &http_server.PalmHttpController{
+		HttpControllerImpl:          *httpController,
+		CreateOrUpdateContactAction: createOrUpdateContactAction,
+	}
+	r.Init()
+	return r
+}
+
+func (c *DI) NewApp(httpController *http_server.PalmHttpController, contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, grpcController *grpc_server.PalmGrpcControllerImpl, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
 	return &PalmApp{
+		HttpController: httpController,
 		Config:         config,
 		EmailService:   emailService,
 		ErrorHandler:   errorHandler,

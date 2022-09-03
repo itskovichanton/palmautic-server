@@ -18,7 +18,7 @@ actions:
 
 server:
   grpcPort: 3001
-  port: 8001
+  port: 3002
   http:
     ssl:
       network: tcp4

@@ -7,6 +7,7 @@ type ID int64
 type IBaseEntity interface {
 	GetId() ID
 	GetAccountId() ID
+	SetAccountId(id ID)
 }
 
 type BaseEntity struct {
@@ -14,27 +15,31 @@ type BaseEntity struct {
 	Id, AccountId ID
 }
 
-func (c BaseEntity) ReadyForSearch() bool {
+func (c *BaseEntity) SetAccountId(accountId ID) {
+	c.AccountId = accountId
+}
+
+func (c *BaseEntity) ReadyForSearch() bool {
 	return c.Id != 0 && c.AccountId != 0
 }
 
-func (c BaseEntity) GetId() ID {
+func (c *BaseEntity) GetId() ID {
 	return c.Id
 }
 
-func (c BaseEntity) GetAccountId() ID {
+func (c *BaseEntity) GetAccountId() ID {
 	return c.AccountId
 }
 
 type Contact struct {
-	BaseEntity
-	Phone string `check:"phone"`
-	Name  string `check:"notempty"`
-	Email string `check:"notempty,email"`
+	BaseEntity `json:"-"`
+	Phone      string `check:"phone"`
+	Name       string `check:"notempty"`
+	Email      string `check:"notempty,email"`
 }
 
 type Task struct {
-	BaseEntity
+	BaseEntity  `json:"-"`
 	Title       string `check:"notempty"`
 	Description string `check:"notempty"`
 	Type        TaskType
