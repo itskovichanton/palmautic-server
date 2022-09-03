@@ -16,6 +16,8 @@ type PalmHttpController struct {
 	pipeline.HttpControllerImpl
 
 	CreateOrUpdateContactAction *frontend.CreateOrUpdateContactAction
+	SearchContactAction         *frontend.SearchContactAction
+	DeleteContactAction         *frontend.DeleteContactAction
 }
 
 func (c *PalmHttpController) Init() {
@@ -24,7 +26,9 @@ func (c *PalmHttpController) Init() {
 	c.GETPOST("/accounts/login", c.GetDefaultHandler(c.prepareAction(c.GetSessionAction)))
 
 	// contacts
-	c.GETPOST("/contacts/createOrUpdate", c.GetDefaultHandler(c.prepareAction(&ReadEntityAction{model: &entities.Contact{}}, c.CreateOrUpdateContactAction)))
+	c.EchoEngine.POST("/contacts/createOrUpdate", c.GetDefaultHandler(c.prepareAction(c.readContact(), c.CreateOrUpdateContactAction)))
+	c.EchoEngine.POST("/contacts/search", c.GetDefaultHandler(c.prepareAction(c.readContact(), c.SearchContactAction)))
+	c.EchoEngine.POST("/contacts/delete", c.GetDefaultHandler(c.prepareAction(c.readContact(), c.DeleteContactAction)))
 
 }
 
@@ -37,13 +41,17 @@ func (c *PalmHttpController) prepareAction(actions ...pipeline.IAction) pipeline
 	}
 }
 
-type ReadEntityAction struct {
+func (c *PalmHttpController) readContact() pipeline.IAction {
+	return &readEntityAction{model: &entities.Contact{}}
+}
+
+type readEntityAction struct {
 	pipeline.BaseActionImpl
 
 	model entities.IBaseEntity
 }
 
-func (c *ReadEntityAction) Run(arg interface{}) (interface{}, error) {
+func (c *readEntityAction) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*core.CallParams)
 	bodyBytes, err := io.ReadAll(cp.Request.(echo.Context).Request().Body)
 	if err != nil {

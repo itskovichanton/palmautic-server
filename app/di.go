@@ -102,10 +102,12 @@ func (c *DI) NewGrpcController(accountGrpcHandler *grpc_server.AccountGrpcHandle
 	return &r
 }
 
-func (c *DI) NewHttpController(createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmHttpController {
+func (c *DI) NewHttpController(searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmHttpController {
 	r := &http_server.PalmHttpController{
 		HttpControllerImpl:          *httpController,
 		CreateOrUpdateContactAction: createOrUpdateContactAction,
+		DeleteContactAction:         deleteContactAction,
+		SearchContactAction:         searchContactAction,
 	}
 	r.Init()
 	return r
