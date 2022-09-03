@@ -15,8 +15,7 @@ type ITaskRepo interface {
 type TaskRepoImpl struct {
 	ITaskRepo
 
-	DBService   IDBService
-	IDGenerator IDGenerator
+	DBService IDBService
 }
 
 func (c *TaskRepoImpl) Search(filter *entities.Task) []*entities.Task {
@@ -46,6 +45,6 @@ func (c *TaskRepoImpl) Delete(filter *entities.Task) *entities.Task {
 }
 
 func (c *TaskRepoImpl) CreateOrUpdate(task *entities.Task) {
-	task.Id = c.IDGenerator.GenerateIntID(task.Id)
+	c.DBService.DBContent().IDGenerator.AssignId(task)
 	c.DBService.DBContent().GetTasks().GetTasks(task.AccountId)[task.Id] = task
 }

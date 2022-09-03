@@ -10,9 +10,10 @@ type Contacts map[entities.ID]*entities.Contact
 type Tasks map[entities.ID]*entities.Task
 
 type DBContent struct {
-	Accounts Accounts
-	Contacts AccountContactsMap
-	Tasks    AccountTasksMap
+	IDGenerator IDGenerator
+	Accounts    Accounts
+	Contacts    AccountContactsMap
+	Tasks       AccountTasksMap
 }
 
 func (c *DBContent) GetContacts() AccountContactsMap {

@@ -9,6 +9,7 @@ import (
 	"io"
 	"palm/app/entities"
 	"palm/app/frontend"
+	"reflect"
 )
 
 type PalmHttpController struct {
@@ -23,7 +24,7 @@ func (c *PalmHttpController) Init() {
 	c.GETPOST("/accounts/login", c.GetDefaultHandler(c.prepareAction(c.GetSessionAction)))
 
 	// contacts
-	c.GETPOST("/contacts/createOrUpdate", c.GetDefaultHandler(c.prepareAction(&ReadEntityAction{model: func() entities.IBaseEntity { return &entities.Contact{} }}, c.CreateOrUpdateContactAction)))
+	c.GETPOST("/contacts/createOrUpdate", c.GetDefaultHandler(c.prepareAction(&ReadEntityAction{model: &entities.Contact{}}, c.CreateOrUpdateContactAction)))
 
 }
 
@@ -39,7 +40,7 @@ func (c *PalmHttpController) prepareAction(actions ...pipeline.IAction) pipeline
 type ReadEntityAction struct {
 	pipeline.BaseActionImpl
 
-	model func() entities.IBaseEntity
+	model entities.IBaseEntity
 }
 
 func (c *ReadEntityAction) Run(arg interface{}) (interface{}, error) {
@@ -48,7 +49,9 @@ func (c *ReadEntityAction) Run(arg interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	m := c.model()
+	t := reflect.TypeOf(c.model).Elem()
+	mI := reflect.New(t).Interface()
+	m := mI.(entities.IBaseEntity)
 	err = json.Unmarshal(bodyBytes, &m)
 	m.SetAccountId(entities.ID(cp.Caller.Session.Account.ID))
 	return m, err

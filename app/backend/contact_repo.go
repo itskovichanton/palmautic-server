@@ -15,8 +15,7 @@ type IContactRepo interface {
 type ContactRepoImpl struct {
 	IContactRepo
 
-	DBService   IDBService
-	IDGenerator IDGenerator
+	DBService IDBService
 }
 
 func (c *ContactRepoImpl) Search(filter *entities.Contact) []*entities.Contact {
@@ -46,6 +45,6 @@ func (c *ContactRepoImpl) Delete(filter *entities.Contact) *entities.Contact {
 }
 
 func (c *ContactRepoImpl) CreateOrUpdate(contact *entities.Contact) {
-	contact.Id = c.IDGenerator.GenerateIntID(contact.Id)
+	c.DBService.DBContent().IDGenerator.AssignId(contact)
 	c.DBService.DBContent().GetContacts().GetContacts(contact.AccountId)[contact.Id] = contact
 }

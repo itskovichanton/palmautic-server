@@ -17,8 +17,9 @@ type IDBService interface {
 type InMemoryDemoDBServiceImpl struct {
 	IDBService
 
-	data   *DBContent
-	Config *core.Config
+	data        *DBContent
+	Config      *core.Config
+	IDGenerator IDGenerator
 }
 
 func (c *InMemoryDemoDBServiceImpl) Init() {
@@ -44,7 +45,9 @@ func (c *InMemoryDemoDBServiceImpl) Load(fileName string) error {
 	if err != nil {
 		return err
 	}
-	c.data = &DBContent{}
+	c.data = &DBContent{
+		IDGenerator: c.IDGenerator,
+	}
 	return json.Unmarshal(dataBytes, &c.data)
 }
 

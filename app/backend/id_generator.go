@@ -2,23 +2,27 @@ package backend
 
 import (
 	"palm/app/entities"
-	"sync/atomic"
 )
 
 type IDGenerator interface {
 	GenerateIntID(id entities.ID) entities.ID
+	AssignId(a entities.IBaseEntity)
 }
 
 type IDGeneratorImpl struct {
 	IDGenerator
 
-	id atomic.Int32
+	Id entities.ID
+}
+
+func (c *IDGeneratorImpl) AssignId(a entities.IBaseEntity) {
+	a.SetId(c.GenerateIntID(a.GetId()))
 }
 
 func (c *IDGeneratorImpl) GenerateIntID(id entities.ID) entities.ID {
 	if id != 0 {
 		return id
 	}
-	c.id.Add(1)
-	return entities.ID(c.id.Load())
+	c.Id++
+	return c.Id
 }

@@ -43,9 +43,10 @@ func (c *DI) InitDI() {
 
 }
 
-func (c *DI) NewDBService(config *core.Config) (backend.IDBService, error) {
+func (c *DI) NewDBService(idGenerator backend.IDGenerator, config *core.Config) (backend.IDBService, error) {
 	r := &backend.InMemoryDemoDBServiceImpl{
-		Config: config,
+		IDGenerator: idGenerator,
+		Config:      config,
 	}
 	err := r.Load("")
 	if err != nil {
@@ -61,8 +62,7 @@ func (c *DI) NewIDGenerator() backend.IDGenerator {
 
 func (c *DI) NewContactRepo(idGenerator backend.IDGenerator, dbService backend.IDBService) backend.IContactRepo {
 	return &backend.ContactRepoImpl{
-		DBService:   dbService,
-		IDGenerator: idGenerator,
+		DBService: dbService,
 	}
 }
 
@@ -155,10 +155,9 @@ func (c *DI) NewTaskService(taskRepo backend.ITaskRepo) backend.ITaskService {
 	}
 }
 
-func (c *DI) NewTaskRepo(idGenerator backend.IDGenerator, dbService backend.IDBService) backend.ITaskRepo {
+func (c *DI) NewTaskRepo(idinmetor backend.IDGenerator, dbService backend.IDBService) backend.ITaskRepo {
 	return &backend.TaskRepoImpl{
-		DBService:   dbService,
-		IDGenerator: idGenerator,
+		DBService: dbService,
 	}
 }
 
