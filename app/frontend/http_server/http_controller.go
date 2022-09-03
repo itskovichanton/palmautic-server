@@ -23,21 +23,29 @@ type PalmHttpController struct {
 func (c *PalmHttpController) Init() {
 
 	// accounts
-	c.GETPOST("/accounts/login", c.GetDefaultHandler(c.prepareAction(c.GetSessionAction)))
+	c.GETPOST("/accounts/login", c.GetDefaultHandler(c.prepareAction(true, c.GetSessionAction)))
 
 	// contacts
-	c.EchoEngine.POST("/contacts/createOrUpdate", c.GetDefaultHandler(c.prepareAction(c.readContact(), c.CreateOrUpdateContactAction)))
-	c.EchoEngine.POST("/contacts/search", c.GetDefaultHandler(c.prepareAction(c.readContact(), c.SearchContactAction)))
-	c.EchoEngine.POST("/contacts/delete", c.GetDefaultHandler(c.prepareAction(c.readContact(), c.DeleteContactAction)))
+	c.EchoEngine.POST("/contacts/createOrUpdate", c.GetDefaultHandler(c.prepareAction(true, c.readContact(), c.CreateOrUpdateContactAction)))
+	c.EchoEngine.POST("/contacts/search", c.GetDefaultHandler(c.prepareAction(true, c.readContact(), c.SearchContactAction)))
+	c.EchoEngine.POST("/contacts/delete", c.GetDefaultHandler(c.prepareAction(true, c.readContact(), c.DeleteContactAction)))
 
 }
 
-func (c *PalmHttpController) prepareAction(actions ...pipeline.IAction) pipeline.IAction {
+func (c *PalmHttpController) prepareAction(requiresAuth bool, actions ...pipeline.IAction) pipeline.IAction {
 	return &pipeline.ChainedActionImpl{
 		Actions: utils.Concat([]pipeline.IAction{
 			c.ValidateCallerAction,
-			c.GetUserAction,
+			c.getGetUserActionIfSessionPresent(requiresAuth),
 		}, actions),
+	}
+}
+
+func (c *PalmHttpController) getGetUserActionIfSessionPresent(requiresAuth bool) pipeline.IAction {
+	if requiresAuth {
+		return c.GetUserAction
+	} else {
+		return c.NopAction
 	}
 }
 
