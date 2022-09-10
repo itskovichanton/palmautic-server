@@ -18,6 +18,7 @@ type PalmHttpController struct {
 	CreateOrUpdateContactAction *frontend.CreateOrUpdateContactAction
 	SearchContactAction         *frontend.SearchContactAction
 	DeleteContactAction         *frontend.DeleteContactAction
+	UploadContactsAction        *frontend.UploadContactsAction
 }
 
 func (c *PalmHttpController) Init() {
@@ -29,6 +30,7 @@ func (c *PalmHttpController) Init() {
 	c.EchoEngine.POST("/contacts/createOrUpdate", c.GetDefaultHandler(c.prepareAction(true, c.readContact(), c.CreateOrUpdateContactAction)))
 	c.EchoEngine.POST("/contacts/search", c.GetDefaultHandler(c.prepareAction(true, c.readContact(), c.SearchContactAction)))
 	c.EchoEngine.POST("/contacts/delete", c.GetDefaultHandler(c.prepareAction(true, c.readContact(), c.DeleteContactAction)))
+	c.EchoEngine.POST("/contacts/upload", c.GetDefaultHandler(c.prepareAction(true, c.UploadContactsAction)))
 
 }
 
@@ -44,9 +46,8 @@ func (c *PalmHttpController) prepareAction(requiresAuth bool, actions ...pipelin
 func (c *PalmHttpController) getGetUserActionIfSessionPresent(requiresAuth bool) pipeline.IAction {
 	if requiresAuth {
 		return c.GetUserAction
-	} else {
-		return c.NopAction
 	}
+	return c.NopAction
 }
 
 func (c *PalmHttpController) readContact() pipeline.IAction {

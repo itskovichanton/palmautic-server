@@ -1,7 +1,9 @@
 package frontend
 
 import (
+	"bitbucket.org/itskovich/core/pkg/core"
 	"bitbucket.org/itskovich/server/pkg/server/pipeline"
+	"mime/multipart"
 	"palm/app/backend"
 	"palm/app/entities"
 )
@@ -38,4 +40,19 @@ type SearchContactAction struct {
 func (c *SearchContactAction) Run(arg interface{}) (interface{}, error) {
 	contact := arg.(*entities.Contact)
 	return c.ContactService.Search(contact), nil
+}
+
+type UploadContactsAction struct {
+	pipeline.BaseActionImpl
+
+	ContactService backend.IContactService
+}
+
+func (c *UploadContactsAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*core.CallParams)
+	f, err := cp.GetParamsUsingFirstValue()["f"].(*multipart.FileHeader).Open()
+	if err != nil {
+		return nil, err
+	}
+	return c.ContactService.Upload(entities.ID(cp.Caller.Session.Account.ID), backend.NewCSVIterator(f))
 }

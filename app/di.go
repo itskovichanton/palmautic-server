@@ -27,6 +27,7 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewGrpcController)
 	container.Provide(c.NewUserRepo)
 	container.Provide(c.NewDBService)
+	container.Provide(c.NewUploadContactsAction)
 	container.Provide(c.NewContactRepo)
 	container.Provide(c.NewTaskRepo)
 	container.Provide(c.NewIDGenerator)
@@ -102,12 +103,13 @@ func (c *DI) NewGrpcController(accountGrpcHandler *grpc_server.AccountGrpcHandle
 	return &r
 }
 
-func (c *DI) NewHttpController(searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmHttpController {
+func (c *DI) NewHttpController(uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmHttpController {
 	r := &http_server.PalmHttpController{
 		HttpControllerImpl:          *httpController,
 		CreateOrUpdateContactAction: createOrUpdateContactAction,
 		DeleteContactAction:         deleteContactAction,
 		SearchContactAction:         searchContactAction,
+		UploadContactsAction:        uploadContactsAction,
 	}
 	r.Init()
 	return r
@@ -166,5 +168,11 @@ func (c *DI) NewTaskRepo(idinmetor backend.IDGenerator, dbService backend.IDBSer
 func (c *DI) NewDeleteTaskAction(taskService backend.ITaskService) *frontend.DeleteTaskAction {
 	return &frontend.DeleteTaskAction{
 		TaskService: taskService,
+	}
+}
+
+func (c *DI) NewUploadContactsAction(contactService backend.IContactService) *frontend.UploadContactsAction {
+	return &frontend.UploadContactsAction{
+		ContactService: contactService,
 	}
 }

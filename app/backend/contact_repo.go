@@ -4,6 +4,7 @@ import (
 	"golang.org/x/exp/maps"
 	"palm/app/entities"
 	"palm/app/utils"
+	"strings"
 )
 
 type IContactRepo interface {
@@ -19,6 +20,7 @@ type ContactRepoImpl struct {
 }
 
 func (c *ContactRepoImpl) Search(filter *entities.Contact) []*entities.Contact {
+	filter.Name = strings.ToUpper(filter.Name)
 	rMap := c.DBService.DBContent().GetContacts()[filter.AccountId]
 	if rMap == nil {
 		return nil
@@ -31,6 +33,15 @@ func (c *ContactRepoImpl) Search(filter *entities.Contact) []*entities.Contact {
 		return r
 	}
 	r := maps.Values(rMap)
+	if len(filter.Name) > 0 {
+		var rFiltered []*entities.Contact
+		for _, p := range r {
+			if strings.Contains(strings.ToUpper(p.Name), filter.Name) || strings.Contains(strings.ToUpper(p.Company), filter.Name) {
+				rFiltered = append(rFiltered, p)
+			}
+		}
+		r = rFiltered
+	}
 	utils.SortById(r)
 	return r
 }
@@ -41,6 +52,9 @@ func (c *ContactRepoImpl) Delete(filter *entities.Contact) *entities.Contact {
 	if deleted != nil {
 		delete(contacts, filter.Id)
 	}
+	c.DBService.DBContent().GetContacts()[filter.AccountId] = contacts
+	c.DBService.Save("")
+	c.DBService.Load("")
 	return deleted
 }
 

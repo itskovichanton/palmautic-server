@@ -12,8 +12,9 @@ type IBaseEntity interface {
 }
 
 type BaseEntity struct {
-	IBaseEntity   `json:"-"`
-	Id, AccountId ID
+	IBaseEntity `json:"-"`
+	Id          ID `json:"id"`
+	AccountId   ID `json:"accountId"`
 }
 
 func (c *BaseEntity) SetId(id ID) {
@@ -38,9 +39,11 @@ func (c *BaseEntity) GetAccountId() ID {
 
 type Contact struct {
 	BaseEntity
-	Phone string `check:"phone"`
-	Name  string `check:"notempty"`
-	Email string `check:"notempty,email"`
+	Phone    string `check:"phone" json:"phone"`
+	Name     string `check:"notempty" json:"name"`
+	Email    string `check:"notempty,email" json:"email"`
+	Company  string `json:"company"`
+	Linkedin string `json:"linkedin"`
 }
 
 type Task struct {

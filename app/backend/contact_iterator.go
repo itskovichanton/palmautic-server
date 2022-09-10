@@ -1,10 +1,8 @@
 package backend
 
 import (
-	"bufio"
 	"encoding/csv"
 	"io"
-	"os"
 	"palm/app/entities"
 )
 
@@ -16,8 +14,8 @@ type CSVIteratorImpl struct {
 	reader *csv.Reader
 }
 
-func NewCSVIterator(f *os.File) *CSVIteratorImpl {
-	r := csv.NewReader(bufio.NewReader(f))
+func NewCSVIterator(reader io.Reader) *CSVIteratorImpl {
+	r := csv.NewReader(reader)
 	r.Comma = ';'
 	return &CSVIteratorImpl{reader: r}
 }
@@ -28,8 +26,10 @@ func (c *CSVIteratorImpl) Next() (*entities.Contact, error) {
 		return nil, nil
 	}
 	return &entities.Contact{
-		Phone: data[2],
-		Name:  data[0],
-		Email: data[1],
+		Phone:    data[2],
+		Name:     data[0],
+		Email:    data[1],
+		Company:  data[3],
+		Linkedin: data[4],
 	}, nil
 }

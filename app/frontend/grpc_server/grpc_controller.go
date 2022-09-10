@@ -71,9 +71,9 @@ type convertToContactModel struct {
 
 func (c *convertToContactModel) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*core.CallParams)
-	contractEntity := toContactModel(c.contact)
-	contractEntity.AccountId = entities.ID(cp.Caller.Session.Account.ID)
-	return contractEntity, nil
+	contactEntity := toContactModel(c.contact)
+	contactEntity.AccountId = entities.ID(cp.Caller.Session.Account.ID)
+	return contactEntity, nil
 }
 
 type convertToTaskModel struct {
@@ -84,7 +84,7 @@ type convertToTaskModel struct {
 
 func (c *convertToTaskModel) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*core.CallParams)
-	contractEntity := toTaskModel(c.task)
-	contractEntity.AccountId = entities.ID(cp.Caller.Session.Account.ID)
-	return contractEntity, nil
+	contactEntity := toTaskModel(c.task)
+	contactEntity.AccountId = entities.ID(cp.Caller.Session.Account.ID)
+	return contactEntity, nil
 }
