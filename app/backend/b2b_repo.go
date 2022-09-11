@@ -171,21 +171,34 @@ func (c *B2BRepoImpl) calcFilters() []entities.IFilter {
 	}
 }
 
-func (c *B2BRepoImpl) calcChoiseFilterVariants(data []entities.MapWithId, f entities.IFilter, filterMap map[string]entities.IFilter) []string {
+func (c *B2BRepoImpl) calcChoiseFilterVariants(data []entities.MapWithId, f1 entities.IFilter, filterMap map[string]entities.IFilter) []string {
 	var r []string
 	if data == nil {
 		return r
 	}
 	for _, p := range data {
-		pStr := cast.ToString(p[strings.Title(f.GetName())])
-		dependentFilter := f.GetDependsOnFilterName()
-		if len(dependentFilter) > 0 {
-			dependentFilterName := filterMap[dependentFilter].GetName()
-			pStr = cast.ToString(p[strings.Title(dependentFilterName)]) + "::" + pStr
+		pStr := cast.ToString(p[strings.Title(f1.GetName())])
+		if len(pStr) == 0 {
+			continue
+		}
+		f := f1
+		for {
+			dependentFilter := f.GetDependsOnFilterName()
+			if len(dependentFilter) > 0 {
+				dependentFilterName := filterMap[dependentFilter].GetName()
+				pStr = cast.ToString(p[strings.Title(dependentFilterName)]) + "::" + pStr
+				f = filterMap[dependentFilter]
+				if f == nil {
+					break
+				}
+			} else {
+				break
+			}
 		}
 		if len(pStr) > 0 {
 			r = append(r, pStr)
 		}
 	}
+
 	return utils.RemoveDuplicates(r)
 }
