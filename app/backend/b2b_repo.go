@@ -20,6 +20,8 @@ type B2BRepoImpl struct {
 	DBService IDBService
 }
 
+const MaxSearchCount = 1000
+
 func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}) []entities.MapWithId {
 
 	var r []entities.MapWithId
@@ -35,10 +37,12 @@ func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}) []ent
 		fits := true
 		for fieldName, fieldValue := range filters {
 			f := filterMap[fieldName]
-			v := cast.ToString(p[strings.Title(fieldName[3:])])
+			v := cast.ToString(p[strings.Title(fieldName[3:])]) // hasXXXX
 			switch f.(type) {
 			case *entities.FlagFilter:
-				if cast.ToBool(fieldValue) && len(v) == 0 {
+				has := cast.ToBool(fieldValue)
+				vLen := len(v)
+				if has && vLen == 0 || !has && vLen > 0 {
 					fits = false
 					break
 				}
@@ -56,6 +60,9 @@ func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}) []ent
 		}
 		if fits {
 			r = append(r, p)
+			if len(r) >= MaxSearchCount {
+				break
+			}
 		}
 	}
 
@@ -154,6 +161,13 @@ func (c *B2BRepoImpl) calcFilters() []entities.IFilter {
 				Type:        entities.FilterTypeFlag,
 			},
 		},
+		&entities.ValueFilter{
+			Filter: entities.Filter{
+				Name:        "name",
+				Description: "Название",
+				Type:        entities.FilterTypeValue,
+			},
+		},
 	}
 }
 
@@ -163,7 +177,7 @@ func (c *B2BRepoImpl) calcChoiseFilterVariants(data []entities.MapWithId, fieldN
 		return r
 	}
 	for _, p := range data {
-		pStr := cast.ToString(p[fieldName])
+		pStr := cast.ToString(p[strings.Title(fieldName)])
 		if len(pStr) > 0 {
 			r = append(r, pStr)
 		}

@@ -37,6 +37,8 @@ func (c *DBContent) createFilter(f string) entities.IFilter {
 		return &entities.ChoiseFilter{}
 	case "flag":
 		return &entities.FlagFilter{}
+	case "value":
+		return &entities.ValueFilter{}
 	}
 	return nil
 }

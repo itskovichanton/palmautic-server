@@ -103,6 +103,7 @@ func (c MapWithId) Id() ID {
 const (
 	FilterTypeChoise = "choise"
 	FilterTypeFlag   = "flag"
+	FilterTypeValue  = "value"
 )
 
 type IFilter interface {
