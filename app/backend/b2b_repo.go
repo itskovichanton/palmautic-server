@@ -28,7 +28,7 @@ func (c *B2BRepoImpl) CreateOrUpdate(table string, a entities.MapWithId) {
 }
 
 func (c *B2BRepoImpl) Table(table string) *entities.B2BTable {
-	return c.DBService.DBContent().B2Bdb.Tables[table]
+	return c.DBService.DBContent().B2Bdb.GetTable(table)
 }
 
 func (c *B2BRepoImpl) Refresh() {
@@ -38,8 +38,8 @@ func (c *B2BRepoImpl) Refresh() {
 	}
 
 	if c.DBService.DBContent().B2Bdb.Tables == nil {
-		c.DBService.DBContent().B2Bdb.Tables = map[string]*entities.B2BTable{
-			"companies": {
+		c.DBService.DBContent().B2Bdb.Tables = []*entities.B2BTable{
+			{
 				Filters:     c.calcFilters(),
 				Name:        "companies",
 				Description: "Компании",
@@ -86,7 +86,7 @@ func (c *B2BRepoImpl) calcFilters() []entities.IFilter {
 		&entities.ChoiseFilter{
 			Filter: entities.Filter{
 				Name:        "city",
-				Description: "Населенный пунки",
+				Description: "Населенный пункт",
 				Type:        entities.FilterTypeChoise,
 			},
 		},

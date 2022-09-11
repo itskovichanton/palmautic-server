@@ -71,7 +71,16 @@ const (
 )
 
 type B2Bdb struct {
-	Tables map[string]*B2BTable
+	Tables []*B2BTable
+}
+
+func (c *B2Bdb) GetTable(table string) *B2BTable {
+	for _, t := range c.Tables {
+		if t.Name == table {
+			return t
+		}
+	}
+	return nil
 }
 
 type B2BTable struct {
