@@ -71,14 +71,24 @@ const (
 )
 
 type B2Bdb struct {
-	Tables []*B2BTable
+	Tables map[string]*B2BTable
 }
 
 type B2BTable struct {
 	Filters           []IFilter
 	FilterTypes       []string
-	Data              []interface{}
+	Data              []MapWithId
 	Name, Description string
+}
+
+type MapWithId map[string]interface{}
+
+func (c MapWithId) SetId(id ID) {
+	c["id"] = id
+}
+
+func (c MapWithId) Id() ID {
+	return c["id"].(ID)
 }
 
 const (
@@ -113,9 +123,4 @@ type ValueFilter struct {
 type FlagFilter struct {
 	Filter
 	Checked bool
-}
-
-type Company struct {
-	BaseEntity
-	Name, Category, ZipCode, Address, Phone, Email, Website, Socials string
 }

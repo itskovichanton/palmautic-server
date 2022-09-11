@@ -2,14 +2,13 @@ package backend
 
 import (
 	"bitbucket.org/itskovich/goava/pkg/goava/utils"
-	"reflect"
+	"github.com/spf13/cast"
 	"salespalm/app/entities"
-	"strings"
 )
 
 type IB2BRepo interface {
 	//Search(filter *entities.Contact) []*entities.Contact
-	CreateOrUpdateCompany(company *entities.Company)
+	CreateOrUpdate(table string, a entities.MapWithId)
 	Refresh()
 	Table(table string) *entities.B2BTable
 }
@@ -20,24 +19,28 @@ type B2BRepoImpl struct {
 	DBService IDBService
 }
 
-func (c *B2BRepoImpl) CreateOrUpdateCompany(a *entities.Company) {
-	a.Id = c.DBService.DBContent().IDGenerator.GenerateIntID(a.Id)
-	c.DBService.DBContent().B2Bdb.Tables[0].Data = append(c.DBService.DBContent().B2Bdb.Tables[0].Data, a)
+func (c *B2BRepoImpl) CreateOrUpdate(table string, a entities.MapWithId) {
+	a.SetId(c.DBService.DBContent().IDGenerator.GenerateIntID(0))
+	t := c.Table(table)
+	if t != nil {
+		t.Data = append(t.Data, a)
+	}
 }
 
 func (c *B2BRepoImpl) Table(table string) *entities.B2BTable {
-	if table == "companies" {
-		return c.DBService.DBContent().B2Bdb.Tables[0]
-	}
-	return c.DBService.DBContent().B2Bdb.Tables[0]
+	return c.DBService.DBContent().B2Bdb.Tables[table]
 }
 
 func (c *B2BRepoImpl) Refresh() {
 
+	if c.DBService.DBContent().B2Bdb == nil {
+		c.DBService.DBContent().B2Bdb = &entities.B2Bdb{}
+	}
+
 	if c.DBService.DBContent().B2Bdb.Tables == nil {
-		c.DBService.DBContent().B2Bdb.Tables = []*entities.B2BTable{
-			{
-				Filters:     c.calcCompanyFilters(),
+		c.DBService.DBContent().B2Bdb.Tables = map[string]*entities.B2BTable{
+			"companies": {
+				Filters:     c.calcFilters(),
 				Name:        "companies",
 				Description: "Компании",
 			},
@@ -57,7 +60,7 @@ func (c *B2BRepoImpl) Refresh() {
 	}
 }
 
-func (c *B2BRepoImpl) calcCompanyFilters() []entities.IFilter {
+func (c *B2BRepoImpl) calcFilters() []entities.IFilter {
 	return []entities.IFilter{
 		&entities.ChoiseFilter{
 			Filter: entities.Filter{
@@ -111,15 +114,15 @@ func (c *B2BRepoImpl) calcCompanyFilters() []entities.IFilter {
 	}
 }
 
-func (c *B2BRepoImpl) calcChoiseFilterVariants(data []interface{}, fieldName string) []string {
+func (c *B2BRepoImpl) calcChoiseFilterVariants(data []entities.MapWithId, fieldName string) []string {
 	var r []string
 	if data == nil {
 		return r
 	}
 	for _, p := range data {
-		f := reflect.ValueOf(p).FieldByName(strings.ToTitle(fieldName))
-		if f.IsValid() {
-			r = append(r, f.String())
+		pStr := cast.ToString(p[fieldName])
+		if len(pStr) > 0 {
+			r = append(r, pStr)
 		}
 	}
 	return utils.RemoveDuplicates(r)

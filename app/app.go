@@ -48,7 +48,7 @@ func (c *PalmApp) tests() {
 	//
 	//f, err := os.Open(filepath.Join(c.Config.GetDir(), "db.csv"))
 	//println(err)
-	//c.ContactService.UploadCompanies(1001, backend.NewCSVIterator(f))
+	//c.ContactService.Upload(1001, backend.NewCSVIterator(f))
 }
 
 func (c *PalmApp) registerUsers() {

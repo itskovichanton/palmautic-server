@@ -49,10 +49,12 @@ func (c *InMemoryDemoDBServiceImpl) Load(fileName string) error {
 		IDGenerator: c.IDGenerator,
 	}
 	err = json.Unmarshal(dataBytes, &c.data)
-	for _, t := range c.data.B2Bdb.Tables {
-		t.Filters = nil
-		for _, f := range t.FilterTypes {
-			t.Filters = append(t.Filters, c.data.createFilter(f))
+	if c.data.B2Bdb != nil {
+		for _, t := range c.data.B2Bdb.Tables {
+			t.Filters = nil
+			for _, f := range t.FilterTypes {
+				t.Filters = append(t.Filters, c.data.createFilter(f))
+			}
 		}
 	}
 	err = json.Unmarshal(dataBytes, &c.data)

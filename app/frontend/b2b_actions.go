@@ -31,7 +31,7 @@ func (c *UploadB2BDataAction) Run(arg interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.B2BService.UploadCompanies(backend.NewCompanyCSVIterator(f))
+	return c.B2BService.Upload(cp.GetParamStr("path__table"), backend.NewMapWithIdCSVIterator(f))
 }
 
 type GetB2BInfoAction struct {
@@ -48,4 +48,16 @@ func (c *GetB2BInfoAction) Run(arg interface{}) (interface{}, error) {
 		"description": r.Description,
 		"filters":     r.Filters,
 	}, nil
+}
+
+type ClearB2BTableAction struct {
+	pipeline.BaseActionImpl
+
+	B2BService backend.IB2BService
+}
+
+func (c *ClearB2BTableAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*core.CallParams)
+	c.B2BService.ClearTable(cp.GetParamStr("path__table"))
+	return nil, nil
 }

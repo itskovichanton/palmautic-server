@@ -27,6 +27,7 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewGrpcController)
 	container.Provide(c.NewUserRepo)
 	container.Provide(c.NewGetB2BInfoActionAction)
+	container.Provide(c.NewClearB2BTableAction)
 	container.Provide(c.NewDBService)
 	container.Provide(c.NewUploadContactsAction)
 	container.Provide(c.NewContactRepo)
@@ -115,7 +116,7 @@ func (c *DI) NewGrpcController(accountGrpcHandler *grpc_server.AccountGrpcHandle
 	return &r
 }
 
-func (c *DI) NewHttpController(getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmHttpController {
+func (c *DI) NewHttpController(clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmHttpController {
 	r := &http_server.PalmHttpController{
 		HttpControllerImpl:          *httpController,
 		CreateOrUpdateContactAction: createOrUpdateContactAction,
@@ -124,6 +125,7 @@ func (c *DI) NewHttpController(getB2BInfoAction *frontend.GetB2BInfoAction, uplo
 		UploadContactsAction:        uploadContactsAction,
 		UploadB2BDataAction:         uploadB2BDataAction,
 		GetB2BInfoAction:            getB2BInfoAction,
+		ClearB2BTableAction:         clearB2BTableAction,
 	}
 	r.Init()
 	return r
@@ -140,6 +142,12 @@ func (c *DI) NewApp(httpController *http_server.PalmHttpController, contactServi
 		GrpcController: grpcController,
 		UserRepo:       userRepo,
 		ContactService: contactService,
+	}
+}
+
+func (c *DI) NewClearB2BTableAction(b2bService backend.IB2BService) *frontend.ClearB2BTableAction {
+	return &frontend.ClearB2BTableAction{
+		B2BService: b2bService,
 	}
 }
 

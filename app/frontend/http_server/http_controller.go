@@ -21,6 +21,7 @@ type PalmHttpController struct {
 	UploadContactsAction        *frontend.UploadContactsAction
 	UploadB2BDataAction         *frontend.UploadB2BDataAction
 	GetB2BInfoAction            *frontend.GetB2BInfoAction
+	ClearB2BTableAction         *frontend.ClearB2BTableAction
 }
 
 func (c *PalmHttpController) Init() {
@@ -35,8 +36,9 @@ func (c *PalmHttpController) Init() {
 	c.EchoEngine.POST("/contacts/upload", c.GetDefaultHandler(c.prepareAction(true, c.UploadContactsAction)))
 
 	// b2b
-	c.EchoEngine.POST("/b2b/upload", c.GetDefaultHandler(c.prepareAction(false, c.UploadB2BDataAction)))
+	c.EchoEngine.POST("/b2b/upload/:table", c.GetDefaultHandler(c.prepareAction(false, c.UploadB2BDataAction)))
 	c.EchoEngine.GET("/b2b/info/:table", c.GetDefaultHandler(c.prepareAction(false, c.GetB2BInfoAction)))
+	c.EchoEngine.GET("/b2b/clear/:table", c.GetDefaultHandler(c.prepareAction(false, c.ClearB2BTableAction)))
 
 }
 
