@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 	"github.com/labstack/echo"
 	"io"
-	"palm/app/entities"
-	"palm/app/frontend"
 	"reflect"
+	"salespalm/app/entities"
+	"salespalm/app/frontend"
 )
 
 type PalmHttpController struct {
@@ -19,6 +19,8 @@ type PalmHttpController struct {
 	SearchContactAction         *frontend.SearchContactAction
 	DeleteContactAction         *frontend.DeleteContactAction
 	UploadContactsAction        *frontend.UploadContactsAction
+	UploadB2BDataAction         *frontend.UploadB2BDataAction
+	GetB2BInfoAction            *frontend.GetB2BInfoAction
 }
 
 func (c *PalmHttpController) Init() {
@@ -31,6 +33,10 @@ func (c *PalmHttpController) Init() {
 	c.EchoEngine.POST("/contacts/search", c.GetDefaultHandler(c.prepareAction(true, c.readContact(), c.SearchContactAction)))
 	c.EchoEngine.POST("/contacts/delete", c.GetDefaultHandler(c.prepareAction(true, c.readContact(), c.DeleteContactAction)))
 	c.EchoEngine.POST("/contacts/upload", c.GetDefaultHandler(c.prepareAction(true, c.UploadContactsAction)))
+
+	// b2b
+	c.EchoEngine.POST("/b2b/upload", c.GetDefaultHandler(c.prepareAction(false, c.UploadB2BDataAction)))
+	c.EchoEngine.GET("/b2b/info", c.GetDefaultHandler(c.prepareAction(false, c.GetB2BInfoAction)))
 
 }
 

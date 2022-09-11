@@ -98,7 +98,7 @@ var Accounts_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "palm_api.proto",
+	Metadata: "salespalm_api.proto",
 }
 
 // ContactsClient is the client API for Contacts service.
@@ -256,7 +256,7 @@ var Contacts_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "palm_api.proto",
+	Metadata: "salespalm_api.proto",
 }
 
 // TasksClient is the client API for Tasks service.
@@ -414,5 +414,5 @@ var Tasks_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "palm_api.proto",
+	Metadata: "salespalm_api.proto",
 }

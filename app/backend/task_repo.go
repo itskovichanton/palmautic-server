@@ -2,8 +2,8 @@ package backend
 
 import (
 	"golang.org/x/exp/maps"
-	"palm/app/entities"
-	"palm/app/utils"
+	"salespalm/app/entities"
+	"salespalm/app/utils"
 )
 
 type ITaskRepo interface {

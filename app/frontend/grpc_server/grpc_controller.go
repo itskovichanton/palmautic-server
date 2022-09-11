@@ -6,8 +6,8 @@ import (
 	"bitbucket.org/itskovich/server/pkg/server/pipeline"
 	"context"
 	"google.golang.org/grpc"
-	"palm/app/entities"
 	"reflect"
+	"salespalm/app/entities"
 )
 
 type PalmGrpcControllerImpl struct {

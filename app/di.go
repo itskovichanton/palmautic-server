@@ -8,10 +8,10 @@ import (
 	"bitbucket.org/itskovich/server/pkg/server/pipeline"
 	"bitbucket.org/itskovich/server/pkg/server/users"
 	"go.uber.org/dig"
-	"palm/app/backend"
-	"palm/app/frontend"
-	"palm/app/frontend/grpc_server"
-	"palm/app/frontend/http_server"
+	"salespalm/app/backend"
+	"salespalm/app/frontend"
+	"salespalm/app/frontend/grpc_server"
+	"salespalm/app/frontend/http_server"
 )
 
 type DI struct {
@@ -26,6 +26,7 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewApp)
 	container.Provide(c.NewGrpcController)
 	container.Provide(c.NewUserRepo)
+	container.Provide(c.NewGetB2BInfoActionAction)
 	container.Provide(c.NewDBService)
 	container.Provide(c.NewUploadContactsAction)
 	container.Provide(c.NewContactRepo)
@@ -34,6 +35,7 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewCreateOrUpdateContactAction)
 	container.Provide(c.NewContactService)
 	container.Provide(c.NewTaskService)
+	container.Provide(c.NewB2BService)
 	container.Provide(c.NewDeleteContactAction)
 	container.Provide(c.NewSearchContactAction)
 	container.Provide(c.NewDeleteTaskAction)
@@ -41,6 +43,8 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewAccountGrpcHandler)
 	container.Provide(c.NewTaskGrpcHandler)
 	container.Provide(c.NewHttpController)
+	container.Provide(c.NewB2BRepo)
+	container.Provide(c.NewUploadB2BDataAction)
 
 }
 
@@ -65,6 +69,14 @@ func (c *DI) NewContactRepo(idGenerator backend.IDGenerator, dbService backend.I
 	return &backend.ContactRepoImpl{
 		DBService: dbService,
 	}
+}
+
+func (c *DI) NewB2BRepo(dbService backend.IDBService) backend.IB2BRepo {
+	r := &backend.B2BRepoImpl{
+		DBService: dbService,
+	}
+	r.Refresh()
+	return r
 }
 
 func (c *DI) NewUserRepo(dbService backend.IDBService) backend.IUserRepo {
@@ -103,13 +115,15 @@ func (c *DI) NewGrpcController(accountGrpcHandler *grpc_server.AccountGrpcHandle
 	return &r
 }
 
-func (c *DI) NewHttpController(uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmHttpController {
+func (c *DI) NewHttpController(getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmHttpController {
 	r := &http_server.PalmHttpController{
 		HttpControllerImpl:          *httpController,
 		CreateOrUpdateContactAction: createOrUpdateContactAction,
 		DeleteContactAction:         deleteContactAction,
 		SearchContactAction:         searchContactAction,
 		UploadContactsAction:        uploadContactsAction,
+		UploadB2BDataAction:         uploadB2BDataAction,
+		GetB2BInfoAction:            getB2BInfoAction,
 	}
 	r.Init()
 	return r
@@ -129,6 +143,12 @@ func (c *DI) NewApp(httpController *http_server.PalmHttpController, contactServi
 	}
 }
 
+func (c *DI) NewUploadB2BDataAction(b2bService backend.IB2BService) *frontend.UploadB2BDataAction {
+	return &frontend.UploadB2BDataAction{
+		B2BService: b2bService,
+	}
+}
+
 func (c *DI) NewCreateOrUpdateContactAction(contactService backend.IContactService) *frontend.CreateOrUpdateContactAction {
 	return &frontend.CreateOrUpdateContactAction{
 		ContactService: contactService,
@@ -144,6 +164,12 @@ func (c *DI) NewDeleteContactAction(contactService backend.IContactService) *fro
 func (c *DI) NewSearchContactAction(contactService backend.IContactService) *frontend.SearchContactAction {
 	return &frontend.SearchContactAction{
 		ContactService: contactService,
+	}
+}
+
+func (c *DI) NewB2BService(B2BRepo backend.IB2BRepo) backend.IB2BService {
+	return &backend.B2BServiceImpl{
+		B2BRepo: B2BRepo,
 	}
 }
 
@@ -174,5 +200,11 @@ func (c *DI) NewDeleteTaskAction(taskService backend.ITaskService) *frontend.Del
 func (c *DI) NewUploadContactsAction(contactService backend.IContactService) *frontend.UploadContactsAction {
 	return &frontend.UploadContactsAction{
 		ContactService: contactService,
+	}
+}
+
+func (c *DI) NewGetB2BInfoActionAction(B2BService backend.IB2BService) *frontend.GetB2BInfoAction {
+	return &frontend.GetB2BInfoAction{
+		B2BService: B2BService,
 	}
 }

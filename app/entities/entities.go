@@ -69,3 +69,52 @@ const (
 	ClosedNegative
 	Active
 )
+
+type B2Bdb struct {
+	Tables []B2BTable
+}
+
+type B2BTable struct {
+	Filters           []IFilter
+	Data              []interface{} `json:"-"`
+	Name, Description string
+}
+
+const (
+	FilterTypeChoise = "choise"
+	FilterTypeFlag   = "flag"
+)
+
+type IFilter interface {
+	GetName() string
+}
+
+type Filter struct {
+	IFilter
+	Name, Description, Type string
+}
+
+func (c *Filter) GetName() string {
+	return c.Name
+}
+
+type ChoiseFilter struct {
+	Filter
+	Variants []string
+	Index    int
+}
+
+type ValueFilter struct {
+	Filter
+	Value string
+}
+
+type FlagFilter struct {
+	Filter
+	Checked bool
+}
+
+type Company struct {
+	BaseEntity
+	Name, Category, ZipCode, Address, Phone, Email, Website, Socials string
+}

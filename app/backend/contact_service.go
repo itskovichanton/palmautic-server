@@ -4,7 +4,7 @@ import (
 	"bitbucket.org/itskovich/core/pkg/core/frmclient"
 	"bitbucket.org/itskovich/core/pkg/core/validation"
 	"bitbucket.org/itskovich/goava/pkg/goava/errs"
-	"palm/app/entities"
+	"salespalm/app/entities"
 )
 
 type IContactService interface {

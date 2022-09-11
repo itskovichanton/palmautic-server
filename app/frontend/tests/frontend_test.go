@@ -8,7 +8,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"palm/app/frontend/grpc_server"
+	"salespalm/app/frontend/grpc_server"
 	"testing"
 )
 

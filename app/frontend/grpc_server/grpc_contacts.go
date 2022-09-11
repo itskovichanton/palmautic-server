@@ -2,8 +2,8 @@ package grpc_server
 
 import (
 	"context"
-	"palm/app/entities"
-	"palm/app/frontend"
+	"salespalm/app/entities"
+	"salespalm/app/frontend"
 )
 
 type ContactGrpcHandler struct {

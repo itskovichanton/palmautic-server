@@ -2,7 +2,7 @@ package main
 
 import (
 	app2 "bitbucket.org/itskovich/core/pkg/core/app"
-	"palm/app"
+	"salespalm/app"
 )
 
 func main() {

@@ -2,7 +2,7 @@ package backend
 
 import (
 	"bitbucket.org/itskovich/core/pkg/core"
-	"palm/app/entities"
+	"salespalm/app/entities"
 )
 
 type Accounts map[entities.ID]*core.Account
@@ -14,6 +14,7 @@ type DBContent struct {
 	Accounts    Accounts
 	Contacts    AccountContactsMap
 	Tasks       AccountTasksMap
+	B2Bdb       entities.B2Bdb
 }
 
 func (c *DBContent) GetContacts() AccountContactsMap {

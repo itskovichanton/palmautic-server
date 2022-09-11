@@ -6,11 +6,9 @@ import (
 	"bitbucket.org/itskovich/core/pkg/core/logger"
 	"bitbucket.org/itskovich/server/pkg/server/users"
 	"log"
-	"os"
-	"palm/app/backend"
-	"palm/app/frontend/grpc_server"
-	"palm/app/frontend/http_server"
-	"path/filepath"
+	"salespalm/app/backend"
+	"salespalm/app/frontend/grpc_server"
+	"salespalm/app/frontend/http_server"
 )
 
 type PalmApp struct {
@@ -30,7 +28,7 @@ type PalmApp struct {
 
 func (c *PalmApp) Run() error {
 	c.registerUsers()
-	//c.tests()
+	c.tests()
 	go func() {
 		err := c.HttpController.Start()
 		if err != nil {
@@ -47,9 +45,10 @@ func (c *PalmApp) Run() error {
 }
 
 func (c *PalmApp) tests() {
-	f, err := os.Open(filepath.Join(c.Config.GetDir(), "db.csv"))
-	println(err)
-	c.ContactService.Upload(1001, backend.NewCSVIterator(f))
+	//
+	//f, err := os.Open(filepath.Join(c.Config.GetDir(), "db.csv"))
+	//println(err)
+	//c.ContactService.UploadCompanies(1001, backend.NewCSVIterator(f))
 }
 
 func (c *PalmApp) registerUsers() {

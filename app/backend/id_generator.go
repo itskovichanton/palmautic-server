@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"palm/app/entities"
+	"salespalm/app/entities"
 )
 
 type IDGenerator interface {

@@ -8,7 +8,7 @@ import (
 	"github.com/golang/protobuf/ptypes/any"
 	"github.com/jinzhu/copier"
 	"github.com/spf13/cast"
-	"palm/app/entities"
+	"salespalm/app/entities"
 )
 
 func toFrontContactSlice(a []*entities.Contact) []*Contact {

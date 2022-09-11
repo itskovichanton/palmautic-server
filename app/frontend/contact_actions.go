@@ -4,8 +4,8 @@ import (
 	"bitbucket.org/itskovich/core/pkg/core"
 	"bitbucket.org/itskovich/server/pkg/server/pipeline"
 	"mime/multipart"
-	"palm/app/backend"
-	"palm/app/entities"
+	"salespalm/app/backend"
+	"salespalm/app/entities"
 )
 
 type CreateOrUpdateContactAction struct {
@@ -54,5 +54,5 @@ func (c *UploadContactsAction) Run(arg interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.ContactService.Upload(entities.ID(cp.Caller.Session.Account.ID), backend.NewCSVIterator(f))
+	return c.ContactService.Upload(entities.ID(cp.Caller.Session.Account.ID), backend.NewContactCSVIterator(f))
 }

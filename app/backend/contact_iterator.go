@@ -3,24 +3,24 @@ package backend
 import (
 	"encoding/csv"
 	"io"
-	"palm/app/entities"
+	"salespalm/app/entities"
 )
 
 type ContactIterator interface {
 	Next() (*entities.Contact, error)
 }
 
-type CSVIteratorImpl struct {
+type CSVContactIteratorImpl struct {
 	reader *csv.Reader
 }
 
-func NewCSVIterator(reader io.Reader) *CSVIteratorImpl {
+func NewContactCSVIterator(reader io.Reader) *CSVContactIteratorImpl {
 	r := csv.NewReader(reader)
 	r.Comma = ';'
-	return &CSVIteratorImpl{reader: r}
+	return &CSVContactIteratorImpl{reader: r}
 }
 
-func (c *CSVIteratorImpl) Next() (*entities.Contact, error) {
+func (c *CSVContactIteratorImpl) Next() (*entities.Contact, error) {
 	data, err := c.reader.Read()
 	if err == io.EOF {
 		return nil, nil
