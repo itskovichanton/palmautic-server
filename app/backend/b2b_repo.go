@@ -11,7 +11,7 @@ type IB2BRepo interface {
 	//Search(filter *entities.Contact) []*entities.Contact
 	CreateOrUpdateCompany(company *entities.Company)
 	Refresh()
-	Tables() []entities.B2BTable
+	Table(table string) *entities.B2BTable
 }
 
 type B2BRepoImpl struct {
@@ -25,14 +25,17 @@ func (c *B2BRepoImpl) CreateOrUpdateCompany(a *entities.Company) {
 	c.DBService.DBContent().B2Bdb.Tables[0].Data = append(c.DBService.DBContent().B2Bdb.Tables[0].Data, a)
 }
 
-func (c *B2BRepoImpl) Tables() []entities.B2BTable {
-	return c.DBService.DBContent().B2Bdb.Tables
+func (c *B2BRepoImpl) Table(table string) *entities.B2BTable {
+	if table == "companies" {
+		return c.DBService.DBContent().B2Bdb.Tables[0]
+	}
+	return c.DBService.DBContent().B2Bdb.Tables[0]
 }
 
 func (c *B2BRepoImpl) Refresh() {
 
 	if c.DBService.DBContent().B2Bdb.Tables == nil {
-		c.DBService.DBContent().B2Bdb.Tables = []entities.B2BTable{
+		c.DBService.DBContent().B2Bdb.Tables = []*entities.B2BTable{
 			{
 				Filters:     c.calcCompanyFilters(),
 				Name:        "companies",

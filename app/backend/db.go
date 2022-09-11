@@ -48,7 +48,15 @@ func (c *InMemoryDemoDBServiceImpl) Load(fileName string) error {
 	c.data = &DBContent{
 		IDGenerator: c.IDGenerator,
 	}
-	return json.Unmarshal(dataBytes, &c.data)
+	err = json.Unmarshal(dataBytes, &c.data)
+	for _, t := range c.data.B2Bdb.Tables {
+		t.Filters = nil
+		for _, f := range t.FilterTypes {
+			t.Filters = append(t.Filters, c.data.createFilter(f))
+		}
+	}
+	err = json.Unmarshal(dataBytes, &c.data)
+	return err
 }
 
 func (c *InMemoryDemoDBServiceImpl) Save(fileName string) error {

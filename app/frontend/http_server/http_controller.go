@@ -36,7 +36,7 @@ func (c *PalmHttpController) Init() {
 
 	// b2b
 	c.EchoEngine.POST("/b2b/upload", c.GetDefaultHandler(c.prepareAction(false, c.UploadB2BDataAction)))
-	c.EchoEngine.GET("/b2b/info", c.GetDefaultHandler(c.prepareAction(false, c.GetB2BInfoAction)))
+	c.EchoEngine.GET("/b2b/info/:table", c.GetDefaultHandler(c.prepareAction(false, c.GetB2BInfoAction)))
 
 }
 

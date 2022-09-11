@@ -14,7 +14,7 @@ type DBContent struct {
 	Accounts    Accounts
 	Contacts    AccountContactsMap
 	Tasks       AccountTasksMap
-	B2Bdb       entities.B2Bdb
+	B2Bdb       *entities.B2Bdb
 }
 
 func (c *DBContent) GetContacts() AccountContactsMap {
@@ -29,6 +29,16 @@ func (c *DBContent) GetTasks() AccountTasksMap {
 		c.Tasks = AccountTasksMap{}
 	}
 	return c.Tasks
+}
+
+func (c *DBContent) createFilter(f string) entities.IFilter {
+	switch f {
+	case "choise":
+		return &entities.ChoiseFilter{}
+	case "flag":
+		return &entities.FlagFilter{}
+	}
+	return nil
 }
 
 type AccountContactsMap map[entities.ID]Contacts

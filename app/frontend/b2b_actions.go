@@ -41,5 +41,11 @@ type GetB2BInfoAction struct {
 }
 
 func (c *GetB2BInfoAction) Run(arg interface{}) (interface{}, error) {
-	return c.B2BService.Tables(), nil
+	cp := arg.(*core.CallParams)
+	r := c.B2BService.Table(cp.GetParamStr("path__table"))
+	return map[string]interface{}{
+		"name":        r.Name,
+		"description": r.Description,
+		"filters":     r.Filters,
+	}, nil
 }

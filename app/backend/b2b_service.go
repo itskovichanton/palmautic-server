@@ -5,7 +5,7 @@ import "salespalm/app/entities"
 type IB2BService interface {
 	//Search(filter *entities.Contact) []*entities.Contact
 	UploadCompanies(iterator CompanyIterator) (int, error)
-	Tables() []entities.B2BTable
+	Table(table string) *entities.B2BTable
 }
 
 type B2BServiceImpl struct {
@@ -18,8 +18,8 @@ type B2BServiceImpl struct {
 //	return c.ContactRepo.Search(filter)
 //}
 
-func (c *B2BServiceImpl) Tables() []entities.B2BTable {
-	return c.B2BRepo.Tables()
+func (c *B2BServiceImpl) Table(table string) *entities.B2BTable {
+	return c.B2BRepo.Table(table)
 }
 
 func (c *B2BServiceImpl) UploadCompanies(iterator CompanyIterator) (int, error) {

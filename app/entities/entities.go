@@ -71,12 +71,13 @@ const (
 )
 
 type B2Bdb struct {
-	Tables []B2BTable
+	Tables []*B2BTable
 }
 
 type B2BTable struct {
 	Filters           []IFilter
-	Data              []interface{} `json:"-"`
+	FilterTypes       []string
+	Data              []interface{}
 	Name, Description string
 }
 
@@ -90,7 +91,7 @@ type IFilter interface {
 }
 
 type Filter struct {
-	IFilter
+	IFilter                 `json:"-"`
 	Name, Description, Type string
 }
 
