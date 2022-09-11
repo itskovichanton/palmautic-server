@@ -5,7 +5,7 @@ import (
 )
 
 type IB2BService interface {
-	//Search(filter *entities.Contact) []*entities.Contact
+	Search(table string, filters map[string]interface{}) []entities.MapWithId
 	Upload(table string, iterator MapIterator) (int, error)
 	Table(table string) *entities.B2BTable
 	ClearTable(table string)
@@ -17,9 +17,9 @@ type B2BServiceImpl struct {
 	B2BRepo IB2BRepo
 }
 
-//func (c *B2BServiceImpl) Search(filter *entities.Contact) []*entities.Contact {
-//	return c.ContactRepo.Search(filter)
-//}
+func (c *B2BServiceImpl) Search(table string, filters map[string]interface{}) []entities.MapWithId {
+	return c.B2BRepo.Search(table, filters)
+}
 
 func (c *B2BServiceImpl) ClearTable(table string) {
 	c.B2BRepo.Table(table).Data = nil

@@ -4,10 +4,11 @@ import (
 	"bitbucket.org/itskovich/goava/pkg/goava/utils"
 	"github.com/spf13/cast"
 	"salespalm/app/entities"
+	"strings"
 )
 
 type IB2BRepo interface {
-	//Search(filter *entities.Contact) []*entities.Contact
+	Search(table string, filters map[string]interface{}) []entities.MapWithId
 	CreateOrUpdate(table string, a entities.MapWithId)
 	Refresh()
 	Table(table string) *entities.B2BTable
@@ -17,6 +18,48 @@ type B2BRepoImpl struct {
 	IB2BRepo
 
 	DBService IDBService
+}
+
+func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}) []entities.MapWithId {
+
+	var r []entities.MapWithId
+	t := c.Table(table)
+	if t == nil {
+		return r
+	}
+	filterMap := map[string]entities.IFilter{}
+	for _, f := range t.Filters {
+		filterMap[f.GetName()] = f
+	}
+	for _, p := range t.Data {
+		fits := true
+		for fieldName, fieldValue := range filters {
+			f := filterMap[fieldName]
+			v := cast.ToString(p[strings.Title(fieldName[3:])])
+			switch f.(type) {
+			case *entities.FlagFilter:
+				if cast.ToBool(fieldValue) && len(v) == 0 {
+					fits = false
+					break
+				}
+			default:
+				fieldVStr := strings.ToUpper(cast.ToString(fieldValue))
+				if len(fieldVStr) > 0 {
+					v := cast.ToString(p[strings.Title(fieldName)])
+					if len(v) > 0 && !strings.Contains(strings.ToUpper(v), fieldVStr) {
+						fits = false
+						break
+					}
+				}
+			}
+
+		}
+		if fits {
+			r = append(r, p)
+		}
+	}
+
+	return r
 }
 
 func (c *B2BRepoImpl) CreateOrUpdate(table string, a entities.MapWithId) {

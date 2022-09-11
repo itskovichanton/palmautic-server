@@ -7,17 +7,16 @@ import (
 	"salespalm/app/backend"
 )
 
-//
-//type SearchB2BAction struct {
-//	pipeline.BaseActionImpl
-//
-//	B2BService backend.IB2BService
-//}
-//
-//func (c *SearchB2BAction) Run(arg interface{}) (interface{}, error) {
-//	contact := arg.(*entities.Contact)
-//	return c.B2BService.Search(contact), nil
-//}
+type SearchB2BAction struct {
+	pipeline.BaseActionImpl
+
+	B2BService backend.IB2BService
+}
+
+func (c *SearchB2BAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*core.CallParams)
+	return c.B2BService.Search(cp.GetParamStr("path__table"), cp.GetParamsUsingFirstValue()), nil
+}
 
 type UploadB2BDataAction struct {
 	pipeline.BaseActionImpl
