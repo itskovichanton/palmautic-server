@@ -101,7 +101,7 @@ func (c *B2BRepoImpl) Refresh() {
 		for _, f := range filterMap {
 			switch e := f.(type) {
 			case *entities.ChoiseFilter:
-				e.Variants = c.calcChoiseFilterVariants(t.Data, f, filterMap)
+				e.Variants = c.calcChoiseFilterVariants(t.Data, e, filterMap)
 				break
 			}
 		}
@@ -171,7 +171,7 @@ func (c *B2BRepoImpl) calcFilters() []entities.IFilter {
 	}
 }
 
-func (c *B2BRepoImpl) calcChoiseFilterVariants(data []entities.MapWithId, f1 entities.IFilter, filterMap map[string]entities.IFilter) []string {
+func (c *B2BRepoImpl) calcChoiseFilterVariants(data []entities.MapWithId, f1 *entities.ChoiseFilter, filterMap map[string]entities.IFilter) []string {
 	var r []string
 	if data == nil {
 		return r
@@ -181,12 +181,13 @@ func (c *B2BRepoImpl) calcChoiseFilterVariants(data []entities.MapWithId, f1 ent
 		if len(pStr) == 0 {
 			continue
 		}
-		f := f1
+		var f entities.IFilter
+		f = f1
 		for {
 			dependentFilter := f.GetDependsOnFilterName()
 			if len(dependentFilter) > 0 {
 				dependentFilterName := filterMap[dependentFilter].GetName()
-				pStr = cast.ToString(p[strings.Title(dependentFilterName)]) + "::" + pStr
+				pStr = dependentFilterName + "=" + cast.ToString(p[strings.Title(dependentFilterName)]) + ";" + pStr
 				f = filterMap[dependentFilter]
 				if f == nil {
 					break

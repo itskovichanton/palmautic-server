@@ -135,7 +135,8 @@ func (c *Filter) GetName() string {
 type ChoiseFilter struct {
 	Filter
 	Variants []string
-	Index    int
+	//VariantsMap map[string]interface{}
+	Index int
 }
 
 type ValueFilter struct {
