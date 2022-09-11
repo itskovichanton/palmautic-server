@@ -90,6 +90,14 @@ type B2BTable struct {
 	Name, Description string
 }
 
+func (t *B2BTable) FilterMap() map[string]IFilter {
+	filterMap := map[string]IFilter{}
+	for _, f := range t.Filters {
+		filterMap[f.GetName()] = f
+	}
+	return filterMap
+}
+
 type MapWithId map[string]interface{}
 
 func (c MapWithId) SetId(id ID) {
@@ -108,11 +116,16 @@ const (
 
 type IFilter interface {
 	GetName() string
+	GetDependsOnFilterName() string
 }
 
 type Filter struct {
-	IFilter                 `json:"-"`
-	Name, Description, Type string
+	IFilter                                      `json:"-"`
+	Name, Description, Type, DependsOnFilterName string
+}
+
+func (c *Filter) GetDependsOnFilterName() string {
+	return c.DependsOnFilterName
 }
 
 func (c *Filter) GetName() string {

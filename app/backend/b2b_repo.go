@@ -29,10 +29,7 @@ func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}) []ent
 	if t == nil {
 		return r
 	}
-	filterMap := map[string]entities.IFilter{}
-	for _, f := range t.Filters {
-		filterMap[f.GetName()] = f
-	}
+	filterMap := t.FilterMap()
 	for _, p := range t.Data {
 		fits := true
 		for fieldName, fieldValue := range filters {
@@ -100,10 +97,11 @@ func (c *B2BRepoImpl) Refresh() {
 	// Пересчитываем данные для фильтров
 	for _, t := range c.DBService.DBContent().B2Bdb.Tables {
 		//utils.RemoveDuplicates(t.Data) - почисти дубликаты в данных
-		for _, f := range t.Filters {
+		filterMap := t.FilterMap()
+		for _, f := range filterMap {
 			switch e := f.(type) {
 			case *entities.ChoiseFilter:
-				e.Variants = c.calcChoiseFilterVariants(t.Data, f.GetName())
+				e.Variants = c.calcChoiseFilterVariants(t.Data, f, filterMap)
 				break
 			}
 		}
@@ -128,16 +126,18 @@ func (c *B2BRepoImpl) calcFilters() []entities.IFilter {
 		},
 		&entities.ChoiseFilter{
 			Filter: entities.Filter{
-				Name:        "region",
-				Description: "Регион",
-				Type:        entities.FilterTypeChoise,
+				DependsOnFilterName: "country",
+				Name:                "region",
+				Description:         "Регион",
+				Type:                entities.FilterTypeChoise,
 			},
 		},
 		&entities.ChoiseFilter{
 			Filter: entities.Filter{
-				Name:        "city",
-				Description: "Населенный пункт",
-				Type:        entities.FilterTypeChoise,
+				DependsOnFilterName: "country",
+				Name:                "city",
+				Description:         "Населенный пункт",
+				Type:                entities.FilterTypeChoise,
 			},
 		},
 		&entities.FlagFilter{
@@ -171,13 +171,18 @@ func (c *B2BRepoImpl) calcFilters() []entities.IFilter {
 	}
 }
 
-func (c *B2BRepoImpl) calcChoiseFilterVariants(data []entities.MapWithId, fieldName string) []string {
+func (c *B2BRepoImpl) calcChoiseFilterVariants(data []entities.MapWithId, f entities.IFilter, filterMap map[string]entities.IFilter) []string {
 	var r []string
 	if data == nil {
 		return r
 	}
 	for _, p := range data {
-		pStr := cast.ToString(p[strings.Title(fieldName)])
+		pStr := cast.ToString(p[strings.Title(f.GetName())])
+		dependentFilter := f.GetDependsOnFilterName()
+		if len(dependentFilter) > 0 {
+			dependentFilterName := filterMap[dependentFilter].GetName()
+			pStr = cast.ToString(p[strings.Title(dependentFilterName)]) + "::" + pStr
+		}
 		if len(pStr) > 0 {
 			r = append(r, pStr)
 		}
