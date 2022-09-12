@@ -6,7 +6,7 @@ import (
 
 type IB2BService interface {
 	Search(table string, filters map[string]interface{}) []entities.MapWithId
-	Upload(table string, iterator MapIterator) (int, error)
+	Upload(table string, iterator IMapIterator) (int, error)
 	Table(table string) *entities.B2BTable
 	ClearTable(table string)
 }
@@ -29,7 +29,7 @@ func (c *B2BServiceImpl) Table(table string) *entities.B2BTable {
 	return c.B2BRepo.Table(table)
 }
 
-func (c *B2BServiceImpl) Upload(table string, iterator MapIterator) (int, error) {
+func (c *B2BServiceImpl) Upload(table string, iterator IMapIterator) (int, error) {
 	uploaded := 0
 	for {
 		m, err := iterator.Next()

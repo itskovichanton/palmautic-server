@@ -120,12 +120,12 @@ type IFilter interface {
 }
 
 type Filter struct {
-	IFilter                                      `json:"-"`
-	Name, Description, Type, DependsOnFilterName string
+	IFilter                                  `json:"-"`
+	Name, Description, Type, DependsOnFilter string
 }
 
 func (c *Filter) GetDependsOnFilterName() string {
-	return c.DependsOnFilterName
+	return c.DependsOnFilter
 }
 
 func (c *Filter) GetName() string {
