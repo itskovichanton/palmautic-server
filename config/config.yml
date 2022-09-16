@@ -8,6 +8,13 @@ email:
   host: mail.molbulak.com
   address: mail.molbulak.com:25
 
+service:
+  enabled: true
+  description: palm-server
+  options:
+    Restart: on-success
+    SuccessExitStatus: 1 2 8 SIGKILL
+
 fr:
   url: http://46.148.231.73:8091
   developerId: 106567582

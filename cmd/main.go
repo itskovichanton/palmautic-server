@@ -10,16 +10,16 @@ func main() {
 	di := &app.DI{}
 	di.InitDI()
 
-	var outerApp app2.IApp
-	err := di.Container.Invoke(func(app app2.IApp) {
-		outerApp = app
+	var outerAppRunner app2.IAppRunner
+	err := di.Container.Invoke(func(app app2.IAppRunner) {
+		outerAppRunner = app
 	})
 
 	if err != nil {
 		panic(err)
 	}
 
-	runningErr := outerApp.Run()
+	runningErr := outerAppRunner.Run()
 	if runningErr != nil {
 		panic(runningErr)
 	}
