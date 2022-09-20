@@ -1,11 +1,11 @@
 package frontend
 
 import (
-	"bitbucket.org/itskovich/core/pkg/core"
-	"bitbucket.org/itskovich/server/pkg/server/pipeline"
+	"github.com/itskovichanton/core/pkg/core"
+	"github.com/itskovichanton/server/pkg/server/pipeline"
 	"mime/multipart"
-	"salespalm/app/backend"
-	"salespalm/app/entities"
+	"salespalm/server/app/backend"
+	"salespalm/server/app/entities"
 )
 
 type CreateOrUpdateContactAction struct {

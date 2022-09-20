@@ -1,8 +1,8 @@
 package main
 
 import (
-	app2 "bitbucket.org/itskovich/core/pkg/core/app"
-	"salespalm/app"
+	app2 "github.com/itskovichanton/core/pkg/core/app"
+	"salespalm/server/app"
 )
 
 func main() {

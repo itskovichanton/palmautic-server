@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"salespalm/app/entities"
+	"salespalm/server/app/entities"
 	"sort"
 )
 

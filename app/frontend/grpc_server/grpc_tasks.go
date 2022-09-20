@@ -2,8 +2,8 @@ package grpc_server
 
 import (
 	"context"
-	"salespalm/app/entities"
-	"salespalm/app/frontend"
+	"salespalm/server/app/entities"
+	"salespalm/server/app/frontend"
 )
 
 type TaskGrpcHandler struct {

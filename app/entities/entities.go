@@ -112,6 +112,7 @@ const (
 	FilterTypeChoise = "choise"
 	FilterTypeFlag   = "flag"
 	FilterTypeValue  = "value"
+	FilterTypeText   = "text"
 )
 
 type IFilter interface {
@@ -122,6 +123,7 @@ type IFilter interface {
 type Filter struct {
 	IFilter                                  `json:"-"`
 	Name, Description, Type, DependsOnFilter string
+	Index                                    int
 }
 
 func (c *Filter) GetDependsOnFilterName() string {
@@ -135,8 +137,6 @@ func (c *Filter) GetName() string {
 type ChoiseFilter struct {
 	Filter
 	Variants []string
-	//VariantsMap map[string]interface{}
-	Index int
 }
 
 type ValueFilter struct {

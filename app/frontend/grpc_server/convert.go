@@ -1,14 +1,14 @@
 package grpc_server
 
 import (
-	"bitbucket.org/itskovich/core/pkg/core"
-	"bitbucket.org/itskovich/core/pkg/core/frmclient"
-	"bitbucket.org/itskovich/core/pkg/core/validation"
-	"bitbucket.org/itskovich/server/pkg/server/pipeline"
 	"github.com/golang/protobuf/ptypes/any"
+	"github.com/itskovichanton/core/pkg/core"
+	"github.com/itskovichanton/core/pkg/core/frmclient"
+	"github.com/itskovichanton/core/pkg/core/validation"
+	"github.com/itskovichanton/server/pkg/server/pipeline"
 	"github.com/jinzhu/copier"
 	"github.com/spf13/cast"
-	"salespalm/app/entities"
+	"salespalm/server/app/entities"
 )
 
 func toFrontContactSlice(a []*entities.Contact) []*Contact {

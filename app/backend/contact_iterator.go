@@ -3,7 +3,7 @@ package backend
 import (
 	"encoding/csv"
 	"io"
-	"salespalm/app/entities"
+	"salespalm/server/app/entities"
 )
 
 type ContactIterator interface {

@@ -1,10 +1,10 @@
 package frontend
 
 import (
-	"bitbucket.org/itskovich/core/pkg/core"
-	"bitbucket.org/itskovich/server/pkg/server/pipeline"
+	"github.com/itskovichanton/core/pkg/core"
+	"github.com/itskovichanton/server/pkg/server/pipeline"
 	"mime/multipart"
-	"salespalm/app/backend"
+	"salespalm/server/app/backend"
 )
 
 type SearchB2BAction struct {
@@ -31,8 +31,7 @@ func (c *UploadB2BDataAction) Run(arg interface{}) (interface{}, error) {
 		return nil, err
 	}
 	table := cp.GetParamStr("path__table")
-	return c.B2BService.Upload(table, backend.NewMapWithIdCSVIterator(f, table))
-
+	return c.B2BService.Upload(table, []backend.IMapIterator{backend.NewMapWithIdCSVIterator(f, table)})
 }
 
 type GetB2BInfoAction struct {
@@ -61,4 +60,16 @@ func (c *ClearB2BTableAction) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*core.CallParams)
 	c.B2BService.ClearTable(cp.GetParamStr("path__table"))
 	return nil, nil
+}
+
+type UploadFromFileB2BDataAction struct {
+	pipeline.BaseActionImpl
+
+	B2BService backend.IB2BService
+}
+
+func (c *UploadFromFileB2BDataAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*core.CallParams)
+	dirName := cp.GetParamStr("dir")
+	return c.B2BService.UploadFromDir(cp.GetParamStr("path__table"), dirName)
 }

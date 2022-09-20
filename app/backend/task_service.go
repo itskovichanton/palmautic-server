@@ -1,10 +1,10 @@
 package backend
 
 import (
-	"bitbucket.org/itskovich/core/pkg/core/frmclient"
-	"bitbucket.org/itskovich/core/pkg/core/validation"
-	"bitbucket.org/itskovich/goava/pkg/goava/errs"
-	"salespalm/app/entities"
+	"github.com/itskovichanton/core/pkg/core/frmclient"
+	"github.com/itskovichanton/core/pkg/core/validation"
+	"github.com/itskovichanton/goava/pkg/goava/errs"
+	"salespalm/server/app/entities"
 )
 
 type ITaskService interface {

@@ -1,14 +1,14 @@
 package app
 
 import (
-	"bitbucket.org/itskovich/core/pkg/core"
-	"bitbucket.org/itskovich/core/pkg/core/app"
-	"bitbucket.org/itskovich/core/pkg/core/logger"
-	"bitbucket.org/itskovich/server/pkg/server/users"
+	"github.com/itskovichanton/core/pkg/core"
+	"github.com/itskovichanton/core/pkg/core/app"
+	"github.com/itskovichanton/core/pkg/core/logger"
+	"github.com/itskovichanton/server/pkg/server/users"
 	"log"
-	"salespalm/app/backend"
-	"salespalm/app/frontend/grpc_server"
-	"salespalm/app/frontend/http_server"
+	"salespalm/server/app/backend"
+	"salespalm/server/app/frontend/grpc_server"
+	"salespalm/server/app/frontend/http_server"
 )
 
 type PalmApp struct {

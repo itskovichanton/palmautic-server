@@ -1,15 +1,15 @@
 package http_server
 
 import (
-	"bitbucket.org/itskovich/core/pkg/core"
-	"bitbucket.org/itskovich/goava/pkg/goava/utils"
-	"bitbucket.org/itskovich/server/pkg/server/pipeline"
 	"encoding/json"
+	"github.com/itskovichanton/core/pkg/core"
+	"github.com/itskovichanton/goava/pkg/goava/utils"
+	"github.com/itskovichanton/server/pkg/server/pipeline"
 	"github.com/labstack/echo"
 	"io"
 	"reflect"
-	"salespalm/app/entities"
-	"salespalm/app/frontend"
+	"salespalm/server/app/entities"
+	"salespalm/server/app/frontend"
 )
 
 type PalmHttpController struct {
@@ -38,6 +38,7 @@ func (c *PalmHttpController) Init() {
 
 	// b2b
 	c.EchoEngine.POST("/b2b/upload/:table", c.GetDefaultHandler(c.prepareAction(false, c.UploadB2BDataAction)))
+	c.EchoEngine.POST("/b2b/uploadFromDir/:table", c.GetDefaultHandler(c.prepareAction(false, c.UploadB2BDataAction)))
 	c.EchoEngine.GET("/b2b/info/:table", c.GetDefaultHandler(c.prepareAction(false, c.GetB2BInfoAction)))
 	c.EchoEngine.GET("/b2b/clear/:table", c.GetDefaultHandler(c.prepareAction(false, c.ClearB2BTableAction)))
 	c.EchoEngine.GET("/b2b/search/:table", c.GetDefaultHandler(c.prepareAction(false, c.SearchB2BAction)))

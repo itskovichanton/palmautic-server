@@ -1,13 +1,13 @@
 package grpc_server
 
 import (
-	"bitbucket.org/itskovich/core/pkg/core"
-	"bitbucket.org/itskovich/goava/pkg/goava/utils"
-	"bitbucket.org/itskovich/server/pkg/server/pipeline"
 	"context"
+	"github.com/itskovichanton/core/pkg/core"
+	"github.com/itskovichanton/goava/pkg/goava/utils"
+	"github.com/itskovichanton/server/pkg/server/pipeline"
 	"google.golang.org/grpc"
 	"reflect"
-	"salespalm/app/entities"
+	"salespalm/server/app/entities"
 )
 
 type PalmGrpcControllerImpl struct {

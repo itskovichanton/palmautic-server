@@ -1,9 +1,9 @@
 package frontend
 
 import (
-	"bitbucket.org/itskovich/server/pkg/server/pipeline"
-	"salespalm/app/backend"
-	"salespalm/app/entities"
+	"github.com/itskovichanton/server/pkg/server/pipeline"
+	"salespalm/server/app/backend"
+	"salespalm/server/app/entities"
 )
 
 type DeleteTaskAction struct {

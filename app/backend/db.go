@@ -1,8 +1,8 @@
 package backend
 
 import (
-	"bitbucket.org/itskovich/core/pkg/core"
 	"encoding/json"
+	"github.com/itskovichanton/core/pkg/core"
 	"os"
 	"path"
 	"time"

@@ -1,14 +1,14 @@
 package tests
 
 import (
-	"bitbucket.org/itskovich/goava/pkg/goava/httputils"
-	"bitbucket.org/itskovich/goava/pkg/goava/utils"
 	"context"
 	"fmt"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/itskovichanton/goava/pkg/goava/httputils"
+	"github.com/itskovichanton/goava/pkg/goava/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"salespalm/app/frontend/grpc_server"
+	"salespalm/server/app/frontend/grpc_server"
 	"testing"
 )
 

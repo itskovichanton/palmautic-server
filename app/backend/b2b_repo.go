@@ -1,9 +1,8 @@
 package backend
 
 import (
-	"bitbucket.org/itskovich/goava/pkg/goava/utils"
 	"github.com/spf13/cast"
-	"salespalm/app/entities"
+	"salespalm/server/app/entities"
 	"strings"
 )
 
@@ -119,6 +118,7 @@ func (c *B2BRepoImpl) calcCompanyFilters() []entities.IFilter {
 	return []entities.IFilter{
 		&entities.ChoiseFilter{
 			Filter: entities.Filter{
+				Index:       0,
 				Name:        "category",
 				Description: "Категория",
 				Type:        entities.FilterTypeChoise,
@@ -126,6 +126,7 @@ func (c *B2BRepoImpl) calcCompanyFilters() []entities.IFilter {
 		},
 		&entities.ChoiseFilter{
 			Filter: entities.Filter{
+				Index:       1,
 				Name:        "country",
 				Description: "Страна",
 				Type:        entities.FilterTypeChoise,
@@ -133,6 +134,7 @@ func (c *B2BRepoImpl) calcCompanyFilters() []entities.IFilter {
 		},
 		&entities.ChoiseFilter{
 			Filter: entities.Filter{
+				Index:           2,
 				DependsOnFilter: "country",
 				Name:            "region",
 				Description:     "Регион",
@@ -141,6 +143,7 @@ func (c *B2BRepoImpl) calcCompanyFilters() []entities.IFilter {
 		},
 		&entities.ChoiseFilter{
 			Filter: entities.Filter{
+				Index:           3,
 				DependsOnFilter: "country",
 				Name:            "city",
 				Description:     "Населенный пункт",
@@ -149,6 +152,7 @@ func (c *B2BRepoImpl) calcCompanyFilters() []entities.IFilter {
 		},
 		&entities.FlagFilter{
 			Filter: entities.Filter{
+				Index:       4,
 				Name:        "hasPhone",
 				Description: "С телефоном",
 				Type:        entities.FilterTypeFlag,
@@ -156,6 +160,7 @@ func (c *B2BRepoImpl) calcCompanyFilters() []entities.IFilter {
 		},
 		&entities.FlagFilter{
 			Filter: entities.Filter{
+				Index:       5,
 				Name:        "hasEmail",
 				Description: "С email",
 				Type:        entities.FilterTypeFlag,
@@ -163,6 +168,7 @@ func (c *B2BRepoImpl) calcCompanyFilters() []entities.IFilter {
 		},
 		&entities.FlagFilter{
 			Filter: entities.Filter{
+				Index:       6,
 				Name:        "hasWebsite",
 				Description: "С вебсайтом",
 				Type:        entities.FilterTypeFlag,
@@ -170,6 +176,7 @@ func (c *B2BRepoImpl) calcCompanyFilters() []entities.IFilter {
 		},
 		&entities.ValueFilter{
 			Filter: entities.Filter{
+				Index:       7,
 				Name:        "name",
 				Description: "Название",
 				Type:        entities.FilterTypeValue,
@@ -182,20 +189,23 @@ func (c *B2BRepoImpl) calcPersonFilters() []entities.IFilter {
 	return []entities.IFilter{
 		&entities.ChoiseFilter{
 			Filter: entities.Filter{
+				Index:       0,
 				Name:        "title",
-				Description: "Title",
+				Description: "Должность",
 				Type:        entities.FilterTypeChoise,
 			},
 		},
 		&entities.ChoiseFilter{
 			Filter: entities.Filter{
+				Index:       1,
 				Name:        "company",
-				Description: "Company",
+				Description: "Компания",
 				Type:        entities.FilterTypeChoise,
 			},
 		},
 		&entities.FlagFilter{
 			Filter: entities.Filter{
+				Index:       2,
 				Name:        "hasLinkedIn",
 				Description: "С LinkedIn",
 				Type:        entities.FilterTypeFlag,
@@ -203,6 +213,7 @@ func (c *B2BRepoImpl) calcPersonFilters() []entities.IFilter {
 		},
 		&entities.FlagFilter{
 			Filter: entities.Filter{
+				Index:       3,
 				Name:        "hasEmail",
 				Description: "С email",
 				Type:        entities.FilterTypeFlag,
@@ -210,6 +221,7 @@ func (c *B2BRepoImpl) calcPersonFilters() []entities.IFilter {
 		},
 		&entities.ValueFilter{
 			Filter: entities.Filter{
+				Index:       4,
 				Name:        "fullName",
 				Description: "Имя",
 				Type:        entities.FilterTypeValue,
@@ -248,5 +260,5 @@ func (c *B2BRepoImpl) calcChoiseFilterVariants(data []entities.MapWithId, f1 *en
 		}
 	}
 
-	return utils.RemoveDuplicates(r)
+	return r
 }

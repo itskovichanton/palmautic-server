@@ -1,8 +1,8 @@
 package backend
 
 import (
-	"bitbucket.org/itskovich/core/pkg/core"
-	"salespalm/app/entities"
+	"github.com/itskovichanton/core/pkg/core"
+	"salespalm/server/app/entities"
 )
 
 type Accounts map[entities.ID]*core.Account
@@ -33,11 +33,11 @@ func (c *DBContent) GetTasks() AccountTasksMap {
 
 func (c *DBContent) createFilter(f string) entities.IFilter {
 	switch f {
-	case "choise":
+	case entities.FilterTypeChoise:
 		return &entities.ChoiseFilter{}
-	case "flag":
+	case entities.FilterTypeFlag:
 		return &entities.FlagFilter{}
-	case "value":
+	case entities.FilterTypeText, entities.FilterTypeValue:
 		return &entities.ValueFilter{}
 	}
 	return nil

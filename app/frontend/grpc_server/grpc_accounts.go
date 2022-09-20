@@ -1,9 +1,9 @@
 package grpc_server
 
 import (
-	"bitbucket.org/itskovich/core/pkg/core"
 	"context"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/itskovichanton/core/pkg/core"
 )
 
 type AccountGrpcHandler struct {
