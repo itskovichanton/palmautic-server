@@ -24,6 +24,7 @@ func (c *DI) InitDI() {
 	c.DI.InitDI(container)
 
 	container.Provide(c.NewApp)
+	container.Provide(c.NewUploadFromFileB2BDataAction)
 	container.Provide(c.NewGrpcController)
 	container.Provide(c.NewUserRepo)
 	container.Provide(c.NewGetB2BInfoActionAction)
@@ -117,7 +118,7 @@ func (c *DI) NewGrpcController(accountGrpcHandler *grpc_server.AccountGrpcHandle
 	return &r
 }
 
-func (c *DI) NewHttpController(searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmHttpController {
+func (c *DI) NewHttpController(uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmHttpController {
 	r := &http_server.PalmHttpController{
 		HttpControllerImpl:          *httpController,
 		CreateOrUpdateContactAction: createOrUpdateContactAction,
@@ -128,6 +129,7 @@ func (c *DI) NewHttpController(searchB2BAction *frontend.SearchB2BAction, clearB
 		GetB2BInfoAction:            getB2BInfoAction,
 		ClearB2BTableAction:         clearB2BTableAction,
 		SearchB2BAction:             searchB2BAction,
+		UploadFromFileB2BDataAction: uploadFromFileB2BDataAction,
 	}
 	r.Init()
 	return r
@@ -161,6 +163,12 @@ func (c *DI) NewClearB2BTableAction(b2bService backend.IB2BService) *frontend.Cl
 
 func (c *DI) NewUploadB2BDataAction(b2bService backend.IB2BService) *frontend.UploadB2BDataAction {
 	return &frontend.UploadB2BDataAction{
+		B2BService: b2bService,
+	}
+}
+
+func (c *DI) NewUploadFromFileB2BDataAction(b2bService backend.IB2BService) *frontend.UploadFromFileB2BDataAction {
+	return &frontend.UploadFromFileB2BDataAction{
 		B2BService: b2bService,
 	}
 }

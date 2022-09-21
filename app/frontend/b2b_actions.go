@@ -31,7 +31,7 @@ func (c *UploadB2BDataAction) Run(arg interface{}) (interface{}, error) {
 		return nil, err
 	}
 	table := cp.GetParamStr("path__table")
-	return c.B2BService.Upload(table, []backend.IMapIterator{backend.NewMapWithIdCSVIterator(f, table)})
+	return c.B2BService.Upload(table, []backend.IMapIterator{backend.NewMapWithIdCSVIterator(f, table)}, &backend.UploadSettings{RefreshFilters: true})
 }
 
 type GetB2BInfoAction struct {

@@ -118,6 +118,7 @@ const (
 type IFilter interface {
 	GetName() string
 	GetDependsOnFilterName() string
+	GetType() string
 }
 
 type Filter struct {
@@ -128,6 +129,10 @@ type Filter struct {
 
 func (c *Filter) GetDependsOnFilterName() string {
 	return c.DependsOnFilter
+}
+
+func (c *Filter) GetType() string {
+	return c.Type
 }
 
 func (c *Filter) GetName() string {

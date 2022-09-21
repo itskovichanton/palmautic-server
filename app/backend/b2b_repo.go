@@ -2,6 +2,7 @@ package backend
 
 import (
 	"github.com/spf13/cast"
+	"golang.org/x/exp/slices"
 	"salespalm/server/app/entities"
 	"strings"
 )
@@ -103,15 +104,18 @@ func (c *B2BRepoImpl) Refresh() {
 	// Пересчитываем данные для фильтров
 	for _, t := range c.DBService.DBContent().B2Bdb.Tables {
 		//utils.RemoveDuplicates(t.Data) - почисти дубликаты в данных
-		filterMap := t.FilterMap()
-		for _, f := range filterMap {
+
+		t.FilterTypes = []string{}
+		for _, f := range t.Filters {
+			t.FilterTypes = append(t.FilterTypes, f.GetType())
 			switch e := f.(type) {
 			case *entities.ChoiseFilter:
-				e.Variants = c.calcChoiseFilterVariants(t.Data, e, filterMap)
+				e.Variants = c.calcChoiseFilterVariants(t.Data, e, t.FilterMap())
 				break
 			}
 		}
 	}
+
 }
 
 func (c *B2BRepoImpl) calcCompanyFilters() []entities.IFilter {
@@ -144,7 +148,7 @@ func (c *B2BRepoImpl) calcCompanyFilters() []entities.IFilter {
 		&entities.ChoiseFilter{
 			Filter: entities.Filter{
 				Index:           3,
-				DependsOnFilter: "country",
+				DependsOnFilter: "region",
 				Name:            "city",
 				Description:     "Населенный пункт",
 				Type:            entities.FilterTypeChoise,
@@ -255,7 +259,7 @@ func (c *B2BRepoImpl) calcChoiseFilterVariants(data []entities.MapWithId, f1 *en
 				break
 			}
 		}
-		if len(pStr) > 0 {
+		if len(pStr) > 0 && !slices.Contains(r, pStr) {
 			r = append(r, pStr)
 		}
 	}

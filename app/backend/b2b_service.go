@@ -10,7 +10,7 @@ import (
 
 type IB2BService interface {
 	Search(table string, filters map[string]interface{}) []entities.MapWithId
-	Upload(table string, iterators []IMapIterator) (int, error)
+	Upload(table string, iterators []IMapIterator, settings *UploadSettings) (int, error)
 	Table(table string) *entities.B2BTable
 	ClearTable(table string)
 	UploadFromDir(table string, dirName string) (int, error)
@@ -19,6 +19,8 @@ type IB2BService interface {
 type UploadSettings struct {
 	MaxUploadedByIterator int
 	PostProcessor         func(m entities.MapWithId)
+	HasHeader             bool
+	RefreshFilters        bool
 }
 
 type B2BServiceImpl struct {
@@ -30,6 +32,9 @@ type B2BServiceImpl struct {
 func (c *B2BServiceImpl) UploadFromDir(table string, dirName string) (int, error) {
 	uploadedTotal := 0
 	filepath.Walk(dirName, func(path string, info fs.FileInfo, err error) error {
+		if info.IsDir() {
+			return nil
+		}
 		extension := filepath.Ext(path)
 		f, _ := os.Open(path)
 		if f == nil {
@@ -38,20 +43,26 @@ func (c *B2BServiceImpl) UploadFromDir(table string, dirName string) (int, error
 		defer func(f *os.File) { f.Close() }(f)
 		var iterator IMapIterator
 		switch extension {
-		case "csv":
+		case ".csv":
 			iterator = NewMapWithIdCSVIterator(f, table)
 		}
+		if iterator == nil {
+			return nil
+		}
 		uploaded, _ := c.Upload(table, []IMapIterator{iterator}, &UploadSettings{
-			MaxUploadedByIterator: 300,
+			MaxUploadedByIterator: 100000,
+			HasHeader:             true,
 			PostProcessor: func(m entities.MapWithId) {
 				if table == "persons" {
-					m["Country"] = strings.TrimSuffix(info.Name(), filepath.Ext(info.Name()))
+					m["City"] = strings.TrimSuffix(info.Name(), filepath.Ext(info.Name()))
+					m["Country"] = "Россия"
 				}
 			},
 		})
 		uploadedTotal += uploaded
 		return nil
 	})
+	c.B2BRepo.Refresh()
 	return uploadedTotal, nil
 }
 
@@ -72,7 +83,16 @@ func (c *B2BServiceImpl) Upload(table string, iterators []IMapIterator, settings
 	uploaded := 0
 	for _, iterator := range iterators {
 		uploadedFromIterator := 0
+		if settings.HasHeader {
+			iterator.Next()
+		}
+		flying := 1000
 		for {
+			if flying > 0 && uploadedFromIterator%flying == 0 {
+				for i := 0; i < flying; i++ {
+					iterator.Next()
+				}
+			}
 			m, err := iterator.Next()
 			if err != nil {
 				switch err.(type) {
@@ -92,6 +112,8 @@ func (c *B2BServiceImpl) Upload(table string, iterators []IMapIterator, settings
 			uploaded++
 		}
 	}
-	c.B2BRepo.Refresh()
+	if settings.RefreshFilters {
+		c.B2BRepo.Refresh()
+	}
 	return uploaded, nil
 }
