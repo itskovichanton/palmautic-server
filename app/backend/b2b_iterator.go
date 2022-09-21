@@ -111,12 +111,11 @@ func (c *PersonMapperImpl) ToEntry(data []string) (entities.MapWithId, error) {
 	}
 	return entities.MapWithId{
 		"FullName":  data[0] + " " + data[1],
-		"FirstName": data[0],
-		"LastName":  data[1],
 		"Title":     data[2],
 		"Company":   data[3],
 		"Email":     data[4],
 		"LinkedIn":  data[5],
+		"Industry1": data[6],
 	}, nil
 }
 

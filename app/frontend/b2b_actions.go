@@ -15,7 +15,11 @@ type SearchB2BAction struct {
 
 func (c *SearchB2BAction) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*core.CallParams)
-	return c.B2BService.Search(cp.GetParamStr("path__table"), cp.GetParamsUsingFirstValue()), nil
+	return c.B2BService.Search(cp.GetParamStr("path__table"), cp.GetParamsUsingFirstValue(),
+		&backend.SearchSettings{
+			Offset: cp.GetParamInt("offset", 0),
+			Count:  cp.GetParamInt("count", 0),
+		}), nil
 }
 
 type UploadB2BDataAction struct {

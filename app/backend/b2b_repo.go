@@ -8,7 +8,7 @@ import (
 )
 
 type IB2BRepo interface {
-	Search(table string, filters map[string]interface{}) []entities.MapWithId
+	Search(table string, filters map[string]interface{}, settings *SearchSettings) []entities.MapWithId
 	CreateOrUpdate(table string, a entities.MapWithId)
 	Refresh()
 	Table(table string) *entities.B2BTable
@@ -20,9 +20,11 @@ type B2BRepoImpl struct {
 	DBService IDBService
 }
 
-const MaxSearchCount = 1000
+func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}, settings *SearchSettings) []entities.MapWithId {
 
-func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}) []entities.MapWithId {
+	if settings.MaxSearchCount == 0 {
+		settings.MaxSearchCount = 1000
+	}
 
 	var r []entities.MapWithId
 	t := c.Table(table)
@@ -57,13 +59,16 @@ func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}) []ent
 		}
 		if fits {
 			r = append(r, p)
-			if len(r) >= MaxSearchCount {
+			if len(r) >= settings.MaxSearchCount {
 				break
 			}
 		}
 	}
 
-	return r
+	if settings.Count > 0 {
+		return r[settings.Offset : settings.Offset+settings.Count]
+	}
+	return r[settings.Offset:]
 }
 
 func (c *B2BRepoImpl) CreateOrUpdate(table string, a entities.MapWithId) {
@@ -191,6 +196,14 @@ func (c *B2BRepoImpl) calcCompanyFilters() []entities.IFilter {
 
 func (c *B2BRepoImpl) calcPersonFilters() []entities.IFilter {
 	return []entities.IFilter{
+		&entities.ChoiseFilter{
+			Filter: entities.Filter{
+				Index:       0,
+				Name:        "industry",
+				Description: "Категория",
+				Type:        entities.FilterTypeChoise,
+			},
+		},
 		&entities.ChoiseFilter{
 			Filter: entities.Filter{
 				Index:       0,
