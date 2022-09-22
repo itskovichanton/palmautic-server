@@ -5,7 +5,6 @@ import (
 	"github.com/itskovichanton/core/pkg/core"
 	"github.com/itskovichanton/goava/pkg/goava/utils"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
-	"github.com/labstack/echo"
 	"io"
 	"reflect"
 	"salespalm/server/app/entities"
@@ -74,7 +73,7 @@ type readEntityAction struct {
 
 func (c *readEntityAction) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*core.CallParams)
-	bodyBytes, err := io.ReadAll(cp.Request.(echo.Context).Request().Body)
+	bodyBytes, err := io.ReadAll(cp.Context().Request().Body)
 	if err != nil {
 		return nil, err
 	}
@@ -83,5 +82,5 @@ func (c *readEntityAction) Run(arg interface{}) (interface{}, error) {
 	m := mI.(entities.IBaseEntity)
 	err = json.Unmarshal(bodyBytes, &m)
 	m.SetAccountId(entities.ID(cp.Caller.Session.Account.ID))
-	return m, err
+	return &frontend.RetrievedEntityParams{CallParams: cp, Entity: m}, err
 }

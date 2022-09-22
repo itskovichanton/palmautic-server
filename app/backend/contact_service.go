@@ -8,7 +8,7 @@ import (
 )
 
 type IContactService interface {
-	Search(filter *entities.Contact) []*entities.Contact
+	Search(filter *entities.Contact, settings *ContactSearchSettings) *ContactSearchResult
 	Delete(filter *entities.Contact) (*entities.Contact, error)
 	CreateOrUpdate(contact *entities.Contact) error
 	Upload(accountId entities.ID, iterator ContactIterator) (int, error)
@@ -20,8 +20,8 @@ type ContactServiceImpl struct {
 	ContactRepo IContactRepo
 }
 
-func (c *ContactServiceImpl) Search(filter *entities.Contact) []*entities.Contact {
-	return c.ContactRepo.Search(filter)
+func (c *ContactServiceImpl) Search(filter *entities.Contact, settings *ContactSearchSettings) *ContactSearchResult {
+	return c.ContactRepo.Search(filter, settings)
 }
 
 func (c *ContactServiceImpl) Delete(filter *entities.Contact) (*entities.Contact, error) {

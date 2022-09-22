@@ -15,7 +15,8 @@ type CreateOrUpdateContactAction struct {
 }
 
 func (c *CreateOrUpdateContactAction) Run(arg interface{}) (interface{}, error) {
-	contact := arg.(*entities.Contact)
+	p := arg.(*RetrievedEntityParams)
+	contact := p.Entity.(*entities.Contact)
 	err := c.ContactService.CreateOrUpdate(contact)
 	return contact, err
 }
@@ -27,7 +28,8 @@ type DeleteContactAction struct {
 }
 
 func (c *DeleteContactAction) Run(arg interface{}) (interface{}, error) {
-	contact := arg.(*entities.Contact)
+	p := arg.(*RetrievedEntityParams)
+	contact := p.Entity.(*entities.Contact)
 	return c.ContactService.Delete(contact)
 }
 
@@ -38,8 +40,13 @@ type SearchContactAction struct {
 }
 
 func (c *SearchContactAction) Run(arg interface{}) (interface{}, error) {
-	contact := arg.(*entities.Contact)
-	return c.ContactService.Search(contact), nil
+	p := arg.(*RetrievedEntityParams)
+	cp := p.CallParams
+	contact := p.Entity.(*entities.Contact)
+	return c.ContactService.Search(contact, &backend.ContactSearchSettings{
+		Offset: cp.GetParamInt("offset", 0),
+		Count:  cp.GetParamInt("count", 0),
+	}), nil
 }
 
 type UploadContactsAction struct {
