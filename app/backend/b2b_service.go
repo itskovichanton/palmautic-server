@@ -9,11 +9,16 @@ import (
 )
 
 type IB2BService interface {
-	Search(table string, filters map[string]interface{}, settings *SearchSettings) []entities.MapWithId
+	Search(table string, filters map[string]interface{}, settings *SearchSettings) *SearchResult
 	Upload(table string, iterators []IMapIterator, settings *UploadSettings) (int, error)
 	Table(table string) *entities.B2BTable
 	ClearTable(table string)
 	UploadFromDir(table string, dirName string) (int, error)
+}
+
+type SearchResult struct {
+	Items      []entities.MapWithId
+	TotalCount int
 }
 
 type SearchSettings struct {
@@ -70,7 +75,7 @@ func (c *B2BServiceImpl) UploadFromDir(table string, dirName string) (int, error
 	return uploadedTotal, nil
 }
 
-func (c *B2BServiceImpl) Search(table string, filters map[string]interface{}, settings *SearchSettings) []entities.MapWithId {
+func (c *B2BServiceImpl) Search(table string, filters map[string]interface{}, settings *SearchSettings) *SearchResult {
 	return c.B2BRepo.Search(table, filters, settings)
 }
 

@@ -8,7 +8,7 @@ import (
 )
 
 type IB2BRepo interface {
-	Search(table string, filters map[string]interface{}, settings *SearchSettings) []entities.MapWithId
+	Search(table string, filters map[string]interface{}, settings *SearchSettings) *SearchResult
 	CreateOrUpdate(table string, a entities.MapWithId)
 	Refresh()
 	Table(table string) *entities.B2BTable
@@ -20,16 +20,18 @@ type B2BRepoImpl struct {
 	DBService IDBService
 }
 
-func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}, settings *SearchSettings) []entities.MapWithId {
+func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}, settings *SearchSettings) *SearchResult {
 
 	if settings.MaxSearchCount == 0 {
 		settings.MaxSearchCount = 1000
 	}
 
-	var r []entities.MapWithId
+	result := &SearchResult{
+		Items: []entities.MapWithId{},
+	}
 	t := c.Table(table)
 	if t == nil {
-		return r
+		return result
 	}
 	filterMap := t.FilterMap()
 	for _, p := range t.Data {
@@ -58,17 +60,21 @@ func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}, setti
 
 		}
 		if fits {
-			r = append(r, p)
-			if len(r) >= settings.MaxSearchCount {
-				break
-			}
+			result.Items = append(result.Items, p)
+			//if len(result.Items) >= settings.MaxSearchCount {
+			//	break
+			//}
 		}
 	}
 
-	if settings.Count > 0 {
-		return r[settings.Offset : settings.Offset+settings.Count]
+	result.TotalCount = len(result.Items)
+	lastElemIndex := settings.Offset + settings.Count
+	if settings.Count > 0 && lastElemIndex < result.TotalCount {
+		result.Items = result.Items[settings.Offset:lastElemIndex]
+	} else {
+		result.Items = result.Items[settings.Offset:]
 	}
-	return r[settings.Offset:]
+	return result
 }
 
 func (c *B2BRepoImpl) CreateOrUpdate(table string, a entities.MapWithId) {
