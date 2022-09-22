@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"salespalm/server/app/entities"
-	"strings"
 )
 
 type IB2BService interface {
@@ -63,8 +62,8 @@ func (c *B2BServiceImpl) UploadFromDir(table string, dirName string) (int, error
 			HasHeader:             true,
 			PostProcessor: func(m entities.MapWithId) {
 				if table == "persons" {
-					m["City"] = strings.TrimSuffix(info.Name(), filepath.Ext(info.Name()))
-					m["Country"] = "Россия"
+					//m["City"] = strings.TrimSuffix(info.Name(), filepath.Ext(info.Name()))
+					//m["Country"] = "Россия"
 				}
 			},
 		})
@@ -95,7 +94,7 @@ func (c *B2BServiceImpl) Upload(table string, iterators []IMapIterator, settings
 		if settings.HasHeader {
 			iterator.Next()
 		}
-		flying := 1000
+		flying := 0
 		for {
 			if flying > 0 && uploadedFromIterator%flying == 0 {
 				for i := 0; i < flying; i++ {

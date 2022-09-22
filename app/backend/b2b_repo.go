@@ -57,6 +57,7 @@ func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}, setti
 		}
 	}
 
+	//sort.Sort()
 	result.TotalCount = len(result.Items)
 	lastElemIndex := settings.Offset + settings.Count
 	if settings.Count > 0 && lastElemIndex < result.TotalCount {

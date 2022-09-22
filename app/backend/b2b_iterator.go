@@ -106,16 +106,25 @@ type PersonMapperImpl struct {
 }
 
 func (c *PersonMapperImpl) ToEntry(data []string) (entities.MapWithId, error) {
-	if len(data) < 6 {
+	if len(data) < 9 {
 		return nil, &MissEntryError{}
 	}
+	return c.mapPersons1(data)
+}
+
+func (c *PersonMapperImpl) mapPersons1(data []string) (entities.MapWithId, error) {
+	if len(data[2]) == 0 {
+		return nil, io.EOF
+	}
 	return entities.MapWithId{
-		"FullName":  data[0] + " " + data[1],
-		"Title":     data[2],
-		"Company":   data[3],
-		"Email":     data[4],
-		"LinkedIn":  data[5],
-		"Industry1": data[6],
+		"FullName": data[0] + " " + data[1],
+		"Title":    data[2],
+		"Company":  data[3],
+		"Email":    data[4],
+		"Linkedin": data[5],
+		"Industry": data[6],
+		"Socials":  data[7],
+		"Phone":    data[8],
 	}, nil
 }
 
