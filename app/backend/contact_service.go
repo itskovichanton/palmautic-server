@@ -1,15 +1,13 @@
 package backend
 
 import (
-	"github.com/itskovichanton/core/pkg/core/frmclient"
 	"github.com/itskovichanton/core/pkg/core/validation"
-	"github.com/itskovichanton/goava/pkg/goava/errs"
 	"salespalm/server/app/entities"
 )
 
 type IContactService interface {
 	Search(filter *entities.Contact, settings *ContactSearchSettings) *ContactSearchResult
-	Delete(filter *entities.Contact) (*entities.Contact, error)
+	Delete(accountId entities.ID, ids []entities.ID)
 	CreateOrUpdate(contact *entities.Contact) error
 	Upload(accountId entities.ID, iterator ContactIterator) (int, error)
 }
@@ -24,12 +22,8 @@ func (c *ContactServiceImpl) Search(filter *entities.Contact, settings *ContactS
 	return c.ContactRepo.Search(filter, settings)
 }
 
-func (c *ContactServiceImpl) Delete(filter *entities.Contact) (*entities.Contact, error) {
-	deleted := c.ContactRepo.Delete(filter)
-	if deleted == nil {
-		return nil, errs.NewBaseErrorWithReason("Контакт не найден", frmclient.ReasonServerRespondedWithErrorNotFound)
-	}
-	return deleted, nil
+func (c *ContactServiceImpl) Delete(accountId entities.ID, ids []entities.ID) {
+	c.ContactRepo.Delete(accountId, ids)
 }
 
 func (c *ContactServiceImpl) CreateOrUpdate(contact *entities.Contact) error {

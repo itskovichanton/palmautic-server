@@ -8,7 +8,6 @@ require (
 	github.com/itskovichanton/goava v0.0.0-20220920141234-6fa469de4e2d
 	github.com/itskovichanton/server v1.0.0
 	github.com/jinzhu/copier v0.3.5
-	github.com/labstack/echo v3.3.10+incompatible
 	github.com/spf13/cast v1.5.0
 	go.uber.org/dig v1.15.0
 	golang.org/x/exp v0.0.0-20220916125017-b168a2c6b86b

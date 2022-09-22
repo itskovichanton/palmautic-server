@@ -9,7 +9,7 @@ import (
 
 type IContactRepo interface {
 	Search(filter *entities.Contact, settings *ContactSearchSettings) *ContactSearchResult
-	Delete(filter *entities.Contact) *entities.Contact
+	Delete(accountId entities.ID, ids []entities.ID)
 	CreateOrUpdate(contact *entities.Contact)
 }
 
@@ -55,16 +55,13 @@ func (c *ContactRepoImpl) Search(filter *entities.Contact, settings *ContactSear
 	return c.applySettings(r, settings)
 }
 
-func (c *ContactRepoImpl) Delete(filter *entities.Contact) *entities.Contact {
-	contacts := c.DBService.DBContent().GetContacts()[filter.AccountId]
-	deleted := contacts[filter.Id]
-	if deleted != nil {
-		delete(contacts, filter.Id)
+func (c *ContactRepoImpl) Delete(accountId entities.ID, ids []entities.ID) {
+	contacts := c.DBService.DBContent().GetContacts()[accountId]
+	for _, id := range ids {
+		delete(contacts, id)
 	}
-	c.DBService.DBContent().GetContacts()[filter.AccountId] = contacts
-	c.DBService.Save("")
-	c.DBService.Load("")
-	return deleted
+	c.DBService.DBContent().GetContacts()[accountId] = contacts
+	c.DBService.Reload("")
 }
 
 func (c *ContactRepoImpl) CreateOrUpdate(contact *entities.Contact) {

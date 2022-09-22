@@ -15,7 +15,8 @@ type SearchB2BAction struct {
 
 func (c *SearchB2BAction) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*core.CallParams)
-	return c.B2BService.Search(cp.GetParamStr("path__table"), cp.GetParamsUsingFirstValue(),
+	p := cp.GetParamsUsingFirstValue()
+	return c.B2BService.Search(cp.GetParamStr("path__table"), p,
 		&backend.SearchSettings{
 			Offset: cp.GetParamInt("offset", 0),
 			Count:  cp.GetParamInt("count", 0),

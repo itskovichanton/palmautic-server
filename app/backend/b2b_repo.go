@@ -38,26 +38,16 @@ func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}, setti
 		fits := true
 		for fieldName, fieldValue := range filters {
 			f := filterMap[fieldName]
-			v := cast.ToString(p[strings.Title(fieldName[3:])]) // hasXXXX
-			switch f.(type) {
-			case *entities.FlagFilter:
-				has := cast.ToBool(fieldValue)
-				vLen := len(v)
-				if has && vLen == 0 || !has && vLen > 0 {
-					fits = false
-					break
-				}
-			default:
-				fieldVStr := strings.ToUpper(cast.ToString(fieldValue))
-				if len(fieldVStr) > 0 {
-					v := cast.ToString(p[strings.Title(fieldName)])
-					if len(v) > 0 && !strings.Contains(strings.ToUpper(v), fieldVStr) {
-						fits = false
-						break
-					}
-				}
+			if f == nil {
+				continue
 			}
-
+			if strings.HasPrefix(fieldName, "has") {
+				fieldName = fieldName[3:]
+			}
+			fits = c.calcFits(f, fieldName, fieldValue, p)
+			if !fits {
+				break
+			}
 		}
 		if fits {
 			result.Items = append(result.Items, p)
@@ -284,4 +274,26 @@ func (c *B2BRepoImpl) calcChoiseFilterVariants(data []entities.MapWithId, f1 *en
 	}
 
 	return r
+}
+
+func (c *B2BRepoImpl) calcFits(f entities.IFilter, filterName string, filterValue interface{}, p entities.MapWithId) bool {
+	filterName = strings.Title(filterName)
+	fieldValue := cast.ToString(p[filterName]) // hasXXXX
+	switch f.(type) {
+	case *entities.FlagFilter:
+		has := cast.ToBool(filterValue)
+		vLen := len(fieldValue)
+		if has && vLen == 0 || !has && vLen > 0 {
+			return false
+		}
+	default:
+		filterVStr := strings.ToUpper(cast.ToString(filterValue))
+		if len(filterVStr) > 0 {
+			fieldValue = cast.ToString(p[filterName])
+			if len(filterVStr) > 0 && !strings.Contains(strings.ToUpper(fieldValue), filterVStr) {
+				return false
+			}
+		}
+	}
+	return true
 }

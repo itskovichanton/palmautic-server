@@ -12,6 +12,7 @@ type IDBService interface {
 	Save(fileName string) error
 	Load(fileName string) error
 	DBContent() *DBContent
+	Reload(fileName string) error
 }
 
 type InMemoryDemoDBServiceImpl struct {
@@ -20,6 +21,14 @@ type InMemoryDemoDBServiceImpl struct {
 	data        *DBContent
 	Config      *core.Config
 	IDGenerator IDGenerator
+}
+
+func (c *InMemoryDemoDBServiceImpl) Reload(fileName string) error {
+	err := c.Save(fileName)
+	if err == nil {
+		err = c.Load(fileName)
+	}
+	return err
 }
 
 func (c *InMemoryDemoDBServiceImpl) Init() {

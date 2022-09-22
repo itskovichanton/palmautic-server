@@ -1,8 +1,10 @@
 package frontend
 
 import (
+	"encoding/json"
 	"github.com/itskovichanton/core/pkg/core"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
+	"io"
 	"mime/multipart"
 	"salespalm/server/app/backend"
 	"salespalm/server/app/entities"
@@ -28,9 +30,18 @@ type DeleteContactAction struct {
 }
 
 func (c *DeleteContactAction) Run(arg interface{}) (interface{}, error) {
-	p := arg.(*RetrievedEntityParams)
-	contact := p.Entity.(*entities.Contact)
-	return c.ContactService.Delete(contact)
+	cp := arg.(*core.CallParams)
+	bodyBytes, err := io.ReadAll(cp.Context().Request().Body)
+	if err != nil {
+		return nil, err
+	}
+	var ids []entities.ID
+	err = json.Unmarshal(bodyBytes, &ids)
+	if err != nil {
+		return nil, err
+	}
+	c.ContactService.Delete(entities.ID(cp.Caller.Session.Account.ID), ids)
+	return nil, nil
 }
 
 type SearchContactAction struct {
