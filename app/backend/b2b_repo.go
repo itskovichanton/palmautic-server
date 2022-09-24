@@ -12,12 +12,23 @@ type IB2BRepo interface {
 	CreateOrUpdate(table string, a entities.MapWithId)
 	Refresh()
 	Table(table string) *entities.B2BTable
+	FindById(id entities.ID) entities.MapWithId
 }
 
 type B2BRepoImpl struct {
 	IB2BRepo
 
 	DBService IDBService
+}
+
+func (c *B2BRepoImpl) FindById(id entities.ID) entities.MapWithId {
+	for _, t := range c.DBService.DBContent().B2Bdb.Tables {
+		r := t.FindById(id)
+		if r != nil {
+			return r
+		}
+	}
+	return nil
 }
 
 func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}, settings *SearchSettings) *SearchResult {
@@ -62,8 +73,10 @@ func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}, setti
 	lastElemIndex := settings.Offset + settings.Count
 	if settings.Count > 0 && lastElemIndex < result.TotalCount {
 		result.Items = result.Items[settings.Offset:lastElemIndex]
-	} else {
+	} else if settings.Offset < len(result.Items) {
 		result.Items = result.Items[settings.Offset:]
+	} else {
+		result.Items = []entities.MapWithId{}
 	}
 	return result
 }
@@ -102,6 +115,9 @@ func (c *B2BRepoImpl) Refresh() {
 			Description: "Люди",
 		})
 	}
+
+	c.DBService.DBContent().B2Bdb.GetTable("persons").Filters = c.calcPersonFilters()
+	c.DBService.DBContent().B2Bdb.GetTable("companies").Filters = c.calcCompanyFilters()
 
 	// Пересчитываем данные для фильтров
 	for _, t := range c.DBService.DBContent().B2Bdb.Tables {
@@ -197,29 +213,31 @@ func (c *B2BRepoImpl) calcPersonFilters() []entities.IFilter {
 			Filter: entities.Filter{
 				Index:       0,
 				Name:        "industry",
-				Description: "Категория",
+				Description: "Индустрия",
 				Type:        entities.FilterTypeChoise,
 			},
 		},
 		&entities.ChoiseFilter{
 			Filter: entities.Filter{
-				Index:       0,
-				Name:        "title",
-				Description: "Должность",
-				Type:        entities.FilterTypeChoise,
-			},
-		},
-		&entities.ChoiseFilter{
-			Filter: entities.Filter{
+				//DependsOnFilter: "industry",
 				Index:       1,
 				Name:        "company",
 				Description: "Компания",
 				Type:        entities.FilterTypeChoise,
 			},
 		},
+		&entities.ChoiseFilter{
+			Filter: entities.Filter{
+				//DependsOnFilter: "company",
+				Index:       2,
+				Name:        "title",
+				Description: "Должность",
+				Type:        entities.FilterTypeChoise,
+			},
+		},
 		&entities.FlagFilter{
 			Filter: entities.Filter{
-				Index:       2,
+				Index:       3,
 				Name:        "hasLinkedIn",
 				Description: "С LinkedIn",
 				Type:        entities.FilterTypeFlag,
@@ -227,15 +245,23 @@ func (c *B2BRepoImpl) calcPersonFilters() []entities.IFilter {
 		},
 		&entities.FlagFilter{
 			Filter: entities.Filter{
-				Index:       3,
+				Index:       4,
 				Name:        "hasEmail",
 				Description: "С email",
 				Type:        entities.FilterTypeFlag,
 			},
 		},
+		&entities.FlagFilter{
+			Filter: entities.Filter{
+				Index:       5,
+				Name:        "hasPhone",
+				Description: "С телефоном",
+				Type:        entities.FilterTypeFlag,
+			},
+		},
 		&entities.ValueFilter{
 			Filter: entities.Filter{
-				Index:       4,
+				Index:       6,
 				Name:        "fullName",
 				Description: "Имя",
 				Type:        entities.FilterTypeValue,

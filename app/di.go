@@ -26,6 +26,7 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewApp)
 	container.Provide(c.NewUploadFromFileB2BDataAction)
 	container.Provide(c.NewGrpcController)
+	container.Provide(c.NewAddContactFromB2BAction)
 	container.Provide(c.NewUserRepo)
 	container.Provide(c.NewGetB2BInfoActionAction)
 	container.Provide(c.NewSearchB2BAction)
@@ -118,7 +119,7 @@ func (c *DI) NewGrpcController(accountGrpcHandler *grpc_server.AccountGrpcHandle
 	return &r
 }
 
-func (c *DI) NewHttpController(uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmHttpController {
+func (c *DI) NewHttpController(AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmHttpController {
 	r := &http_server.PalmHttpController{
 		HttpControllerImpl:          *httpController,
 		CreateOrUpdateContactAction: createOrUpdateContactAction,
@@ -130,6 +131,7 @@ func (c *DI) NewHttpController(uploadFromFileB2BDataAction *frontend.UploadFromF
 		ClearB2BTableAction:         clearB2BTableAction,
 		SearchB2BAction:             searchB2BAction,
 		UploadFromFileB2BDataAction: uploadFromFileB2BDataAction,
+		AddContactFromB2BAction:     AddContactFromB2BAction,
 	}
 	r.Init()
 	return r
@@ -173,6 +175,12 @@ func (c *DI) NewUploadFromFileB2BDataAction(b2bService backend.IB2BService) *fro
 	}
 }
 
+func (c *DI) NewAddContactFromB2BAction(b2bService backend.IB2BService) *frontend.AddContactFromB2BAction {
+	return &frontend.AddContactFromB2BAction{
+		B2BService: b2bService,
+	}
+}
+
 func (c *DI) NewCreateOrUpdateContactAction(contactService backend.IContactService) *frontend.CreateOrUpdateContactAction {
 	return &frontend.CreateOrUpdateContactAction{
 		ContactService: contactService,
@@ -191,9 +199,10 @@ func (c *DI) NewSearchContactAction(contactService backend.IContactService) *fro
 	}
 }
 
-func (c *DI) NewB2BService(B2BRepo backend.IB2BRepo) backend.IB2BService {
+func (c *DI) NewB2BService(B2BRepo backend.IB2BRepo, ContactRepo backend.IContactRepo) backend.IB2BService {
 	return &backend.B2BServiceImpl{
-		B2BRepo: B2BRepo,
+		B2BRepo:     B2BRepo,
+		ContactRepo: ContactRepo,
 	}
 }
 

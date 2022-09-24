@@ -23,6 +23,7 @@ type PalmHttpController struct {
 	ClearB2BTableAction         *frontend.ClearB2BTableAction
 	SearchB2BAction             *frontend.SearchB2BAction
 	UploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction
+	AddContactFromB2BAction     *frontend.AddContactFromB2BAction
 }
 
 func (c *PalmHttpController) Init() {
@@ -42,6 +43,7 @@ func (c *PalmHttpController) Init() {
 	c.EchoEngine.GET("/b2b/info/:table", c.GetDefaultHandler(c.prepareAction(false, c.GetB2BInfoAction)))
 	c.EchoEngine.GET("/b2b/clear/:table", c.GetDefaultHandler(c.prepareAction(false, c.ClearB2BTableAction)))
 	c.EchoEngine.GET("/b2b/search/:table", c.GetDefaultHandler(c.prepareAction(false, c.SearchB2BAction)))
+	c.EchoEngine.POST("/b2b/addToContacts/:table", c.GetDefaultHandler(c.prepareAction(true, c.AddContactFromB2BAction)))
 
 }
 

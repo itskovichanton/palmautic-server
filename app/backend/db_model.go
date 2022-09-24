@@ -45,7 +45,7 @@ func (c *DBContent) createFilter(f string) entities.IFilter {
 
 type AccountContactsMap map[entities.ID]Contacts
 
-func (c AccountContactsMap) GetContacts(accountId entities.ID) Contacts {
+func (c AccountContactsMap) ForAccountId(accountId entities.ID) Contacts {
 	if c[accountId] == nil {
 		c[accountId] = Contacts{}
 	}

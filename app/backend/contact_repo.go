@@ -11,6 +11,7 @@ type IContactRepo interface {
 	Search(filter *entities.Contact, settings *ContactSearchSettings) *ContactSearchResult
 	Delete(accountId entities.ID, ids []entities.ID)
 	CreateOrUpdate(contact *entities.Contact)
+	DeleteDuplicates(accountId entities.ID)
 }
 
 type ContactRepoImpl struct {
@@ -26,6 +27,13 @@ type ContactSearchResult struct {
 
 type ContactSearchSettings struct {
 	Offset, Count, MaxSearchCount int
+}
+
+func (c *ContactRepoImpl) DeleteDuplicates(accountId entities.ID) {
+	contacts := c.DBService.DBContent().GetContacts().ForAccountId(accountId)
+	if contacts != nil {
+		//utils2.UniqueMap(contacts)
+	}
 }
 
 func (c *ContactRepoImpl) Search(filter *entities.Contact, settings *ContactSearchSettings) *ContactSearchResult {
@@ -66,7 +74,7 @@ func (c *ContactRepoImpl) Delete(accountId entities.ID, ids []entities.ID) {
 
 func (c *ContactRepoImpl) CreateOrUpdate(contact *entities.Contact) {
 	c.DBService.DBContent().IDGenerator.AssignId(contact)
-	c.DBService.DBContent().GetContacts().GetContacts(contact.AccountId)[contact.Id] = contact
+	c.DBService.DBContent().GetContacts().ForAccountId(contact.AccountId)[contact.Id] = contact
 }
 
 func (c *ContactRepoImpl) applySettings(r []*entities.Contact, settings *ContactSearchSettings) *ContactSearchResult {
@@ -75,8 +83,11 @@ func (c *ContactRepoImpl) applySettings(r []*entities.Contact, settings *Contact
 	lastElemIndex := settings.Offset + settings.Count
 	if settings.Count > 0 && lastElemIndex < result.TotalCount {
 		result.Items = result.Items[settings.Offset:lastElemIndex]
-	} else {
+	} else if settings.Offset < len(result.Items) {
 		result.Items = result.Items[settings.Offset:]
+	} else {
+		result.Items = []*entities.Contact{}
 	}
+
 	return result
 }

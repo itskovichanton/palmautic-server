@@ -1,10 +1,13 @@
 package frontend
 
 import (
+	"encoding/json"
 	"github.com/itskovichanton/core/pkg/core"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
+	"io"
 	"mime/multipart"
 	"salespalm/server/app/backend"
+	"salespalm/server/app/entities"
 )
 
 type SearchB2BAction struct {
@@ -77,4 +80,25 @@ func (c *UploadFromFileB2BDataAction) Run(arg interface{}) (interface{}, error) 
 	cp := arg.(*core.CallParams)
 	dirName := cp.GetParamStr("dir")
 	return c.B2BService.UploadFromDir(cp.GetParamStr("path__table"), dirName)
+}
+
+type AddContactFromB2BAction struct {
+	pipeline.BaseActionImpl
+
+	B2BService backend.IB2BService
+}
+
+func (c *AddContactFromB2BAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*core.CallParams)
+	bodyBytes, err := io.ReadAll(cp.Context().Request().Body)
+	if err != nil {
+		return nil, err
+	}
+	var ids []entities.ID
+	err = json.Unmarshal(bodyBytes, &ids)
+	if err != nil {
+		return nil, err
+	}
+	c.B2BService.AddToContacts(entities.ID(cp.Caller.Session.Account.ID), ids)
+	return nil, nil
 }

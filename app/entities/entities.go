@@ -1,6 +1,10 @@
 package entities
 
-import "time"
+import (
+	"github.com/itskovichanton/goava/pkg/goava/utils/case_insensitive"
+	"github.com/spf13/cast"
+	"time"
+)
 
 type ID int64
 
@@ -96,6 +100,16 @@ func (t *B2BTable) FilterMap() map[string]IFilter {
 		filterMap[f.GetName()] = f
 	}
 	return filterMap
+}
+
+func (t *B2BTable) FindById(id ID) MapWithId {
+	for _, p := range t.Data {
+		pId := ID(cast.ToInt64(case_insensitive.Get(p, "id")))
+		if pId == id {
+			return p
+		}
+	}
+	return nil
 }
 
 type MapWithId map[string]interface{}

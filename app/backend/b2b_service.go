@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"github.com/spf13/cast"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ type IB2BService interface {
 	Table(table string) *entities.B2BTable
 	ClearTable(table string)
 	UploadFromDir(table string, dirName string) (int, error)
+	AddToContacts(accountId entities.ID, ids []entities.ID)
 }
 
 type SearchResult struct {
@@ -34,7 +36,27 @@ type UploadSettings struct {
 type B2BServiceImpl struct {
 	IContactService
 
-	B2BRepo IB2BRepo
+	B2BRepo     IB2BRepo
+	ContactRepo IContactRepo
+}
+
+func (c *B2BServiceImpl) AddToContacts(accountId entities.ID, b2bItemIds []entities.ID) {
+	for _, b2bItemId := range b2bItemIds {
+		item := c.B2BRepo.FindById(b2bItemId)
+		if item != nil {
+			c.ContactRepo.CreateOrUpdate(&entities.Contact{
+				BaseEntity: entities.BaseEntity{
+					AccountId: accountId,
+				},
+				Phone:    cast.ToString(item["Phone"]),
+				Name:     cast.ToString(item["FullName"]),
+				Email:    cast.ToString(item["Email"]),
+				Company:  cast.ToString(item["Company"]),
+				Linkedin: cast.ToString(item["Linkedin"]),
+			})
+			//c.ContactRepo.DeleteDuplicates(accountId)
+		}
+	}
 }
 
 func (c *B2BServiceImpl) UploadFromDir(table string, dirName string) (int, error) {

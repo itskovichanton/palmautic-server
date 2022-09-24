@@ -4,3 +4,4 @@ workdir/prod
 workdir/dev
 .idea
 palm-server
+!palm-server/workdir/dev/db/db.json
