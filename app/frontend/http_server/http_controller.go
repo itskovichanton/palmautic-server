@@ -14,19 +14,37 @@ import (
 type PalmHttpController struct {
 	pipeline.HttpControllerImpl
 
-	CreateOrUpdateContactAction *frontend.CreateOrUpdateContactAction
-	SearchContactAction         *frontend.SearchContactAction
-	DeleteContactAction         *frontend.DeleteContactAction
-	UploadContactsAction        *frontend.UploadContactsAction
-	UploadB2BDataAction         *frontend.UploadB2BDataAction
-	GetB2BInfoAction            *frontend.GetB2BInfoAction
-	ClearB2BTableAction         *frontend.ClearB2BTableAction
-	SearchB2BAction             *frontend.SearchB2BAction
-	UploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction
-	AddContactFromB2BAction     *frontend.AddContactFromB2BAction
+	CreateOrUpdateContactAction  *frontend.CreateOrUpdateContactAction
+	CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction
+	SearchContactAction          *frontend.SearchContactAction
+	DeleteContactAction          *frontend.DeleteContactAction
+	UploadContactsAction         *frontend.UploadContactsAction
+	UploadB2BDataAction          *frontend.UploadB2BDataAction
+	GetB2BInfoAction             *frontend.GetB2BInfoAction
+	ClearB2BTableAction          *frontend.ClearB2BTableAction
+	SearchB2BAction              *frontend.SearchB2BAction
+	UploadFromFileB2BDataAction  *frontend.UploadFromFileB2BDataAction
+	AddContactFromB2BAction      *frontend.AddContactFromB2BAction
+	GetCommonsAction             *frontend.GetCommonsAction
+	GetTaskStatsAction           *frontend.GetTaskStatsAction
+	SearchTaskAction             *frontend.SearchTaskAction
+	GenerateDemoTasksAction      *frontend.GenerateDemoTasksAction
+	ClearTasksAction             *frontend.ClearTasksAction
 }
 
 func (c *PalmHttpController) Init() {
+
+	// sequences
+	c.EchoEngine.POST("/sequences/createOrUpdate", c.GetDefaultHandler(c.prepareAction(true, c.readSequence(), c.CreateOrUpdateSequenceAction)))
+
+	// other
+	c.EchoEngine.GET("/commons", c.GetDefaultHandler(c.prepareAction(true, c.GetCommonsAction)))
+
+	// tasks
+	c.EchoEngine.GET("/tasks/stats", c.GetDefaultHandler(c.prepareAction(true, c.GetTaskStatsAction)))
+	c.EchoEngine.POST("/tasks/search", c.GetDefaultHandler(c.prepareAction(true, c.readTask(), c.SearchTaskAction)))
+	c.EchoEngine.GET("/demo/tasks/generate", c.GetDefaultHandler(c.prepareAction(true, c.GenerateDemoTasksAction)))
+	c.EchoEngine.GET("/tasks/clear", c.GetDefaultHandler(c.prepareAction(true, c.ClearTasksAction)))
 
 	// accounts
 	c.GETPOST("/accounts/login", c.GetDefaultHandler(c.prepareAction(true, c.GetSessionAction)))
@@ -65,6 +83,14 @@ func (c *PalmHttpController) getGetUserActionIfSessionPresent(requiresAuth bool)
 
 func (c *PalmHttpController) readContact() pipeline.IAction {
 	return &readEntityAction{model: &entities.Contact{}}
+}
+
+func (c *PalmHttpController) readTask() pipeline.IAction {
+	return &readEntityAction{model: &entities.Task{}}
+}
+
+func (c *PalmHttpController) readSequence() pipeline.IAction {
+	return &readEntityAction{model: &entities.Sequence{}}
 }
 
 type readEntityAction struct {

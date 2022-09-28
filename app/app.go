@@ -7,7 +7,6 @@ import (
 	"github.com/itskovichanton/server/pkg/server/users"
 	"log"
 	"salespalm/server/app/backend"
-	"salespalm/server/app/frontend/grpc_server"
 	"salespalm/server/app/frontend/http_server"
 )
 
@@ -20,28 +19,16 @@ type PalmApp struct {
 	LoggerService  logger.ILoggerService
 	AuthService    users.IAuthService
 	opsLogger      *log.Logger
-	GrpcController *grpc_server.PalmGrpcControllerImpl
 	UserRepo       backend.IUserRepo
 	ContactService backend.IContactService
+	TaskService    backend.ITaskService
 	HttpController *http_server.PalmHttpController
 }
 
 func (c *PalmApp) Run() error {
 	c.registerUsers()
 	c.tests()
-	go func() {
-		err := c.HttpController.Start()
-		if err != nil {
-			panic(err)
-		}
-	}()
-	err := c.GrpcController.Start()
-	if err != nil {
-		c.ErrorHandler.Handle(err, true)
-		return err
-	}
-
-	return nil
+	return c.HttpController.Start()
 }
 
 func (c *PalmApp) tests() {

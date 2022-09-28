@@ -10,7 +10,6 @@ import (
 	"go.uber.org/dig"
 	"salespalm/server/app/backend"
 	"salespalm/server/app/frontend"
-	"salespalm/server/app/frontend/grpc_server"
 	"salespalm/server/app/frontend/http_server"
 )
 
@@ -35,21 +34,45 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewUploadContactsAction)
 	container.Provide(c.NewContactRepo)
 	container.Provide(c.NewTaskRepo)
+	container.Provide(c.NewClearTasksAction)
 	container.Provide(c.NewIDGenerator)
 	container.Provide(c.NewCreateOrUpdateContactAction)
 	container.Provide(c.NewContactService)
 	container.Provide(c.NewTaskService)
+	container.Provide(c.NewGetCommonsAction)
+	container.Provide(c.NewCommonsService)
 	container.Provide(c.NewB2BService)
 	container.Provide(c.NewDeleteContactAction)
 	container.Provide(c.NewSearchContactAction)
 	container.Provide(c.NewDeleteTaskAction)
-	container.Provide(c.NewContactGrpcHandler)
-	container.Provide(c.NewAccountGrpcHandler)
-	container.Provide(c.NewTaskGrpcHandler)
 	container.Provide(c.NewHttpController)
 	container.Provide(c.NewB2BRepo)
 	container.Provide(c.NewUploadB2BDataAction)
+	container.Provide(c.NewCommonsService)
+	container.Provide(c.NewGetTaskStatsAction)
+	container.Provide(c.NewSearchTaskAction)
+	container.Provide(c.NewSequenceService)
+	container.Provide(c.NewSequenceRepo)
+	container.Provide(c.NewCreateOrUpdateSequenceAction)
+	container.Provide(c.NewUserService)
+	container.Provide(c.NewTemplateService)
+	container.Provide(c.NewTaskDemoService)
+	container.Provide(c.NewGenerateDemoTasksAction)
+	container.Provide(c.NewClearTasksAction)
 
+}
+
+func (c *DI) NewTaskDemoService(Config *core.Config, AccountService backend.IUserService, TemplateService backend.ITemplateService, ContactService backend.IContactService, TaskService backend.ITaskService, SequenceService backend.ISequenceService) backend.ITaskDemoService {
+	r := &backend.TaskDemoServiceImpl{
+		ContactService:  ContactService,
+		TaskService:     TaskService,
+		SequenceService: SequenceService,
+		TemplateService: TemplateService,
+		AccountService:  AccountService,
+		Config:          Config,
+	}
+	r.Init()
+	return r
 }
 
 func (c *DI) NewDBService(idGenerator backend.IDGenerator, config *core.Config) (backend.IDBService, error) {
@@ -65,11 +88,17 @@ func (c *DI) NewDBService(idGenerator backend.IDGenerator, config *core.Config) 
 	return r, nil
 }
 
+func (c *DI) NewTemplateService(config *core.Config) backend.ITemplateService {
+	return &backend.TemplateServiceImpl{
+		Config: config,
+	}
+}
+
 func (c *DI) NewIDGenerator() backend.IDGenerator {
 	return &backend.IDGeneratorImpl{}
 }
 
-func (c *DI) NewContactRepo(idGenerator backend.IDGenerator, dbService backend.IDBService) backend.IContactRepo {
+func (c *DI) NewContactRepo(dbService backend.IDBService) backend.IContactRepo {
 	return &backend.ContactRepoImpl{
 		DBService: dbService,
 	}
@@ -89,55 +118,37 @@ func (c *DI) NewUserRepo(dbService backend.IDBService) backend.IUserRepo {
 	}
 }
 
-func (c *DI) NewTaskGrpcHandler(deleteTaskAction *frontend.DeleteTaskAction) *grpc_server.TaskGrpcHandler {
-	return &grpc_server.TaskGrpcHandler{
-		DeleteTaskAction: deleteTaskAction,
-	}
-}
-
-func (c *DI) NewAccountGrpcHandler() *grpc_server.AccountGrpcHandler {
-	return &grpc_server.AccountGrpcHandler{}
-}
-
-func (c *DI) NewContactGrpcHandler(searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction) *grpc_server.ContactGrpcHandler {
-	return &grpc_server.ContactGrpcHandler{
-		CreateOrUpdateContactAction: createOrUpdateContactAction,
-		DeleteContactAction:         deleteContactAction,
-		SearchContactAction:         searchContactAction,
-	}
-}
-
-func (c *DI) NewGrpcController(accountGrpcHandler *grpc_server.AccountGrpcHandler, contactGrpcHandler *grpc_server.ContactGrpcHandler, deleteTaskAction *frontend.DeleteTaskAction, grpcController *pipeline.GrpcControllerImpl) *grpc_server.PalmGrpcControllerImpl {
-	r := grpc_server.PalmGrpcControllerImpl{
-		GrpcControllerImpl: *grpcController,
-		NopAction:          &pipeline.NopActionImpl{},
-		ContactGrpcHandler: contactGrpcHandler,
-		AccountGrpcHandler: accountGrpcHandler,
-	}
-	accountGrpcHandler.PalmGrpcControllerImpl = r
-	contactGrpcHandler.PalmGrpcControllerImpl = r
-	return &r
-}
-
-func (c *DI) NewHttpController(AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmHttpController {
+func (c *DI) NewHttpController(ClearTasksAction *frontend.ClearTasksAction, GenerateDemoTasksAction *frontend.GenerateDemoTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmHttpController {
 	r := &http_server.PalmHttpController{
-		HttpControllerImpl:          *httpController,
-		CreateOrUpdateContactAction: createOrUpdateContactAction,
-		DeleteContactAction:         deleteContactAction,
-		SearchContactAction:         searchContactAction,
-		UploadContactsAction:        uploadContactsAction,
-		UploadB2BDataAction:         uploadB2BDataAction,
-		GetB2BInfoAction:            getB2BInfoAction,
-		ClearB2BTableAction:         clearB2BTableAction,
-		SearchB2BAction:             searchB2BAction,
-		UploadFromFileB2BDataAction: uploadFromFileB2BDataAction,
-		AddContactFromB2BAction:     AddContactFromB2BAction,
+		HttpControllerImpl:           *httpController,
+		CreateOrUpdateContactAction:  createOrUpdateContactAction,
+		DeleteContactAction:          deleteContactAction,
+		SearchContactAction:          searchContactAction,
+		UploadContactsAction:         uploadContactsAction,
+		UploadB2BDataAction:          uploadB2BDataAction,
+		GetB2BInfoAction:             getB2BInfoAction,
+		ClearB2BTableAction:          clearB2BTableAction,
+		SearchB2BAction:              searchB2BAction,
+		UploadFromFileB2BDataAction:  uploadFromFileB2BDataAction,
+		AddContactFromB2BAction:      AddContactFromB2BAction,
+		GetCommonsAction:             GetCommonsAction,
+		GetTaskStatsAction:           GetTaskStatsAction,
+		ClearTasksAction:             ClearTasksAction,
+		SearchTaskAction:             SearchTaskAction,
+		CreateOrUpdateSequenceAction: CreateOrUpdateSequenceAction,
+		GenerateDemoTasksAction:      GenerateDemoTasksAction,
 	}
 	r.Init()
 	return r
 }
 
-func (c *DI) NewApp(httpController *http_server.PalmHttpController, contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, grpcController *grpc_server.PalmGrpcControllerImpl, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
+func (c *DI) NewCreateOrUpdateSequenceAction(sequenceService backend.ISequenceService) *frontend.CreateOrUpdateSequenceAction {
+	return &frontend.CreateOrUpdateSequenceAction{
+		SequenceService: sequenceService,
+	}
+}
+
+func (c *DI) NewApp(httpController *http_server.PalmHttpController, contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
 	return &PalmApp{
 		HttpController: httpController,
 		Config:         config,
@@ -145,15 +156,38 @@ func (c *DI) NewApp(httpController *http_server.PalmHttpController, contactServi
 		ErrorHandler:   errorHandler,
 		LoggerService:  loggerService,
 		AuthService:    authService,
-		GrpcController: grpcController,
 		UserRepo:       userRepo,
 		ContactService: contactService,
+	}
+}
+
+func (c *DI) NewGenerateDemoTasksAction(taskDemoService backend.ITaskDemoService) *frontend.GenerateDemoTasksAction {
+	return &frontend.GenerateDemoTasksAction{
+		TaskDemoService: taskDemoService,
+	}
+}
+
+func (c *DI) NewClearTasksAction(taskService backend.ITaskService) *frontend.ClearTasksAction {
+	return &frontend.ClearTasksAction{
+		TaskService: taskService,
+	}
+}
+
+func (c *DI) NewGetTaskStatsAction(taskService backend.ITaskService) *frontend.GetTaskStatsAction {
+	return &frontend.GetTaskStatsAction{
+		TaskService: taskService,
 	}
 }
 
 func (c *DI) NewSearchB2BAction(b2bService backend.IB2BService) *frontend.SearchB2BAction {
 	return &frontend.SearchB2BAction{
 		B2BService: b2bService,
+	}
+}
+
+func (c *DI) NewGetCommonsAction(commonsService backend.ICommonsService) *frontend.GetCommonsAction {
+	return &frontend.GetCommonsAction{
+		CommonsService: commonsService,
 	}
 }
 
@@ -166,6 +200,12 @@ func (c *DI) NewClearB2BTableAction(b2bService backend.IB2BService) *frontend.Cl
 func (c *DI) NewUploadB2BDataAction(b2bService backend.IB2BService) *frontend.UploadB2BDataAction {
 	return &frontend.UploadB2BDataAction{
 		B2BService: b2bService,
+	}
+}
+
+func (c *DI) NewSearchTaskAction(taskService backend.ITaskService) *frontend.SearchTaskAction {
+	return &frontend.SearchTaskAction{
+		TaskService: taskService,
 	}
 }
 
@@ -199,6 +239,13 @@ func (c *DI) NewSearchContactAction(contactService backend.IContactService) *fro
 	}
 }
 
+func (c *DI) NewCommonsService(taskService backend.ITaskService, sequenceService backend.ISequenceService) backend.ICommonsService {
+	return &backend.CommonsServiceImpl{
+		SequenceService: sequenceService,
+		TaskService:     taskService,
+	}
+}
+
 func (c *DI) NewB2BService(B2BRepo backend.IB2BRepo, ContactRepo backend.IContactRepo) backend.IB2BService {
 	return &backend.B2BServiceImpl{
 		B2BRepo:     B2BRepo,
@@ -212,9 +259,27 @@ func (c *DI) NewContactService(contactRepo backend.IContactRepo) backend.IContac
 	}
 }
 
+func (c *DI) NewSequenceService(sequenceRepo backend.ISequenceRepo) backend.ISequenceService {
+	return &backend.SequenceServiceImpl{
+		SequenceRepo: sequenceRepo,
+	}
+}
+
+func (c *DI) NewUserService(userRepo backend.IUserRepo) backend.IUserService {
+	return &backend.UserServiceImpl{
+		UserRepo: userRepo,
+	}
+}
+
 func (c *DI) NewTaskService(taskRepo backend.ITaskRepo) backend.ITaskService {
 	return &backend.TaskServiceImpl{
 		TaskRepo: taskRepo,
+	}
+}
+
+func (c *DI) NewSequenceRepo(dbService backend.IDBService) backend.ISequenceRepo {
+	return &backend.SequenceRepoImpl{
+		DBService: dbService,
 	}
 }
 

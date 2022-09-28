@@ -12,6 +12,7 @@ type IContactRepo interface {
 	Delete(accountId entities.ID, ids []entities.ID)
 	CreateOrUpdate(contact *entities.Contact)
 	DeleteDuplicates(accountId entities.ID)
+	GetByIndex(accountId entities.ID, index int) *entities.Contact
 }
 
 type ContactRepoImpl struct {
@@ -29,8 +30,27 @@ type ContactSearchSettings struct {
 	Offset, Count, MaxSearchCount int
 }
 
+func (c *ContactRepoImpl) GetByIndex(accountId entities.ID, index int) *entities.Contact {
+	if index < 0 {
+		index = 0
+	}
+	contacts := c.DBService.DBContent().GetContacts().ForAccount(accountId)
+	if contacts != nil {
+		i := 0
+		for {
+			for _, r := range contacts {
+				i++
+				if i > index {
+					return r
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func (c *ContactRepoImpl) DeleteDuplicates(accountId entities.ID) {
-	contacts := c.DBService.DBContent().GetContacts().ForAccountId(accountId)
+	contacts := c.DBService.DBContent().GetContacts().ForAccount(accountId)
 	if contacts != nil {
 		//utils2.UniqueMap(contacts)
 	}
@@ -74,7 +94,7 @@ func (c *ContactRepoImpl) Delete(accountId entities.ID, ids []entities.ID) {
 
 func (c *ContactRepoImpl) CreateOrUpdate(contact *entities.Contact) {
 	c.DBService.DBContent().IDGenerator.AssignId(contact)
-	c.DBService.DBContent().GetContacts().ForAccountId(contact.AccountId)[contact.Id] = contact
+	c.DBService.DBContent().GetContacts().ForAccount(contact.AccountId)[contact.Id] = contact
 }
 
 func (c *ContactRepoImpl) applySettings(r []*entities.Contact, settings *ContactSearchSettings) *ContactSearchResult {

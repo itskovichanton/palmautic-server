@@ -3,7 +3,6 @@ package entities
 import (
 	"github.com/itskovichanton/goava/pkg/goava/utils/case_insensitive"
 	"github.com/spf13/cast"
-	"time"
 )
 
 type ID int64
@@ -43,6 +42,7 @@ func (c *BaseEntity) GetAccountId() ID {
 
 type Contact struct {
 	BaseEntity
+
 	Phone    string `check:"phone" json:"phone"`
 	Name     string `check:"notempty" json:"name"`
 	Email    string `check:"notempty,email" json:"email"`
@@ -50,29 +50,14 @@ type Contact struct {
 	Linkedin string `json:"linkedin"`
 }
 
-type Task struct {
-	BaseEntity  `json:"omitempty"`
-	Title       string `check:"notempty"`
-	Description string `check:"notempty"`
-	Type        TaskType
-	Status      TaskStatus
-	Timeout     time.Duration
+type NameAndTitle struct {
+	Name, Title string
 }
 
-type TaskType int
-
-const (
-	WriteLetter TaskType = iota
-	DoSomething
-)
-
-type TaskStatus int
-
-const (
-	ClosedPositive TaskStatus = iota
-	ClosedNegative
-	Active
-)
+type IDAndTitle struct {
+	Title string
+	ID    ID
+}
 
 type B2Bdb struct {
 	Tables []*B2BTable
