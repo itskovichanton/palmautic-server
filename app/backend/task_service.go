@@ -15,14 +15,17 @@ type ITaskService interface {
 	Stats(accountId entities.ID) *entities.TaskStats
 	Commons(accountId entities.ID) *entities.TaskCommons
 	Clear(accountId entities.ID)
+	Skip(task *entities.Task) (*entities.Task, error)
+	Execute(task *entities.Task) (*entities.Task, error)
 }
 
 type TaskServiceImpl struct {
 	ITaskService
 
-	TaskRepo        ITaskRepo
-	TemplateService ITemplateService
-	AccountService  IUserService
+	TaskRepo            ITaskRepo
+	TemplateService     ITemplateService
+	AccountService      IUserService
+	TaskExecutorService ITaskExecutorService
 }
 
 func (c *TaskServiceImpl) Commons(accountId entities.ID) *entities.TaskCommons {
@@ -77,6 +80,68 @@ func (c *TaskServiceImpl) Delete(filter *entities.Task) (*entities.Task, error) 
 	}
 	deleted := c.TaskRepo.Delete(task)
 	return deleted, nil
+}
+
+func (c *TaskServiceImpl) Skip(task *entities.Task) (*entities.Task, error) {
+	if task.ReadyForSearch() {
+
+		foundTasks := c.TaskRepo.Search(task)
+
+		if len(foundTasks) == 0 {
+			return nil, errs.NewBaseErrorWithReason("Задача не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
+		}
+
+		storedTask := foundTasks[0]
+
+		if storedTask.Status == entities.TaskStatusSkipped {
+			return storedTask, nil
+		}
+
+		if storedTask.HasStatusFinal() {
+			return storedTask, errs.NewBaseErrorWithReason("Нельзя выполнить задачу в финальном статусе", frmclient.ReasonServerRespondedWithError)
+		}
+
+		// Обновили задачу в БД в соответствии с тем, что хочет отправить юзер
+		storedTask.Body = task.Body
+		storedTask.Subject = task.Subject
+		c.TaskExecutorService.Execute(storedTask) // пока не проверяю статус выполнения
+		storedTask.Status = entities.TaskStatusCompleted
+
+		return storedTask, nil
+	}
+
+	return nil, errs.NewBaseErrorWithReason("Невозможно найти задачу по переданным параметрам", frmclient.ReasonServerRespondedWithErrorNotFound)
+}
+
+func (c *TaskServiceImpl) Execute(task *entities.Task) (*entities.Task, error) {
+	if task.ReadyForSearch() {
+
+		foundTasks := c.TaskRepo.Search(task)
+
+		if len(foundTasks) == 0 {
+			return nil, errs.NewBaseErrorWithReason("Задача не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
+		}
+
+		storedTask := foundTasks[0]
+
+		if storedTask.Status == entities.TaskStatusCompleted {
+			return storedTask, nil
+		}
+
+		if storedTask.HasStatusFinal() {
+			return storedTask, errs.NewBaseErrorWithReason("Нельзя выполнить задачу в финальном статусе", frmclient.ReasonServerRespondedWithError)
+		}
+
+		// Обновили задачу в БД в соответствии с тем, что хочет отправить юзер
+		storedTask.Body = task.Body
+		storedTask.Subject = task.Subject
+		c.TaskExecutorService.Execute(storedTask) // пока не проверяю статус выполнения
+		storedTask.Status = entities.TaskStatusCompleted
+
+		return storedTask, nil
+	}
+
+	return nil, errs.NewBaseErrorWithReason("Невозможно найти задачу по переданным параметрам", frmclient.ReasonServerRespondedWithErrorNotFound)
 }
 
 func (c *TaskServiceImpl) CreateOrUpdate(task *entities.Task) (*entities.Task, error) {

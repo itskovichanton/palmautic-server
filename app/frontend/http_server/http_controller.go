@@ -30,6 +30,8 @@ type PalmHttpController struct {
 	SearchTaskAction             *frontend.SearchTaskAction
 	GenerateDemoTasksAction      *frontend.GenerateDemoTasksAction
 	ClearTasksAction             *frontend.ClearTasksAction
+	SkipTaskAction               *frontend.SkipTaskAction
+	ExecuteTaskAction            *frontend.ExecuteTaskAction
 }
 
 func (c *PalmHttpController) Init() {
@@ -44,6 +46,8 @@ func (c *PalmHttpController) Init() {
 	c.EchoEngine.GET("/tasks/stats", c.GetDefaultHandler(c.prepareAction(true, c.GetTaskStatsAction)))
 	c.EchoEngine.POST("/tasks/search", c.GetDefaultHandler(c.prepareAction(true, c.readTask(), c.SearchTaskAction)))
 	c.EchoEngine.POST("/demo/tasks/generate", c.GetDefaultHandler(c.prepareAction(true, c.readTask(), c.GenerateDemoTasksAction)))
+	c.EchoEngine.POST("/tasks/skip", c.GetDefaultHandler(c.prepareAction(true, c.readTask(), c.SkipTaskAction)))
+	c.EchoEngine.POST("/tasks/execute", c.GetDefaultHandler(c.prepareAction(true, c.readTask(), c.ExecuteTaskAction)))
 	c.EchoEngine.GET("/tasks/clear", c.GetDefaultHandler(c.prepareAction(true, c.ClearTasksAction)))
 
 	// accounts

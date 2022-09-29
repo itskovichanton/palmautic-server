@@ -84,3 +84,34 @@ func (c *ClearTasksAction) Run(arg interface{}) (interface{}, error) {
 	c.TaskService.Clear(entities.ID(cp.Caller.Session.Account.ID))
 	return "task cleared", nil
 }
+
+type SkipTaskAction struct {
+	pipeline.BaseActionImpl
+
+	TaskService backend.ITaskService
+}
+
+func (c *SkipTaskAction) Run(arg interface{}) (interface{}, error) {
+	p := arg.(*RetrievedEntityParams)
+	task := p.Entity.(*entities.Task)
+	return c.TaskService.Skip(task)
+}
+
+type ExecuteTaskAction struct {
+	pipeline.BaseActionImpl
+
+	TaskService backend.ITaskService
+}
+
+func (c *ExecuteTaskAction) Run(arg interface{}) (interface{}, error) {
+	p := arg.(*RetrievedEntityParams)
+	task := p.Entity.(*entities.Task)
+	executed, err := c.TaskService.Execute(task)
+	if err != nil {
+		return nil, err
+	}
+	return &entities.Task{
+		BaseEntity: executed.BaseEntity,
+		Status:     executed.Status,
+	}, nil
+}
