@@ -3,14 +3,15 @@ package backend
 import (
 	"fmt"
 	"github.com/itskovichanton/core/pkg/core"
+	"github.com/itskovichanton/goava/pkg/goava/utils"
 	"math/rand"
-	"path/filepath"
 	"salespalm/server/app/entities"
+	utils2 "salespalm/server/app/utils"
 	"time"
 )
 
 type ITaskDemoService interface {
-	GenerateTasks(count int, accountId entities.ID) int
+	GenerateTasks(count int, task *entities.Task) int
 	FindRandomContact(accountId entities.ID) *entities.Contact
 }
 
@@ -23,24 +24,25 @@ type TaskDemoServiceImpl struct {
 	TemplateService ITemplateService
 	AccountService  IUserService
 	Config          *core.Config
-	templateDir     string
+	templates       map[string]string
 }
 
-func (c *TaskDemoServiceImpl) Init() {
+func (c *TaskDemoServiceImpl) Init() error {
 	rand.Seed(42)
-	c.templateDir = c.Config.GetOnBaseWorkDir("manual_email_templates")
+	c.templates = c.TemplateService.Templates()
+	return nil
 }
 
 func (c *TaskDemoServiceImpl) FindRandomContact(accountId entities.ID) *entities.Contact {
-	return c.ContactService.GetByIndex(accountId, rand.Intn(10000))
+	return c.ContactService.GetByIndex(accountId, rand.Intn(1000))
 }
 
-func (c *TaskDemoServiceImpl) GenerateTasks(count int, accountId entities.ID) int {
+func (c *TaskDemoServiceImpl) GenerateTasks(count int, task *entities.Task) int {
 
 	generated := 0
 	for i := 0; i < count; i++ {
-		contact := c.FindRandomContact(accountId)
-		_, err := c.TaskService.CreateOrUpdate(c.generateRandomTask(contact, accountId))
+		contact := c.FindRandomContact(task.AccountId)
+		_, err := c.TaskService.CreateOrUpdate(c.generateRandomTask(contact, task))
 		if err == nil {
 			generated++
 		}
@@ -48,20 +50,25 @@ func (c *TaskDemoServiceImpl) GenerateTasks(count int, accountId entities.ID) in
 	return generated
 }
 
-func (c *TaskDemoServiceImpl) generateRandomTask(contact *entities.Contact, accountId entities.ID) *entities.Task {
+func (c *TaskDemoServiceImpl) generateRandomTask(contact *entities.Contact, spec *entities.Task) *entities.Task {
 
 	r := &entities.Task{
 		BaseEntity: entities.BaseEntity{
-			AccountId: accountId,
+			AccountId: spec.AccountId,
 		},
 		Sequence: &entities.IDAndTitle{
-			ID: c.SequenceService.GetByIndex(accountId, 10).GetId(),
+			ID: c.SequenceService.GetByIndex(spec.AccountId, rand.Intn(30)).GetId(),
 		},
 		Contact: contact,
 	}
 
-	types := c.TaskService.Meta(accountId).Types
-	taskType := types[rand.Intn(len(types))]
+	types := c.TaskService.Commons(spec.AccountId).Types
+	var taskType *entities.TaskType
+	if len(spec.Type) == 0 {
+		_, taskType = utils.RandomEntry(types)
+	} else {
+		taskType = types[spec.Type]
+	}
 	r.Type = taskType.Creds.Name
 	if taskType.IsMessenger() && len(contact.Phone) == 0 {
 		if rand.Intn(10) > 5 {
@@ -76,11 +83,11 @@ func (c *TaskDemoServiceImpl) generateRandomTask(contact *entities.Contact, acco
 	switch r.Type {
 	case entities.TaskTypeWhatsapp.Creds.Name:
 		r.Name = "Написать в Whatsapp"
-		r.Description = "Написать в личное сообщение Whatsapp: https://wa.me/" + contact.Phone
+		r.Description = "Написать в личное сообщение Whatsapp: " + utils2.FormatUrl("https://wa.me", contact.Phone)
 		break
 	case entities.TaskTypeTelegram.Creds.Name:
 		r.Name = "Написать в Telegram"
-		r.Description = "Написать в личное сообщение Telegram: https://t.me/" + contact.Phone
+		r.Description = "Написать в личное сообщение Telegram: " + utils2.FormatUrl("https://t.me", contact.Phone)
 		break
 	case entities.TaskTypeCall.Creds.Name:
 		r.Name = "Позвонить по телефону"
@@ -91,17 +98,22 @@ func (c *TaskDemoServiceImpl) generateRandomTask(contact *entities.Contact, acco
 		break
 	case entities.TaskTypeManualEmail.Creds.Name:
 		r.Name = "Отправить письмо"
-		r.Description = fmt.Sprintf("Отправить письмо для %v (%v)", contact.Name, contact.Phone)
+		r.Description = fmt.Sprintf("Отправить письмо для %v на %v", contact.Name, contact.Email)
 		break
 	}
 
-	if r.Type == entities.TaskTypeManualEmail.Creds.Name {
+	switch r.Type {
+	case entities.TaskTypeManualEmail.Creds.Name:
 		r.DueTime = time.Now().Add(20 * time.Minute)
-		r.Body, _ = c.TemplateService.GetTemplate(filepath.Join(c.templateDir, "manual_email_it_hr.html"), &map[string]interface{}{
-			"Contact": r.Contact,
-			"Me":      c.AccountService.Accounts()[accountId],
-		})
-	} else {
+		templateName, _ := utils.RandomEntry(c.templates)
+		r.Body = "template:" + templateName
+		r.Subject = "Компания ITBest приглашает Вас на собеседование!"
+		break
+	case entities.TaskTypeCall.Creds.Name:
+		r.Body = fmt.Sprintf(`Добрый день, я говорю с %v?. Отлично! Меня зовут Антон, я - менеджер по набору персонала в компании ITBestTech. Мы хотели бы пригласить Вас на собеседование. Как я понимаю, сейчас Вы трудоустроены в компании "%v"?`, contact.Name, contact.Company)
+		r.DueTime = time.Now().Add(15 * time.Minute)
+		break
+	default:
 		r.Body = fmt.Sprintf(`Добрый день, %v 👋 Как я понимаю, сейчас Вы трудоустроены в компании "%v". Меня зовут Антон, я - менеджер по набору персонала в компании ITBestTech. Мы хотели бы пригласить Вас на собеседование. Интересно ли Вам наше предложение?`, contact.Name, contact.Company)
 		r.DueTime = time.Now().Add(10 * time.Minute)
 	}

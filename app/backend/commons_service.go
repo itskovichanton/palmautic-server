@@ -7,8 +7,8 @@ type ICommonsService interface {
 }
 
 type Commons struct {
-	Tasks     *entities.TaskMeta
-	Sequences *entities.SequenceMeta
+	Tasks     *entities.TaskCommons
+	Sequences *entities.SequenceCommons
 }
 
 type CommonsServiceImpl struct {
@@ -20,7 +20,7 @@ type CommonsServiceImpl struct {
 
 func (c *CommonsServiceImpl) Commons(accountId entities.ID) *Commons {
 	return &Commons{
-		Tasks:     c.TaskService.Meta(accountId),
-		Sequences: c.SequenceService.Meta(accountId),
+		Tasks:     c.TaskService.Commons(accountId),
+		Sequences: c.SequenceService.Commons(accountId),
 	}
 }

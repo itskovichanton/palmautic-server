@@ -17,10 +17,11 @@ type Task struct {
 	Action             string
 	Body               string
 	Subject            string
+	Alertness          string
 }
 
-type TaskMeta struct {
-	Types    []*TaskType
+type TaskCommons struct {
+	Types    map[string]*TaskType
 	Statuses []string
 	Stats    *TaskStats
 }
@@ -37,6 +38,7 @@ func (t Task) HasStatusFinal() bool {
 type TaskType struct {
 	Creds   *NameAndTitle
 	Actions []*TaskAction
+	Order   int
 }
 
 func (t TaskType) IsMessenger() bool {
@@ -113,4 +115,9 @@ const (
 	TaskStatusStarted   = "started"
 	TaskStatusSkipped   = "skipped"
 	//TaskStatusPending   = "pending"
+
+	TaskAlertnessGreen  = "green"
+	TaskAlertnessOrange = "orange"
+	TaskAlertnessRed    = "red"
+	TaskAlertnessGray   = "gray"
 )

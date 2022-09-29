@@ -43,7 +43,7 @@ func (c *PalmHttpController) Init() {
 	// tasks
 	c.EchoEngine.GET("/tasks/stats", c.GetDefaultHandler(c.prepareAction(true, c.GetTaskStatsAction)))
 	c.EchoEngine.POST("/tasks/search", c.GetDefaultHandler(c.prepareAction(true, c.readTask(), c.SearchTaskAction)))
-	c.EchoEngine.GET("/demo/tasks/generate", c.GetDefaultHandler(c.prepareAction(true, c.GenerateDemoTasksAction)))
+	c.EchoEngine.POST("/demo/tasks/generate", c.GetDefaultHandler(c.prepareAction(true, c.readTask(), c.GenerateDemoTasksAction)))
 	c.EchoEngine.GET("/tasks/clear", c.GetDefaultHandler(c.prepareAction(true, c.ClearTasksAction)))
 
 	// accounts

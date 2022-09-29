@@ -5,10 +5,10 @@ import (
 )
 
 type ISequenceRepo interface {
-	//Search(filter *entities.Sequence) []*entities.Sequences
+	//Search(filter *entities.Sequence) []*entities.SequenceContainer
 	//Delete(filter *entities.Sequence) *entities.Sequence
 	CreateOrUpdate(sequence *entities.Sequence)
-	Meta() *entities.SequenceMeta
+	Commons() *entities.SequenceCommons
 	GetByIndex(accountId entities.ID, index int) *entities.Sequence
 }
 
@@ -23,7 +23,7 @@ func (c *SequenceRepoImpl) GetByIndex(accountId entities.ID, index int) *entitie
 		index = 1
 	}
 	sequences := c.DBService.DBContent().GetSequenceContainer().Sequences.ForAccount(accountId)
-	if sequences != nil {
+	if sequences != nil && len(sequences) > 0 {
 		i := 0
 		for {
 			for _, r := range sequences {
@@ -39,7 +39,7 @@ func (c *SequenceRepoImpl) GetByIndex(accountId entities.ID, index int) *entitie
 
 /*
 func (c *SequenceRepoImpl) Search(filter *entities.Sequence) []*entities.Sequence {
-	rMap := c.DBService.DBContent().GetSequenceContainer().Sequences[filter.AccountId]
+	rMap := c.DBService.DBContent().GetSequenceContainer().SequenceContainer[filter.AccountId]
 	if len(rMap) == 0 {
 		return []*entities.Sequence{}
 	}
@@ -76,10 +76,10 @@ func (c *SequenceRepoImpl) Search(filter *entities.Sequence) []*entities.Sequenc
 }
 
 func (c *SequenceRepoImpl) Delete(filter *entities.Sequence) *entities.Sequence {
-	Sequences := c.DBService.DBContent().GetSequenceContainer().Sequences[filter.AccountId]
-	deleted := Sequences[filter.Id]
+	SequenceContainer := c.DBService.DBContent().GetSequenceContainer().SequenceContainer[filter.AccountId]
+	deleted := SequenceContainer[filter.Id]
 	if deleted != nil {
-		delete(Sequences, filter.Id)
+		delete(SequenceContainer, filter.Id)
 	}
 	return deleted
 }
@@ -90,6 +90,6 @@ func (c *SequenceRepoImpl) CreateOrUpdate(sequence *entities.Sequence) {
 	c.DBService.DBContent().GetSequenceContainer().Sequences.ForAccount(sequence.AccountId)[sequence.Id] = sequence
 }
 
-func (c *SequenceRepoImpl) Meta() *entities.SequenceMeta {
-	return c.DBService.DBContent().GetSequenceContainer().Meta
+func (c *SequenceRepoImpl) Commons() *entities.SequenceCommons {
+	return c.DBService.DBContent().GetSequenceContainer().Commons
 }

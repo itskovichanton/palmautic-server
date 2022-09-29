@@ -62,7 +62,7 @@ func (c *DI) InitDI() {
 
 }
 
-func (c *DI) NewTaskDemoService(Config *core.Config, AccountService backend.IUserService, TemplateService backend.ITemplateService, ContactService backend.IContactService, TaskService backend.ITaskService, SequenceService backend.ISequenceService) backend.ITaskDemoService {
+func (c *DI) NewTaskDemoService(Config *core.Config, AccountService backend.IUserService, TemplateService backend.ITemplateService, ContactService backend.IContactService, TaskService backend.ITaskService, SequenceService backend.ISequenceService) (backend.ITaskDemoService, error) {
 	r := &backend.TaskDemoServiceImpl{
 		ContactService:  ContactService,
 		TaskService:     TaskService,
@@ -71,8 +71,8 @@ func (c *DI) NewTaskDemoService(Config *core.Config, AccountService backend.IUse
 		AccountService:  AccountService,
 		Config:          Config,
 	}
-	r.Init()
-	return r
+	err := r.Init()
+	return r, err
 }
 
 func (c *DI) NewDBService(idGenerator backend.IDGenerator, config *core.Config) (backend.IDBService, error) {
@@ -80,7 +80,7 @@ func (c *DI) NewDBService(idGenerator backend.IDGenerator, config *core.Config) 
 		IDGenerator: idGenerator,
 		Config:      config,
 	}
-	err := r.Load("")
+	err := r.Load()
 	if err != nil {
 		return nil, err
 	}
@@ -88,10 +88,12 @@ func (c *DI) NewDBService(idGenerator backend.IDGenerator, config *core.Config) 
 	return r, nil
 }
 
-func (c *DI) NewTemplateService(config *core.Config) backend.ITemplateService {
-	return &backend.TemplateServiceImpl{
+func (c *DI) NewTemplateService(config *core.Config) (backend.ITemplateService, error) {
+	r := &backend.TemplateServiceImpl{
 		Config: config,
 	}
+	err := r.Init()
+	return r, err
 }
 
 func (c *DI) NewIDGenerator() backend.IDGenerator {
@@ -271,9 +273,11 @@ func (c *DI) NewUserService(userRepo backend.IUserRepo) backend.IUserService {
 	}
 }
 
-func (c *DI) NewTaskService(taskRepo backend.ITaskRepo) backend.ITaskService {
+func (c *DI) NewTaskService(taskRepo backend.ITaskRepo, TemplateService backend.ITemplateService, UserService backend.IUserService) backend.ITaskService {
 	return &backend.TaskServiceImpl{
-		TaskRepo: taskRepo,
+		TaskRepo:        taskRepo,
+		TemplateService: TemplateService,
+		AccountService:  UserService,
 	}
 }
 

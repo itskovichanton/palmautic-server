@@ -8,20 +8,39 @@ import (
 )
 
 type ITemplateService interface {
-	GetTemplate(templateFileName string, arg interface{}) (string, error)
+	Format(templateFileName string, arg interface{}) string
+	Templates() map[string]string
 }
 
 type TemplateServiceImpl struct {
 	ITemplateService
 
-	Config *core.Config
+	Config    *core.Config
+	templates map[string]string
 }
 
-func (c *TemplateServiceImpl) GetTemplate(templateFileName string, arg interface{}) (string, error) {
-	templateFileName = filepath.Join(c.Config.GetOnBaseWorkDir("manual_email_templates"), templateFileName)
-	b, err := os.ReadFile(templateFileName)
+func (c *TemplateServiceImpl) Templates() map[string]string {
+	return c.templates
+}
+
+func (c *TemplateServiceImpl) Init() error {
+	c.templates = map[string]string{}
+	templatesDir := c.Config.GetOnBaseWorkDir("manual_email_templates")
+	files, err := os.ReadDir(templatesDir)
 	if err != nil {
-		return "", nil
+		return err
 	}
-	return utils.Format(string(b)).Exec(arg), nil
+	for _, f := range files {
+		fBytes, err := os.ReadFile(filepath.Join(templatesDir, f.Name()))
+		if err != nil {
+			return err
+		}
+		c.templates[f.Name()] = string(fBytes)
+	}
+	return nil
+}
+
+func (c *TemplateServiceImpl) Format(template string, arg interface{}) string {
+	template = c.templates[template]
+	return utils.Format(template).Exec(arg)
 }

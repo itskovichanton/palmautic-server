@@ -89,7 +89,7 @@ func (c *ContactRepoImpl) Delete(accountId entities.ID, ids []entities.ID) {
 		delete(contacts, id)
 	}
 	c.DBService.DBContent().GetContacts()[accountId] = contacts
-	c.DBService.Reload("")
+	c.DBService.Reload()
 }
 
 func (c *ContactRepoImpl) CreateOrUpdate(contact *entities.Contact) {

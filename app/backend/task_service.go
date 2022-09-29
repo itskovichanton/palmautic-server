@@ -4,6 +4,7 @@ import (
 	"github.com/itskovichanton/core/pkg/core/frmclient"
 	"github.com/itskovichanton/goava/pkg/goava/errs"
 	"salespalm/server/app/entities"
+	"strings"
 	"time"
 )
 
@@ -12,18 +13,20 @@ type ITaskService interface {
 	Delete(filter *entities.Task) (*entities.Task, error)
 	CreateOrUpdate(Task *entities.Task) (*entities.Task, error)
 	Stats(accountId entities.ID) *entities.TaskStats
-	Meta(accountId entities.ID) *entities.TaskMeta
+	Commons(accountId entities.ID) *entities.TaskCommons
 	Clear(accountId entities.ID)
 }
 
 type TaskServiceImpl struct {
 	ITaskService
 
-	TaskRepo ITaskRepo
+	TaskRepo        ITaskRepo
+	TemplateService ITemplateService
+	AccountService  IUserService
 }
 
-func (c *TaskServiceImpl) Meta(accountId entities.ID) *entities.TaskMeta {
-	r := c.TaskRepo.Meta()
+func (c *TaskServiceImpl) Commons(accountId entities.ID) *entities.TaskCommons {
+	r := c.TaskRepo.Commons()
 	r.Stats = c.Stats(accountId)
 	return r
 }
@@ -35,17 +38,28 @@ func (c *TaskServiceImpl) Stats(accountId entities.ID) *entities.TaskStats {
 		ByType:   map[string]int{},
 		ByStatus: map[string]int{},
 	}
-	for _, t := range c.TaskRepo.Meta().Types {
+	for _, t := range c.TaskRepo.Commons().Types {
 		r.ByType[t.Creds.Name] = len(c.TaskRepo.Search(&entities.Task{BaseEntity: be, Type: t.Creds.Name}))
 	}
-	for _, s := range c.TaskRepo.Meta().Statuses {
+	for _, s := range c.TaskRepo.Commons().Statuses {
 		r.ByStatus[s] = len(c.TaskRepo.Search(&entities.Task{BaseEntity: be, Status: s}))
 	}
 	return r
 }
 
 func (c *TaskServiceImpl) Search(filter *entities.Task) []*entities.Task {
-	return c.TaskRepo.Search(filter)
+	r := c.TaskRepo.Search(filter)
+	for _, t := range r {
+		t.Alertness = c.CalcAlertness(t)
+		if strings.HasPrefix(t.Body, "template") {
+			templateName := strings.Split(t.Body, ":")[1]
+			t.Body = c.TemplateService.Format(templateName, &map[string]interface{}{
+				"Contact": t.Contact,
+				"Me":      c.AccountService.Accounts()[filter.AccountId],
+			})
+		}
+	}
+	return r
 }
 
 func (c *TaskServiceImpl) Clear(accountId entities.ID) {
@@ -93,4 +107,11 @@ func (c *TaskServiceImpl) CreateOrUpdate(task *entities.Task) (*entities.Task, e
 	c.TaskRepo.CreateOrUpdate(task)
 	// оповести eventbus что есть новая задача
 	return task, nil
+}
+
+func (c *TaskServiceImpl) CalcAlertness(t *entities.Task) string {
+	if t.Status == entities.TaskStatusStarted {
+		return entities.TaskAlertnessGreen
+	}
+	return entities.TaskAlertnessGray
 }

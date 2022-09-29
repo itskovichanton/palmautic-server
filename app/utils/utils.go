@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"fmt"
+	"net/url"
 	"salespalm/server/app/entities"
 	"sort"
 )
@@ -18,4 +20,8 @@ func SortTasks[V *entities.Task](r []*entities.Task) {
 		}
 		return r[i].GetId() > r[j].GetId()
 	})
+}
+
+func FormatUrl(u string, arg string) string {
+	return fmt.Sprintf("%v/%v", u, url.QueryEscape(arg))
 }

@@ -63,12 +63,13 @@ type GenerateDemoTasksAction struct {
 }
 
 func (c *GenerateDemoTasksAction) Run(arg interface{}) (interface{}, error) {
-	cp := arg.(*core.CallParams)
-	count, _ := validation.CheckInt("count", cp.GetParamInt("count", 1))
+	p := arg.(*RetrievedEntityParams)
+	task := p.Entity.(*entities.Task)
+	count, _ := validation.CheckInt("count", p.CallParams.GetParamInt("count", 1))
 	if count == 0 {
 		count = 10
 	}
-	c.TaskDemoService.GenerateTasks(count, entities.ID(cp.Caller.Session.Account.ID))
+	c.TaskDemoService.GenerateTasks(count, task)
 	return fmt.Sprintf("%v tasks generated", count), nil
 }
 

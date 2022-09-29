@@ -7,7 +7,7 @@ type Sequence struct {
 	Description string
 }
 
-type SequenceMeta struct {
+type SequenceCommons struct {
 	//Types    []*TaskType
 	//Statuses []string
 	//Stats    *TaskStats

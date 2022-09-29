@@ -9,7 +9,7 @@ type ISequenceService interface {
 	//Delete(filter *entities.Sequence) (*entities.Sequence, error)
 	CreateOrUpdate(sequence *entities.Sequence) (*entities.Sequence, error)
 	//Stats(accountId entities.ID) *entities.SequenceStats
-	Meta(accountId entities.ID) *entities.SequenceMeta
+	Commons(accountId entities.ID) *entities.SequenceCommons
 	GetByIndex(accountId entities.ID, index int) *entities.Sequence
 }
 
@@ -23,8 +23,8 @@ func (c *SequenceServiceImpl) GetByIndex(accountId entities.ID, index int) *enti
 	return c.SequenceRepo.GetByIndex(accountId, index)
 }
 
-func (c *SequenceServiceImpl) Meta(accountId entities.ID) *entities.SequenceMeta {
-	r := c.SequenceRepo.Meta()
+func (c *SequenceServiceImpl) Commons(accountId entities.ID) *entities.SequenceCommons {
+	r := c.SequenceRepo.Commons()
 	//r.Stats = c.Stats(accountId)
 	return r
 }
@@ -37,10 +37,10 @@ func (c *SequenceServiceImpl) Stats(accountId entities.ID) *entities.SequenceSta
 		ByType:   map[string]int{},
 		ByStatus: map[string]int{},
 	}
-	for _, t := range c.SequenceRepo.Meta().Types {
+	for _, t := range c.SequenceRepo.Commons().Types {
 		r.ByType[t.Creds.Name] = len(c.Search(&entities.Sequence{BaseEntity: be, Type: t.Creds.Name}))
 	}
-	for _, s := range c.SequenceRepo.Meta().Statuses {
+	for _, s := range c.SequenceRepo.Commons().Statuses {
 		r.ByStatus[s] = len(c.Search(&entities.Sequence{BaseEntity: be, Status: s}))
 	}
 	return r
@@ -51,11 +51,11 @@ func (c *SequenceServiceImpl) Search(filter *entities.Sequence) []*entities.Sequ
 }
 
 func (c *SequenceServiceImpl) Delete(filter *entities.Sequence) (*entities.Sequence, error) {
-	Sequences := c.SequenceRepo.Search(filter)
-	if len(Sequences) == 0 {
+	SequenceContainer := c.SequenceRepo.Search(filter)
+	if len(SequenceContainer) == 0 {
 		return nil, errs.NewBaseErrorWithReason("Задача не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
 	}
-	Sequence := Sequences[0]
+	Sequence := SequenceContainer[0]
 	if Sequence.Status == entities.SequenceStatusStarted {
 		return nil, errs.NewBaseErrorWithReason("Задача активна - ее нельзя удалить", frmclient.ReasonValidation)
 	}

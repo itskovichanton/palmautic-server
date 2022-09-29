@@ -11,22 +11,22 @@ type Tasks map[entities.ID]*entities.Task
 type Sequences map[entities.ID]*entities.Sequence
 
 type DBContent struct {
-	IDGenerator IDGenerator
-	Accounts    Accounts
-	Contacts    AccountContactsMap
-	Tasks       *TaskContainer
-	B2Bdb       *entities.B2Bdb
-	Sequences   *SequencesContainer
+	IDGenerator       IDGenerator
+	Accounts          Accounts
+	Contacts          AccountContactsMap
+	TaskContainer     *TaskContainer
+	B2Bdb             *entities.B2Bdb
+	SequenceContainer *SequencesContainer
 }
 
 type SequencesContainer struct {
 	Sequences AccountSequencesMap
-	Meta      *entities.SequenceMeta
+	Commons   *entities.SequenceCommons
 }
 
 type TaskContainer struct {
-	Tasks AccountTasksMap
-	Meta  *entities.TaskMeta
+	Tasks   AccountTasksMap
+	Commons *entities.TaskCommons
 }
 
 func (c *DBContent) GetContacts() AccountContactsMap {
@@ -37,26 +37,31 @@ func (c *DBContent) GetContacts() AccountContactsMap {
 }
 
 func (c *DBContent) GetSequenceContainer() *SequencesContainer {
-	if c.Sequences == nil {
-		c.Sequences = &SequencesContainer{
+	if c.SequenceContainer == nil {
+		c.SequenceContainer = &SequencesContainer{
 			Sequences: AccountSequencesMap{},
-			Meta:      &entities.SequenceMeta{},
+			Commons:   &entities.SequenceCommons{},
 		}
 	}
-	return c.Sequences
+	return c.SequenceContainer
 }
 
 func (c *DBContent) GetTaskContainer() *TaskContainer {
-	if c.Tasks == nil {
-		c.Tasks = &TaskContainer{
+	if c.TaskContainer == nil {
+		c.TaskContainer = &TaskContainer{
 			Tasks: AccountTasksMap{},
-			Meta: &entities.TaskMeta{
+			Commons: &entities.TaskCommons{
 				Statuses: []string{entities.TaskStatusStarted, entities.TaskStatusCompleted, entities.TaskStatusSkipped},
-				Types:    []*entities.TaskType{entities.TaskTypeManualEmail, entities.TaskTypeCall, entities.TaskTypeWhatsapp, entities.TaskTypeTelegram, entities.TaskTypeLinkedin},
 			},
 		}
+		types := []*entities.TaskType{entities.TaskTypeManualEmail, entities.TaskTypeCall, entities.TaskTypeWhatsapp, entities.TaskTypeTelegram, entities.TaskTypeLinkedin}
+		c.TaskContainer.Commons.Types = map[string]*entities.TaskType{}
+		for index, t := range types {
+			t.Order = index
+			c.TaskContainer.Commons.Types[t.Creds.Name] = t
+		}
 	}
-	return c.Tasks
+	return c.TaskContainer
 }
 
 func (c *DBContent) createFilter(f string) entities.IFilter {

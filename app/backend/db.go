@@ -9,10 +9,10 @@ import (
 )
 
 type IDBService interface {
-	Save(fileName string) error
-	Load(fileName string) error
+	Save() error
+	Load() error
 	DBContent() *DBContent
-	Reload(fileName string) error
+	Reload() error
 }
 
 type InMemoryDemoDBServiceImpl struct {
@@ -23,10 +23,10 @@ type InMemoryDemoDBServiceImpl struct {
 	IDGenerator IDGenerator
 }
 
-func (c *InMemoryDemoDBServiceImpl) Reload(fileName string) error {
-	err := c.Save(fileName)
+func (c *InMemoryDemoDBServiceImpl) Reload() error {
+	err := c.Save()
 	if err == nil {
-		err = c.Load(fileName)
+		err = c.Load()
 	}
 	return err
 }
@@ -35,7 +35,7 @@ func (c *InMemoryDemoDBServiceImpl) Init() {
 	go func() {
 		for {
 			time.Sleep(30 * time.Second)
-			err := c.Save("")
+			err := c.Save()
 			if err == nil {
 				println("DB auto-saved successfully")
 			} else {
@@ -49,14 +49,20 @@ func (c *InMemoryDemoDBServiceImpl) DBContent() *DBContent {
 	return c.data
 }
 
-func (c *InMemoryDemoDBServiceImpl) Load(fileName string) error {
-	dataBytes, err := os.ReadFile(c.getDBFileName(fileName))
+func (c *InMemoryDemoDBServiceImpl) Load() error {
+	dataBytes, err := os.ReadFile(c.getDBFileName())
 	if err != nil {
 		return err
 	}
 	c.data = &DBContent{
 		IDGenerator: c.IDGenerator,
 	}
+
+	//err = c.preprocess(dataBytes)
+	//if err != nil {
+	//	return err
+	//}
+
 	err = json.Unmarshal(dataBytes, &c.data)
 	if c.data.B2Bdb != nil {
 		for _, t := range c.data.B2Bdb.Tables {
@@ -70,17 +76,26 @@ func (c *InMemoryDemoDBServiceImpl) Load(fileName string) error {
 	return err
 }
 
-func (c *InMemoryDemoDBServiceImpl) Save(fileName string) error {
+func (c *InMemoryDemoDBServiceImpl) preprocess(dataBytes []byte) error {
+	m := map[string]interface{}{}
+	err := json.Unmarshal(dataBytes, &m)
+	delete(m, "TaskContainer")
+	//delete(m, "SequencesContainer")
+	dataBytes, err = json.Marshal(m)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(c.getDBFileName(), dataBytes, 0644)
+}
+
+func (c *InMemoryDemoDBServiceImpl) Save() error {
 	dataBytes, err := json.Marshal(c.data)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(c.getDBFileName(fileName), dataBytes, 0644)
+	return os.WriteFile(c.getDBFileName(), dataBytes, 0644)
 }
 
-func (c *InMemoryDemoDBServiceImpl) getDBFileName(fileName string) string {
-	if len(fileName) == 0 {
-		fileName = "db.json"
-	}
-	return path.Join(c.Config.GetDir("db"), fileName)
+func (c *InMemoryDemoDBServiceImpl) getDBFileName() string {
+	return path.Join(c.Config.GetDir("db"), "db.json")
 }

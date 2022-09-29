@@ -11,7 +11,7 @@ type ITaskRepo interface {
 	Search(filter *entities.Task) []*entities.Task
 	Delete(filter *entities.Task) *entities.Task
 	CreateOrUpdate(Task *entities.Task)
-	Meta() *entities.TaskMeta
+	Commons() *entities.TaskCommons
 	Clear(accountId entities.ID)
 }
 
@@ -76,6 +76,6 @@ func (c *TaskRepoImpl) CreateOrUpdate(task *entities.Task) {
 	c.DBService.DBContent().GetTaskContainer().Tasks.ForAccount(task.AccountId)[task.Id] = task
 }
 
-func (c *TaskRepoImpl) Meta() *entities.TaskMeta {
-	return c.DBService.DBContent().GetTaskContainer().Meta
+func (c *TaskRepoImpl) Commons() *entities.TaskCommons {
+	return c.DBService.DBContent().GetTaskContainer().Commons
 }
