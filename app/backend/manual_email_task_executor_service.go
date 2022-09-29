@@ -33,10 +33,13 @@ func (c *ManualEmailTaskExecutorServiceImpl) sendEmailFromTask(t *entities.Task)
 	return c.EmailService.SendPreprocessed(
 		&core.Params{
 			From:    fmt.Sprintf("%v", c.AccountService.Accounts()[t.AccountId].Username),
-			To:      []string{"a.itskovich@molbulak.com" /*t.Contact.Email,*/},
+			To:      []string{"itskovichae@gmail.com", "evstigneeva.design@gmail.com", "a.itskovich@molbulak.ru", "tony5oprano@yandex.ru", "nikolaydemidovez@gmail.com" /*t.Contact.Email,*/},
 			Subject: t.Subject,
-		}, func(m *email.Message) {
+		}, func(srv *email.Email, m *email.Message) {
 			m.BodyHTML = t.Body
+			srv.Header = map[string]string{
+				"Content-Type": "text/html; charset=UTF-8",
+			}
 		},
 	)
 }
