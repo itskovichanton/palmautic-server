@@ -9,7 +9,7 @@ import (
 )
 
 type ITaskService interface {
-	Search(filter *entities.Task) []*entities.Task
+	Search(filter *entities.Task, settings *SearchSettings) []*entities.Task
 	Delete(filter *entities.Task) (*entities.Task, error)
 	CreateOrUpdate(Task *entities.Task) (*entities.Task, error)
 	Stats(accountId entities.ID) *entities.TaskStats
@@ -38,21 +38,21 @@ func (c *TaskServiceImpl) Commons(accountId entities.ID) *entities.TaskCommons {
 func (c *TaskServiceImpl) Stats(accountId entities.ID) *entities.TaskStats {
 	be := entities.BaseEntity{AccountId: accountId}
 	r := &entities.TaskStats{
-		All:      len(c.TaskRepo.Search(&entities.Task{BaseEntity: be})),
+		All:      len(c.TaskRepo.Search(&entities.Task{BaseEntity: be}, nil)),
 		ByType:   map[string]int{},
 		ByStatus: map[string]int{},
 	}
 	for _, t := range c.TaskRepo.Commons().Types {
-		r.ByType[t.Creds.Name] = len(c.TaskRepo.Search(&entities.Task{BaseEntity: be, Type: t.Creds.Name}))
+		r.ByType[t.Creds.Name] = len(c.TaskRepo.Search(&entities.Task{BaseEntity: be, Type: t.Creds.Name}, nil))
 	}
 	for _, s := range c.TaskRepo.Commons().Statuses {
-		r.ByStatus[s] = len(c.TaskRepo.Search(&entities.Task{BaseEntity: be, Status: s}))
+		r.ByStatus[s] = len(c.TaskRepo.Search(&entities.Task{BaseEntity: be, Status: s}, nil))
 	}
 	return r
 }
 
-func (c *TaskServiceImpl) Search(filter *entities.Task) []*entities.Task {
-	r := c.TaskRepo.Search(filter)
+func (c *TaskServiceImpl) Search(filter *entities.Task, settings *SearchSettings) []*entities.Task {
+	r := c.TaskRepo.Search(filter, settings)
 	for _, t := range r {
 		t.Alertness = c.CalcAlertness(t)
 		seq := c.SequenceRepo.FindFirst(&entities.Sequence{
@@ -80,7 +80,7 @@ func (c *TaskServiceImpl) Clear(accountId entities.ID) {
 }
 
 func (c *TaskServiceImpl) Delete(filter *entities.Task) (*entities.Task, error) {
-	tasks := c.TaskRepo.Search(filter)
+	tasks := c.TaskRepo.Search(filter, nil)
 	if len(tasks) == 0 {
 		return nil, errs.NewBaseErrorWithReason("Задача не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
 	}
@@ -96,7 +96,7 @@ func (c *TaskServiceImpl) Skip(task *entities.Task) (*entities.Task, error) {
 
 	if task.ReadyForSearch() {
 
-		foundTasks := c.TaskRepo.Search(task)
+		foundTasks := c.TaskRepo.Search(task, nil)
 
 		if len(foundTasks) == 0 {
 			return nil, errs.NewBaseErrorWithReason("Задача не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
@@ -124,7 +124,7 @@ func (c *TaskServiceImpl) Execute(task *entities.Task) (*entities.Task, error) {
 
 	if task.ReadyForSearch() {
 
-		foundTasks := c.TaskRepo.Search(task)
+		foundTasks := c.TaskRepo.Search(task, nil)
 
 		if len(foundTasks) == 0 {
 			return nil, errs.NewBaseErrorWithReason("Задача не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
@@ -157,7 +157,7 @@ func (c *TaskServiceImpl) CreateOrUpdate(task *entities.Task) (*entities.Task, e
 
 	if task.ReadyForSearch() {
 		// update
-		foundTasks := c.TaskRepo.Search(task)
+		foundTasks := c.TaskRepo.Search(task, nil)
 		if len(foundTasks) == 0 {
 			return nil, nil
 		}

@@ -41,8 +41,12 @@ type SearchTaskAction struct {
 
 func (c *SearchTaskAction) Run(arg interface{}) (interface{}, error) {
 	p := arg.(*RetrievedEntityParams)
-	task := p.Entity.(*entities.Task)
-	return c.TaskService.Search(task), nil
+	cp := p.CallParams
+	filter := p.Entity.(*entities.Task)
+	return c.TaskService.Search(filter, &backend.SearchSettings{
+		Offset: cp.GetParamInt("offset", 0),
+		Count:  cp.GetParamInt("count", 0),
+	}), nil
 }
 
 type GetTaskStatsAction struct {

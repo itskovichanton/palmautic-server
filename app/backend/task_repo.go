@@ -8,7 +8,7 @@ import (
 )
 
 type ITaskRepo interface {
-	Search(filter *entities.Task) []*entities.Task
+	Search(filter *entities.Task, settings *SearchSettings) []*entities.Task
 	Delete(filter *entities.Task) *entities.Task
 	CreateOrUpdate(Task *entities.Task)
 	Commons() *entities.TaskCommons
@@ -25,7 +25,7 @@ func (c *TaskRepoImpl) Clear(accountId entities.ID) {
 	c.DBService.DBContent().GetTaskContainer().Tasks[accountId] = Tasks{}
 }
 
-func (c *TaskRepoImpl) Search(filter *entities.Task) []*entities.Task {
+func (c *TaskRepoImpl) Search(filter *entities.Task, settings *SearchSettings) []*entities.Task {
 	rMap := c.DBService.DBContent().GetTaskContainer().Tasks[filter.AccountId]
 	if len(rMap) == 0 {
 		return []*entities.Task{}
@@ -59,6 +59,19 @@ func (c *TaskRepoImpl) Search(filter *entities.Task) []*entities.Task {
 		}
 	}
 	utils.SortTasks(r)
+	return c.applySettings(r, settings)
+}
+
+func (c *TaskRepoImpl) applySettings(r []*entities.Task, settings *SearchSettings) []*entities.Task {
+	lastElemIndex := settings.Offset + settings.Count
+	if settings.Count > 0 && lastElemIndex < len(r) {
+		r = r[settings.Offset:lastElemIndex]
+	} else if settings.Offset < len(r) {
+		r = r[settings.Offset:]
+	} else {
+		r = []*entities.Task{}
+	}
+
 	return r
 }
 

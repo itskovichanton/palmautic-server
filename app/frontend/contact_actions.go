@@ -54,8 +54,8 @@ type SearchContactAction struct {
 func (c *SearchContactAction) Run(arg interface{}) (interface{}, error) {
 	p := arg.(*RetrievedEntityParams)
 	cp := p.CallParams
-	contact := p.Entity.(*entities.Contact)
-	return c.ContactService.Search(contact, &backend.ContactSearchSettings{
+	filter := p.Entity.(*entities.Contact)
+	return c.ContactService.Search(filter, &backend.ContactSearchSettings{
 		Offset: cp.GetParamInt("offset", 0),
 		Count:  cp.GetParamInt("count", 0),
 	}), nil
