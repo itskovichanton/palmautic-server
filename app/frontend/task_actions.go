@@ -2,8 +2,8 @@ package frontend
 
 import (
 	"fmt"
-	"github.com/itskovichanton/core/pkg/core"
 	"github.com/itskovichanton/core/pkg/core/validation"
+	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
 	"salespalm/server/app/backend"
 	"salespalm/server/app/entities"
@@ -52,7 +52,7 @@ type GetTaskStatsAction struct {
 }
 
 func (c *GetTaskStatsAction) Run(arg interface{}) (interface{}, error) {
-	cp := arg.(*core.CallParams)
+	cp := arg.(*entities2.CallParams)
 	return c.TaskService.Stats(entities.ID(cp.Caller.Session.Account.ID)), nil
 }
 
@@ -80,7 +80,7 @@ type ClearTasksAction struct {
 }
 
 func (c *ClearTasksAction) Run(arg interface{}) (interface{}, error) {
-	cp := arg.(*core.CallParams)
+	cp := arg.(*entities2.CallParams)
 	c.TaskService.Clear(entities.ID(cp.Caller.Session.Account.ID))
 	return "task cleared", nil
 }
@@ -94,7 +94,14 @@ type SkipTaskAction struct {
 func (c *SkipTaskAction) Run(arg interface{}) (interface{}, error) {
 	p := arg.(*RetrievedEntityParams)
 	task := p.Entity.(*entities.Task)
-	return c.TaskService.Skip(task)
+	task, err := c.TaskService.Skip(task)
+	if err != nil {
+		return nil, err
+	}
+	return &entities.Task{
+		BaseEntity: task.BaseEntity,
+		Status:     task.Status,
+	}, nil
 }
 
 type ExecuteTaskAction struct {
@@ -105,13 +112,14 @@ type ExecuteTaskAction struct {
 
 func (c *ExecuteTaskAction) Run(arg interface{}) (interface{}, error) {
 	p := arg.(*RetrievedEntityParams)
-	task := p.Entity.(*entities.Task)
-	executed, err := c.TaskService.Execute(task)
+	t := p.Entity.(*entities.Task)
+	t, err := c.TaskService.Execute(t)
 	if err != nil {
 		return nil, err
 	}
 	return &entities.Task{
-		BaseEntity: executed.BaseEntity,
-		Status:     executed.Status,
+		BaseEntity: t.BaseEntity,
+		Status:     t.Status,
+		Alertness:  t.Alertness,
 	}, nil
 }

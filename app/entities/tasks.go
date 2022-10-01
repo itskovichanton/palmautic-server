@@ -105,16 +105,20 @@ var (
 			Title: "Написать личное сообщение",
 		}, {
 			Name:  "cold_msg",
-			Title: "Написать холодное сообщение",
+			Title: "InMail",
+		}, {
+			Name:  "connect",
+			Title: "Connect",
 		}},
 	}
 )
 
 const (
-	TaskStatusCompleted = "completed"
-	TaskStatusStarted   = "started"
-	TaskStatusSkipped   = "skipped"
-	//TaskStatusPending   = "pending"
+	TaskStatusCompleted       = "completed"
+	TaskStatusStarted         = "started"
+	TaskStatusSkipped         = "skipped"
+	TaskStatusPending         = "pending"
+	TaskStatusMissedByTimeout = "timeout"
 
 	TaskAlertnessGreen  = "green"
 	TaskAlertnessOrange = "orange"

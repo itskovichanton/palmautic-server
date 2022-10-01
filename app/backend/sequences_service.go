@@ -11,6 +11,8 @@ type ISequenceService interface {
 	//Stats(accountId entities.ID) *entities.SequenceStats
 	Commons(accountId entities.ID) *entities.SequenceCommons
 	GetByIndex(accountId entities.ID, index int) *entities.Sequence
+	Search(filter *entities.Sequence) []*entities.Sequence
+	FindFirst(filter *entities.Sequence) *entities.Sequence
 }
 
 type SequenceServiceImpl struct {
@@ -27,6 +29,14 @@ func (c *SequenceServiceImpl) Commons(accountId entities.ID) *entities.SequenceC
 	r := c.SequenceRepo.Commons()
 	//r.Stats = c.Stats(accountId)
 	return r
+}
+
+func (c *SequenceServiceImpl) FindFirst(filter *entities.Sequence) *entities.Sequence {
+	return c.SequenceRepo.FindFirst(filter)
+}
+
+func (c *SequenceServiceImpl) Search(filter *entities.Sequence) []*entities.Sequence {
+	return c.SequenceRepo.Search(filter)
 }
 
 /*

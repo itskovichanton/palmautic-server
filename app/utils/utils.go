@@ -7,13 +7,33 @@ import (
 	"sort"
 )
 
+func RandomEntry[K comparable, V any](r map[K]V) *V {
+	n := len(r)
+	for _, p := range r {
+		n--
+		if n < 0 {
+			return &p
+		}
+	}
+	return nil
+}
+
+func FindFirst[V entities.IBaseEntity](r []V, filter entities.IBaseEntity) *V {
+	for _, p := range r {
+		if p.GetId() == filter.GetId() && p.GetAccountId() == filter.GetAccountId() {
+			return &p
+		}
+	}
+	return nil
+}
+
 func SortById[V entities.IBaseEntity](r []V) {
 	sort.Slice(r, func(i, j int) bool {
 		return r[i].GetId() > r[j].GetId()
 	})
 }
 
-func SortTasks[V *entities.Task](r []*entities.Task) {
+func SortTasks(r []*entities.Task) {
 	sort.Slice(r, func(i, j int) bool {
 		if !r[i].HasStatusFinal() && r[j].HasStatusFinal() {
 			return true

@@ -1,11 +1,11 @@
 package frontend
 
 import (
-	"github.com/itskovichanton/core/pkg/core"
+	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"salespalm/server/app/entities"
 )
 
 type RetrievedEntityParams struct {
-	CallParams *core.CallParams
+	CallParams *entities2.CallParams
 	Entity     entities.IBaseEntity
 }

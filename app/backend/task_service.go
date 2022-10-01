@@ -26,6 +26,7 @@ type TaskServiceImpl struct {
 	TemplateService     ITemplateService
 	AccountService      IUserService
 	TaskExecutorService ITaskExecutorService
+	SequenceRepo        ISequenceRepo
 }
 
 func (c *TaskServiceImpl) Commons(accountId entities.ID) *entities.TaskCommons {
@@ -54,6 +55,15 @@ func (c *TaskServiceImpl) Search(filter *entities.Task) []*entities.Task {
 	r := c.TaskRepo.Search(filter)
 	for _, t := range r {
 		t.Alertness = c.CalcAlertness(t)
+		seq := c.SequenceRepo.FindFirst(&entities.Sequence{
+			BaseEntity: entities.BaseEntity{
+				Id:        t.Sequence.ID,
+				AccountId: t.AccountId,
+			},
+		})
+		if seq != nil {
+			t.Sequence.Title = seq.Name
+		}
 		if strings.HasPrefix(t.Body, "template") {
 			templateName := strings.Split(t.Body, ":")[1]
 			t.Body = c.TemplateService.Format(templateName, &map[string]interface{}{
@@ -83,6 +93,7 @@ func (c *TaskServiceImpl) Delete(filter *entities.Task) (*entities.Task, error) 
 }
 
 func (c *TaskServiceImpl) Skip(task *entities.Task) (*entities.Task, error) {
+
 	if task.ReadyForSearch() {
 
 		foundTasks := c.TaskRepo.Search(task)
@@ -101,11 +112,7 @@ func (c *TaskServiceImpl) Skip(task *entities.Task) (*entities.Task, error) {
 			return storedTask, errs.NewBaseErrorWithReason("Нельзя выполнить задачу в финальном статусе", frmclient.ReasonServerRespondedWithError)
 		}
 
-		// Обновили задачу в БД в соответствии с тем, что хочет отправить юзер
-		storedTask.Body = task.Body
-		storedTask.Subject = task.Subject
-		c.TaskExecutorService.Execute(storedTask) // пока не проверяю статус выполнения
-		storedTask.Status = entities.TaskStatusCompleted
+		storedTask.Status = entities.TaskStatusSkipped
 
 		return storedTask, nil
 	}
@@ -114,6 +121,7 @@ func (c *TaskServiceImpl) Skip(task *entities.Task) (*entities.Task, error) {
 }
 
 func (c *TaskServiceImpl) Execute(task *entities.Task) (*entities.Task, error) {
+
 	if task.ReadyForSearch() {
 
 		foundTasks := c.TaskRepo.Search(task)
@@ -137,6 +145,7 @@ func (c *TaskServiceImpl) Execute(task *entities.Task) (*entities.Task, error) {
 		storedTask.Subject = task.Subject
 		c.TaskExecutorService.Execute(storedTask) // пока не проверяю статус выполнения
 		storedTask.Status = entities.TaskStatusCompleted
+		storedTask.Alertness = c.CalcAlertness(storedTask)
 
 		return storedTask, nil
 	}

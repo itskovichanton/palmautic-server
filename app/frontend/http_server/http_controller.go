@@ -2,8 +2,9 @@ package http_server
 
 import (
 	"encoding/json"
-	"github.com/itskovichanton/core/pkg/core"
+	"github.com/itskovichanton/echo-http"
 	"github.com/itskovichanton/goava/pkg/goava/utils"
+	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
 	"io"
 	"reflect"
@@ -51,7 +52,7 @@ func (c *PalmHttpController) Init() {
 	c.EchoEngine.GET("/tasks/clear", c.GetDefaultHandler(c.prepareAction(true, c.ClearTasksAction)))
 
 	// accounts
-	c.GETPOST("/accounts/login", c.GetDefaultHandler(c.prepareAction(true, c.GetSessionAction)))
+	c.EchoEngine.GET("/accounts/login", c.GetDefaultHandler(c.prepareAction(true, c.GetSessionAction)))
 
 	// contacts
 	c.EchoEngine.POST("/contacts/createOrUpdate", c.GetDefaultHandler(c.prepareAction(true, c.readContact(), c.CreateOrUpdateContactAction)))
@@ -104,8 +105,8 @@ type readEntityAction struct {
 }
 
 func (c *readEntityAction) Run(arg interface{}) (interface{}, error) {
-	cp := arg.(*core.CallParams)
-	bodyBytes, err := io.ReadAll(cp.Context().Request().Body)
+	cp := arg.(*entities2.CallParams)
+	bodyBytes, err := io.ReadAll(cp.Request.(echo.Context).Request().Body)
 	if err != nil {
 		return nil, err
 	}

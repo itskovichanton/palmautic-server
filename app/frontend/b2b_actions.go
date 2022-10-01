@@ -2,7 +2,8 @@ package frontend
 
 import (
 	"encoding/json"
-	"github.com/itskovichanton/core/pkg/core"
+	"github.com/itskovichanton/echo-http"
+	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
 	"io"
 	"mime/multipart"
@@ -17,7 +18,7 @@ type SearchB2BAction struct {
 }
 
 func (c *SearchB2BAction) Run(arg interface{}) (interface{}, error) {
-	cp := arg.(*core.CallParams)
+	cp := arg.(*entities2.CallParams)
 	p := cp.GetParamsUsingFirstValue()
 	return c.B2BService.Search(cp.GetParamStr("path__table"), p,
 		&backend.SearchSettings{
@@ -33,7 +34,7 @@ type UploadB2BDataAction struct {
 }
 
 func (c *UploadB2BDataAction) Run(arg interface{}) (interface{}, error) {
-	cp := arg.(*core.CallParams)
+	cp := arg.(*entities2.CallParams)
 	f, err := cp.GetParamsUsingFirstValue()["f"].(*multipart.FileHeader).Open()
 	if err != nil {
 		return nil, err
@@ -49,7 +50,7 @@ type GetB2BInfoAction struct {
 }
 
 func (c *GetB2BInfoAction) Run(arg interface{}) (interface{}, error) {
-	cp := arg.(*core.CallParams)
+	cp := arg.(*entities2.CallParams)
 	r := c.B2BService.Table(cp.GetParamStr("path__table"))
 	return map[string]interface{}{
 		"name":        r.Name,
@@ -65,7 +66,7 @@ type ClearB2BTableAction struct {
 }
 
 func (c *ClearB2BTableAction) Run(arg interface{}) (interface{}, error) {
-	cp := arg.(*core.CallParams)
+	cp := arg.(*entities2.CallParams)
 	c.B2BService.ClearTable(cp.GetParamStr("path__table"))
 	return nil, nil
 }
@@ -77,7 +78,7 @@ type UploadFromFileB2BDataAction struct {
 }
 
 func (c *UploadFromFileB2BDataAction) Run(arg interface{}) (interface{}, error) {
-	cp := arg.(*core.CallParams)
+	cp := arg.(*entities2.CallParams)
 	dirName := cp.GetParamStr("dir")
 	return c.B2BService.UploadFromDir(cp.GetParamStr("path__table"), dirName)
 }
@@ -89,8 +90,8 @@ type AddContactFromB2BAction struct {
 }
 
 func (c *AddContactFromB2BAction) Run(arg interface{}) (interface{}, error) {
-	cp := arg.(*core.CallParams)
-	bodyBytes, err := io.ReadAll(cp.Context().Request().Body)
+	cp := arg.(*entities2.CallParams)
+	bodyBytes, err := io.ReadAll(cp.Request.(echo.Context).Request().Body)
 	if err != nil {
 		return nil, err
 	}
@@ -99,6 +100,6 @@ func (c *AddContactFromB2BAction) Run(arg interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	c.B2BService.AddToContacts(entities.ID(cp.Caller.Session.Account.ID), ids)
-	return nil, nil
+	addedCount := c.B2BService.AddToContacts(entities.ID(cp.Caller.Session.Account.ID), ids)
+	return addedCount, nil
 }

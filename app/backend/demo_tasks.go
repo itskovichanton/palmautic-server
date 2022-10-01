@@ -3,7 +3,6 @@ package backend
 import (
 	"fmt"
 	"github.com/itskovichanton/core/pkg/core"
-	"github.com/itskovichanton/goava/pkg/goava/utils"
 	"math/rand"
 	"salespalm/server/app/entities"
 	utils2 "salespalm/server/app/utils"
@@ -65,7 +64,7 @@ func (c *TaskDemoServiceImpl) generateRandomTask(contact *entities.Contact, spec
 	types := c.TaskService.Commons(spec.AccountId).Types
 	var taskType *entities.TaskType
 	if len(spec.Type) == 0 {
-		_, taskType = utils.RandomEntry(types)
+		taskType = *utils2.RandomEntry(types)
 	} else {
 		taskType = types[spec.Type]
 	}
@@ -105,7 +104,7 @@ func (c *TaskDemoServiceImpl) generateRandomTask(contact *entities.Contact, spec
 	switch r.Type {
 	case entities.TaskTypeManualEmail.Creds.Name:
 		r.DueTime = time.Now().Add(20 * time.Minute)
-		templateName, _ := utils.RandomEntry(c.templates)
+		templateName := *utils2.RandomEntry(c.templates)
 		r.Body = "template:" + templateName
 		r.Subject = "Компания ITBest приглашает Вас на собеседование!"
 		break

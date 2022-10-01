@@ -14,7 +14,7 @@ type IB2BService interface {
 	Table(table string) *entities.B2BTable
 	ClearTable(table string)
 	UploadFromDir(table string, dirName string) (int, error)
-	AddToContacts(accountId entities.ID, ids []entities.ID)
+	AddToContacts(accountId entities.ID, ids []entities.ID) int
 }
 
 type SearchResult struct {
@@ -40,7 +40,7 @@ type B2BServiceImpl struct {
 	ContactRepo IContactRepo
 }
 
-func (c *B2BServiceImpl) AddToContacts(accountId entities.ID, b2bItemIds []entities.ID) {
+func (c *B2BServiceImpl) AddToContacts(accountId entities.ID, b2bItemIds []entities.ID) int {
 	for _, b2bItemId := range b2bItemIds {
 		item := c.B2BRepo.FindById(b2bItemId)
 		if item != nil {
@@ -57,6 +57,7 @@ func (c *B2BServiceImpl) AddToContacts(accountId entities.ID, b2bItemIds []entit
 			//c.ContactRepo.DeleteDuplicates(accountId)
 		}
 	}
+	return len(b2bItemIds)
 }
 
 func (c *B2BServiceImpl) UploadFromDir(table string, dirName string) (int, error) {

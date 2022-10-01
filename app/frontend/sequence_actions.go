@@ -51,6 +51,6 @@ func (c *CreateOrUpdateSequenceAction) Run(arg interface{}) (interface{}, error)
 //}
 //
 //func (c *GetSequenceStatsAction) Run(arg interface{}) (interface{}, error) {
-//	cp := arg.(*core.CallParams)
+//	cp := arg.(*entities2.CallParams)
 //	return c.SequenceService.Stats(entities.ID(cp.Caller.Session.Account.ID)), nil
 //}

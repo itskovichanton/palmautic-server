@@ -168,16 +168,17 @@ func (c *DI) NewCreateOrUpdateSequenceAction(sequenceService backend.ISequenceSe
 	}
 }
 
-func (c *DI) NewApp(httpController *http_server.PalmHttpController, contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
+func (c *DI) NewApp(TaskExecutorService backend.ITaskExecutorService, httpController *http_server.PalmHttpController, contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
 	return &PalmApp{
-		HttpController: httpController,
-		Config:         config,
-		EmailService:   emailService,
-		ErrorHandler:   errorHandler,
-		LoggerService:  loggerService,
-		AuthService:    authService,
-		UserRepo:       userRepo,
-		ContactService: contactService,
+		HttpController:      httpController,
+		Config:              config,
+		EmailService:        emailService,
+		ErrorHandler:        errorHandler,
+		LoggerService:       loggerService,
+		AuthService:         authService,
+		UserRepo:            userRepo,
+		ContactService:      contactService,
+		TaskExecutorService: TaskExecutorService,
 	}
 }
 
@@ -291,12 +292,13 @@ func (c *DI) NewUserService(userRepo backend.IUserRepo) backend.IUserService {
 	}
 }
 
-func (c *DI) NewTaskService(TaskExecutorService backend.ITaskExecutorService, taskRepo backend.ITaskRepo, TemplateService backend.ITemplateService, UserService backend.IUserService) backend.ITaskService {
+func (c *DI) NewTaskService(SequenceRepo backend.ISequenceRepo, TaskExecutorService backend.ITaskExecutorService, taskRepo backend.ITaskRepo, TemplateService backend.ITemplateService, UserService backend.IUserService) backend.ITaskService {
 	return &backend.TaskServiceImpl{
 		TaskRepo:            taskRepo,
 		TemplateService:     TemplateService,
 		AccountService:      UserService,
 		TaskExecutorService: TaskExecutorService,
+		SequenceRepo:        SequenceRepo,
 	}
 }
 

@@ -1,9 +1,7 @@
 package backend
 
 import (
-	"fmt"
 	"github.com/itskovichanton/core/pkg/core"
-	"github.com/labstack/gommon/email"
 	"salespalm/server/app/entities"
 )
 
@@ -30,16 +28,17 @@ func (c *ManualEmailTaskExecutorServiceImpl) Execute(t *entities.Task) *TaskExec
 }
 
 func (c *ManualEmailTaskExecutorServiceImpl) sendEmailFromTask(t *entities.Task) error {
-	return c.EmailService.SendPreprocessed(
-		&core.Params{
-			From:    fmt.Sprintf("%v", c.AccountService.Accounts()[t.AccountId].Username),
-			To:      []string{"itskovichae@gmail.com", "evstigneeva.design@gmail.com", "a.itskovich@molbulak.ru", "tony5oprano@yandex.ru", "nikolaydemidovez@gmail.com" /*t.Contact.Email,*/},
-			Subject: t.Subject,
-		}, func(srv *email.Email, m *email.Message) {
-			m.BodyHTML = t.Body
-			srv.Header = map[string]string{
-				"Content-Type": "text/html; charset=UTF-8",
-			}
-		},
-	)
+	//return c.EmailService.SendPreprocessed(
+	//	&core.Params{
+	//		From:    fmt.Sprintf("%v", c.AccountService.Accounts()[t.AccountId].Username),
+	//		To:      []string{"itskovichae@gmail.com" /*, "evstigneeva.design@gmail.com", "a.itskovich@molbulak.ru", "tony5oprano@yandex.ru", "nikolaydemidovez@gmail.com" /*t.Contact.Email,*/},
+	//		Subject: t.Subject,
+	//	}, func(srv *email.Email, m *email.Message) {
+	//		m.BodyHTML = t.Body
+	//		srv.Header = map[string]string{
+	//			"Content-Type": "text/html; charset=UTF-8",
+	//		}
+	//	},
+	//)
+	return nil
 }

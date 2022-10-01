@@ -2,7 +2,8 @@ package frontend
 
 import (
 	"encoding/json"
-	"github.com/itskovichanton/core/pkg/core"
+	"github.com/itskovichanton/echo-http"
+	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
 	"io"
 	"mime/multipart"
@@ -30,8 +31,8 @@ type DeleteContactAction struct {
 }
 
 func (c *DeleteContactAction) Run(arg interface{}) (interface{}, error) {
-	cp := arg.(*core.CallParams)
-	bodyBytes, err := io.ReadAll(cp.Context().Request().Body)
+	cp := arg.(*entities2.CallParams)
+	bodyBytes, err := io.ReadAll(cp.Request.(echo.Context).Request().Body)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +68,7 @@ type UploadContactsAction struct {
 }
 
 func (c *UploadContactsAction) Run(arg interface{}) (interface{}, error) {
-	cp := arg.(*core.CallParams)
+	cp := arg.(*entities2.CallParams)
 	f, err := cp.GetParamsUsingFirstValue()["f"].(*multipart.FileHeader).Open()
 	if err != nil {
 		return nil, err
