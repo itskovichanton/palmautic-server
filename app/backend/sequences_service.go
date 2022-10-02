@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"github.com/itskovichanton/goava/pkg/goava/errs"
 	"salespalm/server/app/entities"
 )
 
@@ -13,12 +14,15 @@ type ISequenceService interface {
 	GetByIndex(accountId entities.ID, index int) *entities.Sequence
 	Search(filter *entities.Sequence) []*entities.Sequence
 	FindFirst(filter *entities.Sequence) *entities.Sequence
+	AddContact(sequenceCreds, contactCreds entities.BaseEntity) error
 }
 
 type SequenceServiceImpl struct {
 	ISequenceService
 
-	SequenceRepo ISequenceRepo
+	SequenceRepo          ISequenceRepo
+	ContactService        IContactService
+	SequenceRunnerService ISequenceRunnerService
 }
 
 func (c *SequenceServiceImpl) GetByIndex(accountId entities.ID, index int) *entities.Sequence {
@@ -39,8 +43,29 @@ func (c *SequenceServiceImpl) Search(filter *entities.Sequence) []*entities.Sequ
 	return c.SequenceRepo.Search(filter)
 }
 
+func (c *SequenceServiceImpl) AddContact(sequenceCreds, contactCreds entities.BaseEntity) error {
+
+	sequence := c.SequenceRepo.FindFirst(&entities.Sequence{
+		BaseEntity: sequenceCreds,
+	})
+	if sequence == nil {
+		return errs.NewBaseError("Последовательность не найдена")
+	}
+
+	contact := c.ContactService.FindFirst(&entities.Contact{
+		BaseEntity: contactCreds,
+	})
+	if contact == nil {
+		return errs.NewBaseError("Контакт не найден")
+	}
+
+	c.SequenceRunnerService.Run(sequence, contact)
+
+	return nil
+}
+
 /*
-func (c *SequenceServiceImpl) Stats(accountId entities.ID) *entities.SequenceStats {
+func (c *SequenceServiceImpl) Stats(accountId entities.Id) *entities.SequenceStats {
 	be := entities.BaseEntity{AccountId: accountId}
 	r := &entities.SequenceStats{
 		All:      len(c.Search(&entities.Sequence{BaseEntity: be})),
@@ -76,27 +101,17 @@ func (c *SequenceServiceImpl) Delete(filter *entities.Sequence) (*entities.Seque
 
 func (c *SequenceServiceImpl) CreateOrUpdate(sequence *entities.Sequence) (*entities.Sequence, error) {
 
-	//if sequence.ReadyForSearch() {
-	//	// update
-	//	foundSequences := c.SequenceRepo.Search(sequence)
-	//	if len(foundSequences) == 0 {
-	//		return nil, nil
-	//	}
-	//	foundSequence := foundSequences[0]
-	//	if sequence.Status != foundSequence.Status {
-	//		if foundSequence.HasStatusFinal() {
-	//			return foundSequence, errs.NewBaseErrorWithReason("Нельзя изменить финальный статус", frmclient.ReasonServerRespondedWithError)
-	//		}
-	//		foundSequence.Status = sequence.Status
-	//		// оповести eventbus
-	//	}
-	//	return foundSequence, nil
-	//}
+	if sequence.ReadyForSearch() {
+		// update
+		foundSequence := c.SequenceRepo.FindFirst(sequence)
+		foundSequence.Name = sequence.Name
+		foundSequence.Description = sequence.Description
+		//foundSequence.Model = sequence.Model
+		return foundSequence, nil
+	}
 
 	// Create
-	//sequence.Status = entities.SequenceStatusStarted
-	//sequence.StartTime = time.Now()
-	//sequence.DueTime = sequence.DueTime.Add(30 * time.Minute)
+	sequence.Process = &entities.SequenceProcess{ByContact: map[entities.ID]*entities.SequenceInstance{}}
 	c.SequenceRepo.CreateOrUpdate(sequence)
 	return sequence, nil
 }

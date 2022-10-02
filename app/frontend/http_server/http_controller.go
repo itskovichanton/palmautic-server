@@ -12,11 +12,12 @@ import (
 	"salespalm/server/app/frontend"
 )
 
-type PalmHttpController struct {
+type PalmauticHttpController struct {
 	pipeline.HttpControllerImpl
 
 	CreateOrUpdateContactAction  *frontend.CreateOrUpdateContactAction
 	CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction
+	AddContactToSequenceAction   *frontend.AddContactToSequenceAction
 	SearchContactAction          *frontend.SearchContactAction
 	DeleteContactAction          *frontend.DeleteContactAction
 	UploadContactsAction         *frontend.UploadContactsAction
@@ -35,10 +36,11 @@ type PalmHttpController struct {
 	ExecuteTaskAction            *frontend.ExecuteTaskAction
 }
 
-func (c *PalmHttpController) Init() {
+func (c *PalmauticHttpController) Init() {
 
 	// sequences
 	c.EchoEngine.POST("/sequences/createOrUpdate", c.GetDefaultHandler(c.prepareAction(true, c.readSequence(), c.CreateOrUpdateSequenceAction)))
+	c.EchoEngine.GET("/sequences/addContact", c.GetDefaultHandler(c.prepareAction(true, c.AddContactToSequenceAction)))
 
 	// other
 	c.EchoEngine.GET("/commons", c.GetDefaultHandler(c.prepareAction(true, c.GetCommonsAction)))
@@ -70,7 +72,7 @@ func (c *PalmHttpController) Init() {
 
 }
 
-func (c *PalmHttpController) prepareAction(requiresAuth bool, actions ...pipeline.IAction) pipeline.IAction {
+func (c *PalmauticHttpController) prepareAction(requiresAuth bool, actions ...pipeline.IAction) pipeline.IAction {
 	return &pipeline.ChainedActionImpl{
 		Actions: utils.Concat([]pipeline.IAction{
 			c.ValidateCallerAction,
@@ -79,22 +81,22 @@ func (c *PalmHttpController) prepareAction(requiresAuth bool, actions ...pipelin
 	}
 }
 
-func (c *PalmHttpController) getGetUserActionIfSessionPresent(requiresAuth bool) pipeline.IAction {
+func (c *PalmauticHttpController) getGetUserActionIfSessionPresent(requiresAuth bool) pipeline.IAction {
 	if requiresAuth {
 		return c.GetUserAction
 	}
 	return c.NopAction
 }
 
-func (c *PalmHttpController) readContact() pipeline.IAction {
+func (c *PalmauticHttpController) readContact() pipeline.IAction {
 	return &readEntityAction{model: &entities.Contact{}}
 }
 
-func (c *PalmHttpController) readTask() pipeline.IAction {
+func (c *PalmauticHttpController) readTask() pipeline.IAction {
 	return &readEntityAction{model: &entities.Task{}}
 }
 
-func (c *PalmHttpController) readSequence() pipeline.IAction {
+func (c *PalmauticHttpController) readSequence() pipeline.IAction {
 	return &readEntityAction{model: &entities.Sequence{}}
 }
 

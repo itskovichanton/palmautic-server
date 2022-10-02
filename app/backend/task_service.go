@@ -1,6 +1,8 @@
 package backend
 
 import (
+	"fmt"
+	"github.com/asaskevich/EventBus"
 	"github.com/itskovichanton/core/pkg/core/frmclient"
 	"github.com/itskovichanton/goava/pkg/goava/errs"
 	"salespalm/server/app/entities"
@@ -27,6 +29,7 @@ type TaskServiceImpl struct {
 	AccountService      IUserService
 	TaskExecutorService ITaskExecutorService
 	SequenceRepo        ISequenceRepo
+	EventBus            EventBus.Bus
 }
 
 func (c *TaskServiceImpl) Commons(accountId entities.ID) *entities.TaskCommons {
@@ -51,26 +54,32 @@ func (c *TaskServiceImpl) Stats(accountId entities.ID) *entities.TaskStats {
 	return r
 }
 
+type TaskSearchSettings struct {
+	Offset, Count int
+}
+
 func (c *TaskServiceImpl) Search(filter *entities.Task, settings *SearchSettings) []*entities.Task {
 	r := c.TaskRepo.Search(filter, settings)
 	for _, t := range r {
-		t.Alertness = c.CalcAlertness(t)
-		seq := c.SequenceRepo.FindFirst(&entities.Sequence{
-			BaseEntity: entities.BaseEntity{
-				Id:        t.Sequence.ID,
-				AccountId: t.AccountId,
-			},
-		})
-		if seq != nil {
-			t.Sequence.Title = seq.Name
+		//seq := c.SequenceRepo.FindFirst(&entities.Sequence{
+		//	BaseEntity: entities.BaseEntity{
+		//		Id:        t.Sequence.Id,
+		//		AccountId: t.AccountId,
+		//	},
+		//})
+		//if seq != nil {
+		//	t.Sequence.Name = seq.Name
+		//}
+		if len(filter.Body) > 0 { // чтото передал в body - возвращаем ему его
+			if strings.HasPrefix(t.Body, "template") {
+				templateName := strings.Split(t.Body, ":")[1]
+				t.Body = c.TemplateService.Format(templateName, &map[string]interface{}{
+					"Contact": t.Contact,
+					"Me":      c.AccountService.Accounts()[filter.AccountId],
+				})
+			}
 		}
-		if strings.HasPrefix(t.Body, "template") {
-			templateName := strings.Split(t.Body, ":")[1]
-			t.Body = c.TemplateService.Format(templateName, &map[string]interface{}{
-				"Contact": t.Contact,
-				"Me":      c.AccountService.Accounts()[filter.AccountId],
-			})
-		}
+
 	}
 	return r
 }
@@ -104,12 +113,12 @@ func (c *TaskServiceImpl) Skip(task *entities.Task) (*entities.Task, error) {
 
 		storedTask := foundTasks[0]
 
-		if storedTask.Status == entities.TaskStatusSkipped {
-			return storedTask, nil
-		}
-
-		if storedTask.HasStatusFinal() {
-			return storedTask, errs.NewBaseErrorWithReason("Нельзя выполнить задачу в финальном статусе", frmclient.ReasonServerRespondedWithError)
+		if storedTask.HasFinalStatus() {
+			var err error
+			if storedTask.Status != entities.TaskStatusSkipped {
+				err = errs.NewBaseErrorWithReason("Нельзя пропустить задачу в финальном статусе", frmclient.ReasonServerRespondedWithError)
+			}
+			return storedTask, err
 		}
 
 		storedTask.Status = entities.TaskStatusSkipped
@@ -132,12 +141,12 @@ func (c *TaskServiceImpl) Execute(task *entities.Task) (*entities.Task, error) {
 
 		storedTask := foundTasks[0]
 
-		if storedTask.Status == entities.TaskStatusCompleted {
-			return storedTask, nil
-		}
-
-		if storedTask.HasStatusFinal() {
-			return storedTask, errs.NewBaseErrorWithReason("Нельзя выполнить задачу в финальном статусе", frmclient.ReasonServerRespondedWithError)
+		if storedTask.HasFinalStatus() {
+			var err error
+			if storedTask.Status == entities.TaskStatusCompleted {
+				err = errs.NewBaseErrorWithReason("Нельзя выполнить задачу в финальном статусе", frmclient.ReasonServerRespondedWithError)
+			}
+			return storedTask, err
 		}
 
 		// Обновили задачу в БД в соответствии с тем, что хочет отправить юзер
@@ -145,7 +154,10 @@ func (c *TaskServiceImpl) Execute(task *entities.Task) (*entities.Task, error) {
 		storedTask.Subject = task.Subject
 		c.TaskExecutorService.Execute(storedTask) // пока не проверяю статус выполнения
 		storedTask.Status = entities.TaskStatusCompleted
-		storedTask.Alertness = c.CalcAlertness(storedTask)
+		RefreshTask(storedTask)
+
+		// Оповещаем шину
+		c.EventBus.Publish(fmt.Sprintf("task-updated:%v", storedTask.Id), storedTask)
 
 		return storedTask, nil
 	}
@@ -163,7 +175,7 @@ func (c *TaskServiceImpl) CreateOrUpdate(task *entities.Task) (*entities.Task, e
 		}
 		foundTask := foundTasks[0]
 		if task.Status != foundTask.Status {
-			if foundTask.HasStatusFinal() {
+			if foundTask.HasFinalStatus() {
 				return foundTask, errs.NewBaseErrorWithReason("Нельзя изменить финальный статус", frmclient.ReasonServerRespondedWithError)
 			}
 			foundTask.Status = task.Status
@@ -173,19 +185,16 @@ func (c *TaskServiceImpl) CreateOrUpdate(task *entities.Task) (*entities.Task, e
 	}
 
 	// Create
-	task.Status = entities.TaskStatusStarted
-	task.StartTime = time.Now()
-	if task.DueTime.Year() == 0 {
-		task.DueTime = task.DueTime.Add(30 * time.Minute)
+	if task.StartTime.UnixMilli() == 0 {
+		task.StartTime = time.Now()
 	}
+
+	if task.DueTime.Before(task.StartTime) {
+		task.DueTime = task.StartTime.Add(30 * time.Minute)
+	}
+	RefreshTask(task)
 	c.TaskRepo.CreateOrUpdate(task)
+
 	// оповести eventbus что есть новая задача
 	return task, nil
-}
-
-func (c *TaskServiceImpl) CalcAlertness(t *entities.Task) string {
-	if t.Status == entities.TaskStatusStarted {
-		return entities.TaskAlertnessGreen
-	}
-	return entities.TaskAlertnessGray
 }

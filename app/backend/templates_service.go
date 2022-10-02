@@ -5,6 +5,8 @@ import (
 	"github.com/itskovichanton/goava/pkg/goava/utils"
 	"os"
 	"path/filepath"
+	utils2 "salespalm/server/app/utils"
+	"strings"
 )
 
 type ITemplateService interface {
@@ -31,11 +33,14 @@ func (c *TemplateServiceImpl) Init() error {
 		return err
 	}
 	for _, f := range files {
+		if strings.Contains(f.Name(), "disabled)") {
+			continue
+		}
 		fBytes, err := os.ReadFile(filepath.Join(templatesDir, f.Name()))
 		if err != nil {
 			return err
 		}
-		c.templates[f.Name()] = string(fBytes)
+		c.templates[f.Name()] = utils2.RemoveHtmlIndents(string(fBytes))
 	}
 	return nil
 }

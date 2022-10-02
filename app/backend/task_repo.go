@@ -42,13 +42,19 @@ func (c *TaskRepoImpl) Search(filter *entities.Task, settings *SearchSettings) [
 	var r []*entities.Task
 	for _, t := range unfiltered {
 		fits := true
-		if len(filter.Status) > 0 && t.Status != filter.Status {
-			fits = false
+		if len(filter.Status) > 0 {
+			statuses := strings.Split(filter.Status, ",")
+			for _, status := range statuses {
+				if strings.HasPrefix(status, "-") && t.Status == status[1:] || t.Status != filter.Status {
+					fits = false
+				}
+			}
+
 		}
 		if len(filter.Type) > 0 && t.Type != filter.Type {
 			fits = false
 		}
-		if filter.Sequence != nil && filter.Sequence.ID != t.Sequence.ID {
+		if filter.Sequence != nil && filter.Sequence.Id != t.Sequence.Id {
 			fits = false
 		}
 		if len(filter.Name) > 0 && !strings.Contains(strings.ToUpper(t.Name), strings.ToUpper(filter.Name)) {

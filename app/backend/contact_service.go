@@ -7,7 +7,7 @@ import (
 
 type IContactService interface {
 	Search(filter *entities.Contact, settings *ContactSearchSettings) *ContactSearchResult
-	SearchFirst(filter *entities.Contact) *entities.Contact
+	FindFirst(filter *entities.Contact) *entities.Contact
 	Delete(accountId entities.ID, ids []entities.ID)
 	CreateOrUpdate(contact *entities.Contact) error
 	Upload(accountId entities.ID, iterator ContactIterator) (int, error)
@@ -24,7 +24,7 @@ func (c *ContactServiceImpl) GetByIndex(accountId entities.ID, index int) *entit
 	return c.ContactRepo.GetByIndex(accountId, index)
 }
 
-func (c *ContactServiceImpl) SearchFirst(filter *entities.Contact) *entities.Contact {
+func (c *ContactServiceImpl) FindFirst(filter *entities.Contact) *entities.Contact {
 	r := c.Search(filter, &ContactSearchSettings{MaxSearchCount: 1}).Items
 	if len(r) == 0 {
 		return nil

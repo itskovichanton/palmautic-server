@@ -56,7 +56,7 @@ func (c *TaskDemoServiceImpl) generateRandomTask(contact *entities.Contact, spec
 			AccountId: spec.AccountId,
 		},
 		Sequence: &entities.IDAndTitle{
-			ID: c.SequenceService.GetByIndex(spec.AccountId, rand.Intn(30)).GetId(),
+			Id: c.SequenceService.GetByIndex(spec.AccountId, rand.Intn(30)).GetId(),
 		},
 		Contact: contact,
 	}
@@ -118,7 +118,6 @@ func (c *TaskDemoServiceImpl) generateRandomTask(contact *entities.Contact, spec
 	}
 
 	return r
-
 }
 
 func (c *TaskDemoServiceImpl) updateLinkedinTask(r *entities.Task) {

@@ -22,10 +22,6 @@ type SearchResult struct {
 	TotalCount int
 }
 
-type SearchSettings struct {
-	Offset, Count, MaxSearchCount int
-}
-
 type UploadSettings struct {
 	MaxUploadedByIterator int
 	PostProcessor         func(m entities.MapWithId)

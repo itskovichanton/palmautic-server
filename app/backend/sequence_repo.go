@@ -68,7 +68,7 @@ func (c *SequenceRepoImpl) Search(filter *entities.Sequence) []*entities.Sequenc
 		//if len(filter.Type) > 0 && t.Type != filter.Type {
 		//	fits = false
 		//}
-		//if filter.Sequence != nil && filter.Sequence.ID != t.Sequence.ID {
+		//if filter.Sequence != nil && filter.Sequence.Id != t.Sequence.Id {
 		//	fits = false
 		//}
 		//if len(filter.Name) > 0 && !strings.Contains(strings.ToUpper(t.Name), strings.ToUpper(filter.Name)) {

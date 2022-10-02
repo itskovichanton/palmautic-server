@@ -31,8 +31,8 @@ type TaskStats struct {
 	ByType, ByStatus map[string]int
 }
 
-func (t Task) HasStatusFinal() bool {
-	return t.Status == TaskStatusCompleted || t.Status == TaskStatusSkipped
+func (t Task) HasFinalStatus() bool {
+	return len(t.Status) > 0 && t.Status != TaskStatusPending && t.Status != TaskStatusStarted
 }
 
 type TaskType struct {
@@ -48,6 +48,17 @@ func (t TaskType) IsMessenger() bool {
 type TaskAction NameAndTitle
 
 var (
+	TaskTypeAutoEmail = &TaskType{
+		Creds: &NameAndTitle{
+			Name:  "auto_email",
+			Title: "Автоматический Email",
+		},
+		Actions: []*TaskAction{{
+			Name:  "send_letter",
+			Title: "Отправить письмо",
+		}},
+	}
+
 	TaskTypeManualEmail = &TaskType{
 		Creds: &NameAndTitle{
 			Name:  "manual_email",
@@ -114,11 +125,13 @@ var (
 )
 
 const (
-	TaskStatusCompleted       = "completed"
-	TaskStatusStarted         = "started"
-	TaskStatusSkipped         = "skipped"
-	TaskStatusPending         = "pending"
-	TaskStatusMissedByTimeout = "timeout"
+	TaskStatusCompleted = "completed"
+	TaskStatusStarted   = "started"
+	TaskStatusSkipped   = "skipped"
+	TaskStatusPending   = "pending"
+	TaskStatusExpired   = "expired"
+	TaskStatusReplied   = "replied"
+	TaskStatusArchived  = "archived"
 
 	TaskAlertnessGreen  = "green"
 	TaskAlertnessOrange = "orange"

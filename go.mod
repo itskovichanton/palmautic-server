@@ -3,11 +3,13 @@ module salespalm/server
 go 1.19
 
 require (
+	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef
 	github.com/golang/protobuf v1.5.2
 	github.com/itskovichanton/core v1.0.4
+	github.com/itskovichanton/echo-http v1.0.2
 	github.com/itskovichanton/goava v1.0.6
 	github.com/itskovichanton/server v1.0.3
-	github.com/labstack/gommon v0.3.1
+	github.com/jinzhu/copier v0.3.5
 	github.com/spf13/cast v1.5.0
 	go.uber.org/dig v1.15.0
 	golang.org/x/exp v0.0.0-20220916125017-b168a2c6b86b
@@ -20,8 +22,8 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/itskovichanton/echo-http v1.0.2 // indirect
 	github.com/kardianos/service v1.2.1 // indirect
+	github.com/labstack/gommon v0.3.1 // indirect
 	github.com/lestrrat/go-file-rotatelogs v0.0.0-20180223000712-d3151e2a480f // indirect
 	github.com/lestrrat/go-strftime v0.0.0-20180220042222-ba3bf9c1d042 // indirect
 	github.com/lingdor/stackerror v0.0.0-20191119040541-976d8885ed76 // indirect

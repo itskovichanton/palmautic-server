@@ -20,6 +20,12 @@ type BaseEntity struct {
 	AccountId   ID `json:"accountId"`
 }
 
+func (c *BaseEntity) ToIDAndTitle() *IDAndTitle {
+	return &IDAndTitle{
+		Id: c.Id,
+	}
+}
+
 func (c *BaseEntity) SetId(id ID) {
 	c.Id = id
 }
@@ -55,8 +61,8 @@ type NameAndTitle struct {
 }
 
 type IDAndTitle struct {
-	Title string
-	ID    ID
+	Name string
+	Id   ID
 }
 
 type B2Bdb struct {

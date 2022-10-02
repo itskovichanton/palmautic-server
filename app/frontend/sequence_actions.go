@@ -1,6 +1,7 @@
 package frontend
 
 import (
+	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
 	"salespalm/server/app/backend"
 	"salespalm/server/app/entities"
@@ -31,6 +32,21 @@ func (c *CreateOrUpdateSequenceAction) Run(arg interface{}) (interface{}, error)
 	return c.SequenceService.CreateOrUpdate(sequence)
 }
 
+type AddContactToSequenceAction struct {
+	pipeline.BaseActionImpl
+
+	SequenceService backend.ISequenceService
+}
+
+func (c *AddContactToSequenceAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*entities2.CallParams)
+	accountId := entities.ID(cp.Caller.Session.Account.ID)
+	return nil, c.SequenceService.AddContact(
+		entities.BaseEntity{Id: entities.ID(cp.GetParamInt("sequenceId", 0)), AccountId: accountId},
+		entities.BaseEntity{Id: entities.ID(cp.GetParamInt("contactId", 0)), AccountId: accountId},
+	)
+}
+
 //
 //type SearchSequenceAction struct {
 //	pipeline.BaseActionImpl
@@ -52,5 +68,5 @@ func (c *CreateOrUpdateSequenceAction) Run(arg interface{}) (interface{}, error)
 //
 //func (c *GetSequenceStatsAction) Run(arg interface{}) (interface{}, error) {
 //	cp := arg.(*entities2.CallParams)
-//	return c.SequenceService.Stats(entities.ID(cp.Caller.Session.Account.ID)), nil
+//	return c.SequenceService.Stats(entities.Id(cp.Caller.Session.Account.Id)), nil
 //}

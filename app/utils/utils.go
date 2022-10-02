@@ -7,6 +7,15 @@ import (
 	"sort"
 )
 
+func RemoveHtmlIndents(s string) string {
+	return s
+}
+
+func CalcPtr[E any](f func() E) *E {
+	r := f()
+	return &r
+}
+
 func RandomEntry[K comparable, V any](r map[K]V) *V {
 	n := len(r)
 	for _, p := range r {
@@ -35,7 +44,7 @@ func SortById[V entities.IBaseEntity](r []V) {
 
 func SortTasks(r []*entities.Task) {
 	sort.Slice(r, func(i, j int) bool {
-		if !r[i].HasStatusFinal() && r[j].HasStatusFinal() {
+		if !r[i].HasFinalStatus() && r[j].HasFinalStatus() {
 			return true
 		}
 		return r[i].GetId() > r[j].GetId()
