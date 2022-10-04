@@ -7,6 +7,7 @@ import (
 	"github.com/itskovichanton/server/pkg/server/users"
 	"log"
 	"salespalm/server/app/backend"
+	"salespalm/server/app/entities"
 	"salespalm/server/app/frontend/http_server"
 )
 
@@ -24,6 +25,7 @@ type PalmauticServerApp struct {
 	TaskService         backend.ITaskService
 	HttpController      *http_server.PalmauticHttpController
 	TaskExecutorService backend.ITaskExecutorService
+	SequenceService     backend.ISequenceService
 }
 
 func (c *PalmauticServerApp) Run() error {
@@ -33,6 +35,9 @@ func (c *PalmauticServerApp) Run() error {
 }
 
 func (c *PalmauticServerApp) tests() {
+
+	c.SequenceService.AddContact(entities.BaseEntity{Id: 228298, AccountId: 1001}, entities.BaseEntity{Id: 227631, AccountId: 1001})
+
 	//var zeroTime time.Time
 	//s := utils.ToJson(entities.Sequence{
 	//	Name:        "Тестовая-1",

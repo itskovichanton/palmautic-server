@@ -40,16 +40,16 @@ func (c *TaskRepoImpl) Search(filter *entities.Task, settings *SearchSettings) [
 	}
 	unfiltered := maps.Values(rMap)
 	var r []*entities.Task
+	statuses := strings.Split(filter.Status, ",")
+
 	for _, t := range unfiltered {
 		fits := true
 		if len(filter.Status) > 0 {
-			statuses := strings.Split(filter.Status, ",")
 			for _, status := range statuses {
-				if strings.HasPrefix(status, "-") && t.Status == status[1:] || t.Status != filter.Status {
+				if (strings.HasPrefix(status, "-") && t.Status == status[1:]) || t.Status != filter.Status {
 					fits = false
 				}
 			}
-
 		}
 		if len(filter.Type) > 0 && t.Type != filter.Type {
 			fits = false
@@ -61,6 +61,7 @@ func (c *TaskRepoImpl) Search(filter *entities.Task, settings *SearchSettings) [
 			fits = false
 		}
 		if fits {
+			//RefreshTask(t)
 			r = append(r, t)
 		}
 	}
@@ -69,15 +70,16 @@ func (c *TaskRepoImpl) Search(filter *entities.Task, settings *SearchSettings) [
 }
 
 func (c *TaskRepoImpl) applySettings(r []*entities.Task, settings *SearchSettings) []*entities.Task {
-	lastElemIndex := settings.Offset + settings.Count
-	if settings.Count > 0 && lastElemIndex < len(r) {
-		r = r[settings.Offset:lastElemIndex]
-	} else if settings.Offset < len(r) {
-		r = r[settings.Offset:]
-	} else {
-		r = []*entities.Task{}
+	if settings != nil {
+		lastElemIndex := settings.Offset + settings.Count
+		if settings.Count > 0 && lastElemIndex < len(r) {
+			r = r[settings.Offset:lastElemIndex]
+		} else if settings.Offset < len(r) {
+			r = r[settings.Offset:]
+		} else {
+			r = []*entities.Task{}
+		}
 	}
-
 	return r
 }
 

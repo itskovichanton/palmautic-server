@@ -35,6 +35,10 @@ func (t Task) HasFinalStatus() bool {
 	return len(t.Status) > 0 && t.Status != TaskStatusPending && t.Status != TaskStatusStarted
 }
 
+func (t Task) HasTypeEmail() bool {
+	return t.Type == TaskTypeManualEmail.Creds.Name || t.Type == TaskTypeAutoEmail.Creds.Name
+}
+
 type TaskType struct {
 	Creds   *NameAndTitle
 	Actions []*TaskAction

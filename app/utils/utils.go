@@ -51,6 +51,10 @@ func SortTasks(r []*entities.Task) {
 	})
 }
 
-func FormatUrl(u string, arg string) string {
-	return fmt.Sprintf("%v/%v", u, url.QueryEscape(arg))
+func FormatUrl(host string, arg string) string {
+	return fmt.Sprintf("%v/%v", host, url.QueryEscape(arg))
+}
+
+func IDStr(id entities.ID) string {
+	return fmt.Sprintf("%v", id)
 }

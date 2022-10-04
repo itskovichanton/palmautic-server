@@ -1,11 +1,20 @@
 package backend
 
 import (
+	"fmt"
 	"salespalm/server/app/entities"
+	utils2 "salespalm/server/app/utils"
 	"time"
 )
 
 func RefreshTask(t *entities.Task) {
+
+	//if len(t.Name) == 0 {
+	t.Name = calcName(t)
+	//}
+	//if len(t.Description) == 0 {
+	t.Description = calcDescription(t)
+	//}
 
 	if t.HasFinalStatus() {
 		return
@@ -13,12 +22,7 @@ func RefreshTask(t *entities.Task) {
 
 	calcStatus(t)
 	calcAlertness(t)
-	if len(t.Name) == 0 {
-		t.Name = calcName(t)
-	}
-	if len(t.Description) == 0 {
-		t.Description = calcDescription(t)
-	}
+
 }
 
 func calcLinkedinTaskDescription(t *entities.Task) string {
@@ -91,9 +95,9 @@ func calcDescription(t *entities.Task) string {
 
 	switch t.Type {
 	case entities.TaskTypeWhatsapp.Creds.Name:
-		return "Написать в личное сообщение Whatsapp: https://wa.me/{{.Contact.Phone}}"
+		return fmt.Sprintf(`Написать в личное сообщение Whatsapp: <a target="_blank" href="%v">{{.Contact.Phone}}</a>`, utils2.FormatUrl("https://wa.me", t.Contact.Phone))
 	case entities.TaskTypeTelegram.Creds.Name:
-		return "Написать в личное сообщение Telegram: https://t.me/{{.Contact.Phone}}"
+		return fmt.Sprintf(`Написать в личное сообщение Telegram: <a target="_blank" href="%v">{{.Contact.Phone}}</a>`, utils2.FormatUrl("https://t.me", t.Contact.Phone))
 	case entities.TaskTypeCall.Creds.Name:
 		return "Позвонить по номеру телефона {{.Contact.Phone}}. Настройся на продуктивный лад 😊"
 	case entities.TaskTypeLinkedin.Creds.Name:
@@ -105,6 +109,6 @@ func calcDescription(t *entities.Task) string {
 	return ""
 }
 
-func IsAutoExecuted(t *entities.Task) bool {
+func IsTaskAutoExecuted(t *entities.Task) bool {
 	return t.Type == entities.TaskTypeAutoEmail.Creds.Name
 }

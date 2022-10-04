@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"github.com/jinzhu/copier"
 	"golang.org/x/exp/maps"
 	"salespalm/server/app/entities"
 	"salespalm/server/app/utils"
@@ -94,7 +95,12 @@ func (c *ContactRepoImpl) Delete(accountId entities.ID, ids []entities.ID) {
 
 func (c *ContactRepoImpl) CreateOrUpdate(contact *entities.Contact) {
 	c.DBService.DBContent().IDGenerator.AssignId(contact)
-	c.DBService.DBContent().GetContacts().ForAccount(contact.AccountId)[contact.Id] = contact
+	old := c.DBService.DBContent().GetContacts().ForAccount(contact.AccountId)[contact.Id]
+	if old == nil {
+		c.DBService.DBContent().GetContacts().ForAccount(contact.AccountId)[contact.Id] = contact
+	} else {
+		copier.Copy(old, contact)
+	}
 }
 
 func (c *ContactRepoImpl) applySettings(r []*entities.Contact, settings *ContactSearchSettings) *ContactSearchResult {

@@ -11,13 +11,13 @@ import (
 //type DeleteSequenceAction struct {
 //	pipeline.BaseActionImpl
 //
-//	SequenceService backend.ISequenceService
+//	SequenceRepo backend.ISequenceService
 //}
 //
 //func (c *DeleteSequenceAction) Run(arg interface{}) (interface{}, error) {
 //	p := arg.(*RetrievedEntityParams)
 //	Sequence := p.Entity.(*entities.Sequence)
-//	return c.SequenceService.Delete(Sequence)
+//	return c.SequenceRepo.Delete(Sequence)
 //}
 
 type CreateOrUpdateSequenceAction struct {
@@ -29,7 +29,14 @@ type CreateOrUpdateSequenceAction struct {
 func (c *CreateOrUpdateSequenceAction) Run(arg interface{}) (interface{}, error) {
 	p := arg.(*RetrievedEntityParams)
 	sequence := p.Entity.(*entities.Sequence)
-	return c.SequenceService.CreateOrUpdate(sequence)
+	updatedSeq, templates, err := c.SequenceService.CreateOrUpdate(sequence)
+	if err != nil {
+		return updatedSeq, err
+	}
+	return map[string]interface{}{
+		"sequence":  updatedSeq.ToIDAndName(updatedSeq.Name),
+		"templates": templates,
+	}, nil
 }
 
 type AddContactToSequenceAction struct {
@@ -51,22 +58,22 @@ func (c *AddContactToSequenceAction) Run(arg interface{}) (interface{}, error) {
 //type SearchSequenceAction struct {
 //	pipeline.BaseActionImpl
 //
-//	SequenceService backend.ISequenceService
+//	SequenceRepo backend.ISequenceService
 //}
 //
 //func (c *SearchSequenceAction) Run(arg interface{}) (interface{}, error) {
 //	p := arg.(*RetrievedEntityParams)
 //	Sequence := p.Entity.(*entities.Sequence)
-//	return c.SequenceService.Search(Sequence), nil
+//	return c.SequenceRepo.Search(Sequence), nil
 //}
 //
 //type GetSequenceStatsAction struct {
 //	pipeline.BaseActionImpl
 //
-//	SequenceService backend.ISequenceService
+//	SequenceRepo backend.ISequenceService
 //}
 //
 //func (c *GetSequenceStatsAction) Run(arg interface{}) (interface{}, error) {
 //	cp := arg.(*entities2.CallParams)
-//	return c.SequenceService.Stats(entities.Id(cp.Caller.Session.Account.Id)), nil
+//	return c.SequenceRepo.Stats(entities.Id(cp.Caller.Session.Account.Id)), nil
 //}

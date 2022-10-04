@@ -1,51 +1,129 @@
 package backend
 
 import (
+	"fmt"
 	"github.com/itskovichanton/core/pkg/core"
 	"github.com/itskovichanton/goava/pkg/goava/utils"
+	"github.com/patrickmn/go-cache"
+	"github.com/spf13/cast"
+	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
+	"reflect"
+	"salespalm/server/app/entities"
 	utils2 "salespalm/server/app/utils"
 	"strings"
 )
 
 type ITemplateService interface {
-	Format(templateFileName string, arg interface{}) string
-	Templates() map[string]string
+	Format(template string, accountId entities.ID, args map[string]interface{}) string
+	Templates(accountId entities.ID) TemplatesMap
+	CreateOrUpdate(entity entities.IBaseEntity, body string, arg ...interface{}) string
+	Clear(accountId entities.ID)
 }
+
+type TemplatesMap map[string]string
 
 type TemplateServiceImpl struct {
 	ITemplateService
 
-	Config    *core.Config
-	templates map[string]string
+	Config         *core.Config
+	AccountService IUserService
+	templates      *cache.Cache
+	templatesDir   string
+	optimize       bool
 }
 
-func (c *TemplateServiceImpl) Templates() map[string]string {
-	return c.templates
+func (c *TemplateServiceImpl) Clear(accountId entities.ID) {
+	c.templates.Delete(utils2.IDStr(accountId))
 }
 
-func (c *TemplateServiceImpl) Init() error {
-	c.templates = map[string]string{}
-	templatesDir := c.Config.GetOnBaseWorkDir("manual_email_templates")
-	files, err := os.ReadDir(templatesDir)
+func (c *TemplateServiceImpl) CreateOrUpdate(entity entities.IBaseEntity, body string, arg ...interface{}) string {
+
+	prefix := strings.ToLower(reflect.ValueOf(entity).Type().Elem().Name())
+	postfix := strings.Join(cast.ToStringSlice(arg), "_")
+
+	templateFileName := ""
+	if c.optimize {
+		templateFileName = utils.MD5(body) + ".html"
+	} else {
+		templateFileName = fmt.Sprintf("%v__acc%v_id%v_%v.html", prefix, entity.GetAccountId(), entity.GetId(), postfix)
+	}
+
+	templateFullFileName := filepath.Join(c.calcTemplateForAccountDir(entity), templateFileName)
+	err := os.WriteFile(templateFullFileName, []byte(body), 0755)
 	if err != nil {
-		return err
+		templateFullFileName = ""
 	}
-	for _, f := range files {
-		if strings.Contains(f.Name(), "disabled)") {
-			continue
-		}
-		fBytes, err := os.ReadFile(filepath.Join(templatesDir, f.Name()))
-		if err != nil {
-			return err
-		}
-		c.templates[f.Name()] = utils2.RemoveHtmlIndents(string(fBytes))
-	}
-	return nil
+	templateName := calcTemplateName(templateFileName)
+	c.Templates(entity.GetAccountId())[templateName] = body
+	return templateName
+
 }
 
-func (c *TemplateServiceImpl) Format(template string, arg interface{}) string {
-	template = c.templates[template]
-	return utils.Format(template).Exec(arg)
+func calcTemplateName(templateFileName string) string {
+	_, templateFileName = filepath.Split(templateFileName)
+	templateFileName = templateFileName[:len(templateFileName)-len(path.Ext(templateFileName))]
+	return templateFileName
+}
+
+func (c *TemplateServiceImpl) Templates(accountId entities.ID) TemplatesMap {
+	key := utils2.IDStr(accountId)
+	templatesMapI, _ := c.templates.Get(key)
+	if templatesMapI == nil {
+		templatesMap := TemplatesMap{}
+		templatesMapI = templatesMap
+		c.fillTemplatesMap(accountId, templatesMap)
+		c.templates.Set(key, templatesMap, cache.NoExpiration)
+	}
+	return templatesMapI.(TemplatesMap)
+}
+
+func (c *TemplateServiceImpl) Init() {
+	c.templates = cache.New(cache.NoExpiration, cache.NoExpiration)
+	c.templatesDir = c.Config.GetOnBaseWorkDir("manual_email_templates")
+	c.optimize = c.Config.GetBool("templates", "optimize")
+}
+
+func (c *TemplateServiceImpl) Format(template string, accountId entities.ID, args map[string]interface{}) string {
+	if strings.HasPrefix(template, "template") {
+		template = strings.Split(template, ":")[1]
+		if len(template) > 0 {
+			template = c.Templates(accountId)[template]
+		}
+	}
+	return utils.Format(template).Exec(c.prepareArgs(accountId, args))
+}
+
+func (c *TemplateServiceImpl) calcTemplateForAccountDir(entity entities.IBaseEntity) string {
+	r := c.calcTemplatesDir(entity.GetAccountId())
+	os.MkdirAll(r, 0755)
+	return r
+}
+
+func (c *TemplateServiceImpl) fillTemplatesMap(accountId entities.ID, templatesMap TemplatesMap) {
+	filepath.Walk(c.calcTemplatesDir(accountId), func(path string, f fs.FileInfo, err error) error {
+
+		if f.IsDir() || strings.Contains(f.Name(), "disabled)") {
+			return nil
+		}
+
+		fBytes, _ := os.ReadFile(path)
+		templatesMap[calcTemplateName(f.Name())] = utils2.RemoveHtmlIndents(string(fBytes))
+
+		return nil
+	})
+}
+
+func (c *TemplateServiceImpl) calcTemplatesDir(accountId entities.ID) string {
+	return filepath.Join(c.templatesDir, fmt.Sprintf("%v", accountId))
+}
+
+func (c *TemplateServiceImpl) prepareArgs(accountId entities.ID, args map[string]interface{}) interface{} {
+	if args == nil {
+		args = map[string]interface{}{}
+	}
+	args["Me"] = c.AccountService.Accounts()[accountId]
+	return args
 }

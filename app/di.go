@@ -27,6 +27,7 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewUploadFromFileB2BDataAction)
 	container.Provide(c.NewAddContactToSequenceAction)
 	container.Provide(c.NewGrpcController)
+	container.Provide(c.NewClearTemplatesAction)
 	container.Provide(c.NewAddContactFromB2BAction)
 	container.Provide(c.NewUserRepo)
 	container.Provide(c.NewGetB2BInfoActionAction)
@@ -73,11 +74,16 @@ func (c *DI) NewEventBus() EventBus.Bus {
 	return EventBus.New()
 }
 
-func (c *DI) NewSequenceRunnerService(EventBus EventBus.Bus, TaskService backend.ITaskService) backend.ISequenceRunnerService {
-	return &backend.SequenceRunnerServiceImpl{
-		TaskService: TaskService,
-		EventBus:    EventBus,
+func (c *DI) NewSequenceRunnerService(ContactService backend.IContactService, SequenceRepo backend.ISequenceRepo, LoggerService logger.ILoggerService, EventBus EventBus.Bus, TaskService backend.ITaskService) backend.ISequenceRunnerService {
+	r := &backend.SequenceRunnerServiceImpl{
+		TaskService:    TaskService,
+		EventBus:       EventBus,
+		LoggerService:  LoggerService,
+		SequenceRepo:   SequenceRepo,
+		ContactService: ContactService,
 	}
+	r.Init()
+	return r
 }
 
 func (c *DI) NewTaskExecutorService(manualEmailTaskExecutorService backend.IManualEmailTaskExecutorService) backend.ITaskExecutorService {
@@ -119,12 +125,13 @@ func (c *DI) NewDBService(idGenerator backend.IDGenerator, config *core.Config) 
 	return r, nil
 }
 
-func (c *DI) NewTemplateService(config *core.Config) (backend.ITemplateService, error) {
+func (c *DI) NewTemplateService(accountService backend.IUserService, config *core.Config) backend.ITemplateService {
 	r := &backend.TemplateServiceImpl{
-		Config: config,
+		Config:         config,
+		AccountService: accountService,
 	}
-	err := r.Init()
-	return r, err
+	r.Init()
+	return r
 }
 
 func (c *DI) NewIDGenerator() backend.IDGenerator {
@@ -151,9 +158,10 @@ func (c *DI) NewUserRepo(dbService backend.IDBService) backend.IUserRepo {
 	}
 }
 
-func (c *DI) NewHttpController(AddContactToSequenceAction *frontend.AddContactToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, GenerateDemoTasksAction *frontend.GenerateDemoTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
+func (c *DI) NewHttpController(ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, GenerateDemoTasksAction *frontend.GenerateDemoTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
 	r := &http_server.PalmauticHttpController{
 		HttpControllerImpl:           *httpController,
+		ClearTemplatesAction:         ClearTemplatesAction,
 		CreateOrUpdateContactAction:  createOrUpdateContactAction,
 		DeleteContactAction:          deleteContactAction,
 		SearchContactAction:          searchContactAction,
@@ -190,7 +198,7 @@ func (c *DI) NewCreateOrUpdateSequenceAction(sequenceService backend.ISequenceSe
 	}
 }
 
-func (c *DI) NewApp(TaskExecutorService backend.ITaskExecutorService, httpController *http_server.PalmauticHttpController, contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
+func (c *DI) NewApp(SequenceService backend.ISequenceService, TaskExecutorService backend.ITaskExecutorService, httpController *http_server.PalmauticHttpController, contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
 	return &PalmauticServerApp{
 		HttpController:      httpController,
 		Config:              config,
@@ -201,6 +209,7 @@ func (c *DI) NewApp(TaskExecutorService backend.ITaskExecutorService, httpContro
 		UserRepo:            userRepo,
 		ContactService:      contactService,
 		TaskExecutorService: TaskExecutorService,
+		SequenceService:     SequenceService,
 	}
 }
 
@@ -282,10 +291,12 @@ func (c *DI) NewSearchContactAction(contactService backend.IContactService) *fro
 	}
 }
 
-func (c *DI) NewCommonsService(taskService backend.ITaskService, sequenceService backend.ISequenceService) backend.ICommonsService {
+func (c *DI) NewCommonsService(AccountService backend.IUserService, TemplateService backend.ITemplateService, taskService backend.ITaskService, sequenceService backend.ISequenceService) backend.ICommonsService {
 	return &backend.CommonsServiceImpl{
-		SequenceService: sequenceService,
 		TaskService:     taskService,
+		SequenceService: sequenceService,
+		TemplateService: TemplateService,
+		AccountService:  AccountService,
 	}
 }
 
@@ -302,11 +313,18 @@ func (c *DI) NewContactService(contactRepo backend.IContactRepo) backend.IContac
 	}
 }
 
-func (c *DI) NewSequenceService(ContactService backend.IContactService, SequenceRunnerService backend.ISequenceRunnerService, sequenceRepo backend.ISequenceRepo) backend.ISequenceService {
+func (c *DI) NewSequenceService(TemplateService backend.ITemplateService, ContactService backend.IContactService, SequenceRunnerService backend.ISequenceRunnerService, sequenceRepo backend.ISequenceRepo) backend.ISequenceService {
 	return &backend.SequenceServiceImpl{
 		SequenceRepo:          sequenceRepo,
 		ContactService:        ContactService,
 		SequenceRunnerService: SequenceRunnerService,
+		TemplateService:       TemplateService,
+	}
+}
+
+func (c *DI) NewClearTemplatesAction(TemplateService backend.ITemplateService) *frontend.ClearTemplatesAction {
+	return &frontend.ClearTemplatesAction{
+		TemplateService: TemplateService,
 	}
 }
 

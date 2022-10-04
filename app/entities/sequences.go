@@ -10,6 +10,19 @@ type Sequence struct {
 	Process     *SequenceProcess
 }
 
+func (s Sequence) Status(accountId ID) string {
+	tasksForAccount := s.Process.ByContact[accountId]
+	tasks := tasksForAccount.Tasks
+	r := ""
+	if tasksForAccount != nil && len(tasks) > 0 {
+		r = tasks[len(tasks)-1].Status
+	}
+	if len(r) == 0 {
+
+	}
+	return r
+}
+
 type SequenceModel struct {
 	Steps []*Task
 }

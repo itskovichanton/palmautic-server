@@ -20,6 +20,7 @@ type PalmauticHttpController struct {
 	AddContactToSequenceAction   *frontend.AddContactToSequenceAction
 	SearchContactAction          *frontend.SearchContactAction
 	DeleteContactAction          *frontend.DeleteContactAction
+	ClearTemplatesAction         *frontend.ClearTemplatesAction
 	UploadContactsAction         *frontend.UploadContactsAction
 	UploadB2BDataAction          *frontend.UploadB2BDataAction
 	GetB2BInfoAction             *frontend.GetB2BInfoAction
@@ -41,6 +42,9 @@ func (c *PalmauticHttpController) Init() {
 	// sequences
 	c.EchoEngine.POST("/sequences/createOrUpdate", c.GetDefaultHandler(c.prepareAction(true, c.readSequence(), c.CreateOrUpdateSequenceAction)))
 	c.EchoEngine.GET("/sequences/addContact", c.GetDefaultHandler(c.prepareAction(true, c.AddContactToSequenceAction)))
+
+	// templates
+	c.EchoEngine.GET("/templates/clear", c.GetDefaultHandler(c.prepareAction(true, c.ClearTemplatesAction)))
 
 	// other
 	c.EchoEngine.GET("/commons", c.GetDefaultHandler(c.prepareAction(true, c.GetCommonsAction)))

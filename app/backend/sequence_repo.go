@@ -46,6 +46,19 @@ func (c *SequenceRepoImpl) GetByIndex(accountId entities.ID, index int) *entitie
 }
 
 func (c *SequenceRepoImpl) Search(filter *entities.Sequence) []*entities.Sequence {
+	var r []*entities.Sequence
+	if filter.AccountId == 0 {
+		for accountId, _ := range c.DBService.DBContent().GetSequenceContainer().Sequences {
+			filter.AccountId = accountId
+			r = append(r, c.searchForAccount(filter)...)
+		}
+	} else {
+		return c.searchForAccount(filter)
+	}
+	return r
+}
+
+func (c *SequenceRepoImpl) searchForAccount(filter *entities.Sequence) []*entities.Sequence {
 	rMap := c.DBService.DBContent().GetSequenceContainer().Sequences[filter.AccountId]
 	if len(rMap) == 0 {
 		return []*entities.Sequence{}
@@ -92,6 +105,9 @@ func (c *SequenceRepoImpl) Search(filter *entities.Sequence) []*entities.Sequenc
 //}
 
 func (c *SequenceRepoImpl) CreateOrUpdate(sequence *entities.Sequence) {
+	if sequence.Process == nil {
+		sequence.Process = &entities.SequenceProcess{ByContact: map[entities.ID]*entities.SequenceInstance{}}
+	}
 	c.DBService.DBContent().IDGenerator.AssignId(sequence)
 	c.DBService.DBContent().GetSequenceContainer().Sequences.ForAccount(sequence.AccountId)[sequence.Id] = sequence
 }

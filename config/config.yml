@@ -9,7 +9,7 @@ email:
   address: mail.molbulak.com:25
 
 service:
-  enabled: true
+  enabled: false
   description: palm-server
   options:
     Restart: on-success
@@ -36,6 +36,9 @@ server:
       enabled: false
     multipart:
       maxRequestSizeBytes: 5MB
+
+templates:
+  optimize: true
 
 profile: dev
 

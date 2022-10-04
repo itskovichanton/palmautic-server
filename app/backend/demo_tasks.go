@@ -28,7 +28,7 @@ type TaskDemoServiceImpl struct {
 
 func (c *TaskDemoServiceImpl) Init() error {
 	rand.Seed(42)
-	c.templates = c.TemplateService.Templates()
+	c.templates = c.TemplateService.Templates(0)
 	return nil
 }
 

@@ -1,14 +1,16 @@
 package backend
 
 import (
+	"fmt"
 	"github.com/itskovichanton/goava/pkg/goava/errs"
 	"salespalm/server/app/entities"
+	"strings"
 )
 
 type ISequenceService interface {
 	//Search(filter *entities.Sequence) []*entities.Sequence
 	//Delete(filter *entities.Sequence) (*entities.Sequence, error)
-	CreateOrUpdate(sequence *entities.Sequence) (*entities.Sequence, error)
+	CreateOrUpdate(sequence *entities.Sequence) (*entities.Sequence, TemplatesMap, error)
 	//Stats(accountId entities.ID) *entities.SequenceStats
 	Commons(accountId entities.ID) *entities.SequenceCommons
 	GetByIndex(accountId entities.ID, index int) *entities.Sequence
@@ -23,6 +25,7 @@ type SequenceServiceImpl struct {
 	SequenceRepo          ISequenceRepo
 	ContactService        IContactService
 	SequenceRunnerService ISequenceRunnerService
+	TemplateService       ITemplateService
 }
 
 func (c *SequenceServiceImpl) GetByIndex(accountId entities.ID, index int) *entities.Sequence {
@@ -59,7 +62,7 @@ func (c *SequenceServiceImpl) AddContact(sequenceCreds, contactCreds entities.Ba
 		return errs.NewBaseError("Контакт не найден")
 	}
 
-	c.SequenceRunnerService.Run(sequence, contact)
+	go c.SequenceRunnerService.Run(sequence, contact)
 
 	return nil
 }
@@ -99,19 +102,24 @@ func (c *SequenceServiceImpl) Delete(filter *entities.Sequence) (*entities.Seque
 }
 */
 
-func (c *SequenceServiceImpl) CreateOrUpdate(sequence *entities.Sequence) (*entities.Sequence, error) {
+func (c *SequenceServiceImpl) CreateOrUpdate(sequence *entities.Sequence) (*entities.Sequence, TemplatesMap, error) {
 
-	if sequence.ReadyForSearch() {
-		// update
-		foundSequence := c.SequenceRepo.FindFirst(sequence)
-		foundSequence.Name = sequence.Name
-		foundSequence.Description = sequence.Description
-		//foundSequence.Model = sequence.Model
-		return foundSequence, nil
+	// сохраняем как есть
+	c.SequenceRepo.CreateOrUpdate(sequence)
+
+	// сохраняем все боди у писем в шаблоны
+	for stepIndex, step := range sequence.Model.Steps {
+		if step.HasTypeEmail() {
+			if !strings.HasPrefix(step.Body, "template") {
+				// сохраняем шаблон в папку
+				templateName := c.TemplateService.CreateOrUpdate(sequence, step.Body, fmt.Sprintf("step%v", stepIndex))
+				if len(templateName) > 0 {
+					step.Body = "template:" + templateName
+				}
+			}
+		}
 	}
 
-	// Create
-	sequence.Process = &entities.SequenceProcess{ByContact: map[entities.ID]*entities.SequenceInstance{}}
 	c.SequenceRepo.CreateOrUpdate(sequence)
-	return sequence, nil
+	return sequence, c.TemplateService.Templates(sequence.AccountId), nil
 }

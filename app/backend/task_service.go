@@ -1,12 +1,10 @@
 package backend
 
 import (
-	"fmt"
 	"github.com/asaskevich/EventBus"
 	"github.com/itskovichanton/core/pkg/core/frmclient"
 	"github.com/itskovichanton/goava/pkg/goava/errs"
 	"salespalm/server/app/entities"
-	"strings"
 	"time"
 )
 
@@ -19,6 +17,7 @@ type ITaskService interface {
 	Clear(accountId entities.ID)
 	Skip(task *entities.Task) (*entities.Task, error)
 	Execute(task *entities.Task) (*entities.Task, error)
+	RefreshTask(task *entities.Task)
 }
 
 type TaskServiceImpl struct {
@@ -61,25 +60,7 @@ type TaskSearchSettings struct {
 func (c *TaskServiceImpl) Search(filter *entities.Task, settings *SearchSettings) []*entities.Task {
 	r := c.TaskRepo.Search(filter, settings)
 	for _, t := range r {
-		//seq := c.SequenceRepo.FindFirst(&entities.Sequence{
-		//	BaseEntity: entities.BaseEntity{
-		//		Id:        t.Sequence.Id,
-		//		AccountId: t.AccountId,
-		//	},
-		//})
-		//if seq != nil {
-		//	t.Sequence.Name = seq.Name
-		//}
-		if len(filter.Body) > 0 { // чтото передал в body - возвращаем ему его
-			if strings.HasPrefix(t.Body, "template") {
-				templateName := strings.Split(t.Body, ":")[1]
-				t.Body = c.TemplateService.Format(templateName, &map[string]interface{}{
-					"Contact": t.Contact,
-					"Me":      c.AccountService.Accounts()[filter.AccountId],
-				})
-			}
-		}
-
+		c.RefreshTask(t)
 	}
 	return r
 }
@@ -154,10 +135,10 @@ func (c *TaskServiceImpl) Execute(task *entities.Task) (*entities.Task, error) {
 		storedTask.Subject = task.Subject
 		c.TaskExecutorService.Execute(storedTask) // пока не проверяю статус выполнения
 		storedTask.Status = entities.TaskStatusCompleted
-		RefreshTask(storedTask)
+		c.RefreshTask(storedTask)
 
 		// Оповещаем шину
-		c.EventBus.Publish(fmt.Sprintf("task-updated:%v", storedTask.Id), storedTask)
+		c.EventBus.Publish(TaskUpdatedEventName(storedTask.Id), storedTask)
 
 		return storedTask, nil
 	}
@@ -192,9 +173,21 @@ func (c *TaskServiceImpl) CreateOrUpdate(task *entities.Task) (*entities.Task, e
 	if task.DueTime.Before(task.StartTime) {
 		task.DueTime = task.StartTime.Add(30 * time.Minute)
 	}
-	RefreshTask(task)
+
+	c.RefreshTask(task)
 	c.TaskRepo.CreateOrUpdate(task)
 
 	// оповести eventbus что есть новая задача
 	return task, nil
+}
+
+func (c *TaskServiceImpl) RefreshTask(task *entities.Task) {
+	RefreshTask(task)
+	args := map[string]interface{}{"Contact": task.Contact}
+	task.Subject = c.TemplateService.Format(task.Subject, task.AccountId, args)
+	task.Description = c.TemplateService.Format(task.Description, task.AccountId, args)
+	task.Name = c.TemplateService.Format(task.Name, task.AccountId, args)
+	if !task.HasTypeEmail() {
+		task.Body = c.TemplateService.Format(task.Body, task.AccountId, args)
+	}
 }
