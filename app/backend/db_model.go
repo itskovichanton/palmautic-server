@@ -51,7 +51,7 @@ func (c *DBContent) GetTaskContainer() *TaskContainer {
 		c.TaskContainer = &TaskContainer{
 			Tasks: AccountTasksMap{},
 			Commons: &entities.TaskCommons{
-				Statuses: []string{entities.TaskStatusStarted, entities.TaskStatusCompleted, entities.TaskStatusSkipped},
+				Statuses: []string{entities.TaskStatusStarted, entities.TaskStatusCompleted, entities.TaskStatusSkipped, entities.TaskStatusExpired},
 			},
 		}
 		types := []*entities.TaskType{entities.TaskTypeManualEmail, entities.TaskTypeCall, entities.TaskTypeWhatsapp, entities.TaskTypeTelegram, entities.TaskTypeLinkedin}
@@ -61,6 +61,7 @@ func (c *DBContent) GetTaskContainer() *TaskContainer {
 			c.TaskContainer.Commons.Types[t.Creds.Name] = t
 		}
 	}
+	c.TaskContainer.Commons.Statuses = []string{entities.TaskStatusStarted, entities.TaskStatusCompleted, entities.TaskStatusSkipped, entities.TaskStatusExpired}
 	return c.TaskContainer
 }
 

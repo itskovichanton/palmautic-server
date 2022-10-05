@@ -10,17 +10,14 @@ type Sequence struct {
 	Process     *SequenceProcess
 }
 
-func (s Sequence) Status(accountId ID) string {
-	tasksForAccount := s.Process.ByContact[accountId]
-	tasks := tasksForAccount.Tasks
-	r := ""
-	if tasksForAccount != nil && len(tasks) > 0 {
-		r = tasks[len(tasks)-1].Status
+func (s *SequenceInstance) StatusTask() *Task {
+	for i := len(s.Tasks) - 1; i >= 0; i-- {
+		t := s.Tasks[i]
+		if len(t.Status) > 0 && t.Status != TaskStatusArchived {
+			return t
+		}
 	}
-	if len(r) == 0 {
-
-	}
-	return r
+	return s.Tasks[0]
 }
 
 type SequenceModel struct {

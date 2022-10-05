@@ -13,7 +13,9 @@ func RefreshTask(t *entities.Task) {
 	t.Name = calcName(t)
 	//}
 	//if len(t.Description) == 0 {
-	t.Description = calcDescription(t)
+	if t.Contact != nil {
+		t.Description = calcDescription(t)
+	}
 	//}
 
 	if t.HasFinalStatus() {

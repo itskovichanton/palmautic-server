@@ -35,6 +35,7 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewClearB2BTableAction)
 	container.Provide(c.NewDBService)
 	container.Provide(c.NewUploadContactsAction)
+	container.Provide(c.NewMarkRepliedTaskAction)
 	container.Provide(c.NewContactRepo)
 	container.Provide(c.NewTaskRepo)
 	container.Provide(c.NewClearTasksAction)
@@ -59,8 +60,6 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewCreateOrUpdateSequenceAction)
 	container.Provide(c.NewUserService)
 	container.Provide(c.NewTemplateService)
-	container.Provide(c.NewTaskDemoService)
-	container.Provide(c.NewGenerateDemoTasksAction)
 	container.Provide(c.NewClearTasksAction)
 	container.Provide(c.NewManualEmailTaskExecutorService)
 	container.Provide(c.NewTaskExecutorService)
@@ -97,19 +96,6 @@ func (c *DI) NewManualEmailTaskExecutorService(emailService core.IEmailService, 
 		EmailService:   emailService,
 		AccountService: AccountService,
 	}
-}
-
-func (c *DI) NewTaskDemoService(Config *core.Config, AccountService backend.IUserService, TemplateService backend.ITemplateService, ContactService backend.IContactService, TaskService backend.ITaskService, SequenceService backend.ISequenceService) (backend.ITaskDemoService, error) {
-	r := &backend.TaskDemoServiceImpl{
-		ContactService:  ContactService,
-		TaskService:     TaskService,
-		SequenceService: SequenceService,
-		TemplateService: TemplateService,
-		AccountService:  AccountService,
-		Config:          Config,
-	}
-	err := r.Init()
-	return r, err
 }
 
 func (c *DI) NewDBService(idGenerator backend.IDGenerator, config *core.Config) (backend.IDBService, error) {
@@ -158,9 +144,10 @@ func (c *DI) NewUserRepo(dbService backend.IDBService) backend.IUserRepo {
 	}
 }
 
-func (c *DI) NewHttpController(ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, GenerateDemoTasksAction *frontend.GenerateDemoTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
+func (c *DI) NewHttpController(MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
 	r := &http_server.PalmauticHttpController{
 		HttpControllerImpl:           *httpController,
+		MarkRepliedTaskAction:        MarkRepliedTaskAction,
 		ClearTemplatesAction:         ClearTemplatesAction,
 		CreateOrUpdateContactAction:  createOrUpdateContactAction,
 		DeleteContactAction:          deleteContactAction,
@@ -178,7 +165,6 @@ func (c *DI) NewHttpController(ClearTemplatesAction *frontend.ClearTemplatesActi
 		ClearTasksAction:             ClearTasksAction,
 		SearchTaskAction:             SearchTaskAction,
 		CreateOrUpdateSequenceAction: CreateOrUpdateSequenceAction,
-		GenerateDemoTasksAction:      GenerateDemoTasksAction,
 		SkipTaskAction:               SkipTaskAction,
 		ExecuteTaskAction:            ExecuteTaskAction,
 	}
@@ -210,12 +196,6 @@ func (c *DI) NewApp(SequenceService backend.ISequenceService, TaskExecutorServic
 		ContactService:      contactService,
 		TaskExecutorService: TaskExecutorService,
 		SequenceService:     SequenceService,
-	}
-}
-
-func (c *DI) NewGenerateDemoTasksAction(taskDemoService backend.ITaskDemoService) *frontend.GenerateDemoTasksAction {
-	return &frontend.GenerateDemoTasksAction{
-		TaskDemoService: taskDemoService,
 	}
 }
 
@@ -383,6 +363,12 @@ func (c *DI) NewSkipTaskAction(TaskService backend.ITaskService) *frontend.SkipT
 
 func (c *DI) NewExecuteTaskAction(TaskService backend.ITaskService) *frontend.ExecuteTaskAction {
 	return &frontend.ExecuteTaskAction{
+		TaskService: TaskService,
+	}
+}
+
+func (c *DI) NewMarkRepliedTaskAction(TaskService backend.ITaskService) *frontend.MarkRepliedTaskAction {
+	return &frontend.MarkRepliedTaskAction{
 		TaskService: TaskService,
 	}
 }

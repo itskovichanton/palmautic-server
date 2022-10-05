@@ -62,7 +62,7 @@ func (c *SequenceServiceImpl) AddContact(sequenceCreds, contactCreds entities.Ba
 		return errs.NewBaseError("Контакт не найден")
 	}
 
-	go c.SequenceRunnerService.Run(sequence, contact)
+	go c.SequenceRunnerService.Run(sequence, contact, false)
 
 	return nil
 }
@@ -108,11 +108,13 @@ func (c *SequenceServiceImpl) CreateOrUpdate(sequence *entities.Sequence) (*enti
 	c.SequenceRepo.CreateOrUpdate(sequence)
 
 	// сохраняем все боди у писем в шаблоны
+	sequenceTemplatesUsedTemplates := TemplatesMap{}
 	for stepIndex, step := range sequence.Model.Steps {
 		if step.HasTypeEmail() {
 			if !strings.HasPrefix(step.Body, "template") {
 				// сохраняем шаблон в папку
 				templateName := c.TemplateService.CreateOrUpdate(sequence, step.Body, fmt.Sprintf("step%v", stepIndex))
+				sequenceTemplatesUsedTemplates[templateName] = step.Body
 				if len(templateName) > 0 {
 					step.Body = "template:" + templateName
 				}
@@ -121,5 +123,5 @@ func (c *SequenceServiceImpl) CreateOrUpdate(sequence *entities.Sequence) (*enti
 	}
 
 	c.SequenceRepo.CreateOrUpdate(sequence)
-	return sequence, c.TemplateService.Templates(sequence.AccountId), nil
+	return sequence, sequenceTemplatesUsedTemplates, nil
 }

@@ -8,7 +8,7 @@ import (
 )
 
 type ITaskRepo interface {
-	Search(filter *entities.Task, settings *SearchSettings) []*entities.Task
+	Search(filter *entities.Task, settings *SearchSettings) *TaskSearchResult
 	Delete(filter *entities.Task) *entities.Task
 	CreateOrUpdate(Task *entities.Task)
 	Commons() *entities.TaskCommons
@@ -25,10 +25,10 @@ func (c *TaskRepoImpl) Clear(accountId entities.ID) {
 	c.DBService.DBContent().GetTaskContainer().Tasks[accountId] = Tasks{}
 }
 
-func (c *TaskRepoImpl) Search(filter *entities.Task, settings *SearchSettings) []*entities.Task {
+func (c *TaskRepoImpl) Search(filter *entities.Task, settings *SearchSettings) *TaskSearchResult {
 	rMap := c.DBService.DBContent().GetTaskContainer().Tasks[filter.AccountId]
 	if len(rMap) == 0 {
-		return []*entities.Task{}
+		return c.applySettings([]*entities.Task{}, settings)
 	}
 	if filter.Id != 0 {
 		var r []*entities.Task
@@ -36,7 +36,7 @@ func (c *TaskRepoImpl) Search(filter *entities.Task, settings *SearchSettings) [
 		if searchResult != nil {
 			r = append(r, searchResult)
 		}
-		return r
+		return c.applySettings(r, settings)
 	}
 	unfiltered := maps.Values(rMap)
 	var r []*entities.Task
@@ -46,7 +46,12 @@ func (c *TaskRepoImpl) Search(filter *entities.Task, settings *SearchSettings) [
 		fits := true
 		if len(filter.Status) > 0 {
 			for _, status := range statuses {
-				if (strings.HasPrefix(status, "-") && t.Status == status[1:]) || t.Status != filter.Status {
+				if strings.HasPrefix(status, "-") {
+					status = status[1:]
+					if t.Status == status {
+						fits = false
+					}
+				} else if t.Status != filter.Status {
 					fits = false
 				}
 			}
@@ -61,7 +66,6 @@ func (c *TaskRepoImpl) Search(filter *entities.Task, settings *SearchSettings) [
 			fits = false
 		}
 		if fits {
-			//RefreshTask(t)
 			r = append(r, t)
 		}
 	}
@@ -69,18 +73,22 @@ func (c *TaskRepoImpl) Search(filter *entities.Task, settings *SearchSettings) [
 	return c.applySettings(r, settings)
 }
 
-func (c *TaskRepoImpl) applySettings(r []*entities.Task, settings *SearchSettings) []*entities.Task {
-	if settings != nil {
-		lastElemIndex := settings.Offset + settings.Count
-		if settings.Count > 0 && lastElemIndex < len(r) {
-			r = r[settings.Offset:lastElemIndex]
-		} else if settings.Offset < len(r) {
-			r = r[settings.Offset:]
-		} else {
-			r = []*entities.Task{}
-		}
+func (c *TaskRepoImpl) applySettings(r []*entities.Task, settings *SearchSettings) *TaskSearchResult {
+	result := &TaskSearchResult{Items: r}
+	result.TotalCount = len(result.Items)
+	if settings == nil {
+		return result
 	}
-	return r
+	lastElemIndex := settings.Offset + settings.Count
+	if settings.Count > 0 && lastElemIndex < result.TotalCount {
+		result.Items = result.Items[settings.Offset:lastElemIndex]
+	} else if settings.Offset < len(result.Items) {
+		result.Items = result.Items[settings.Offset:]
+	} else {
+		result.Items = []*entities.Task{}
+	}
+
+	return result
 }
 
 func (c *TaskRepoImpl) Delete(filter *entities.Task) *entities.Task {

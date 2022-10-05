@@ -1,8 +1,6 @@
 package frontend
 
 import (
-	"fmt"
-	"github.com/itskovichanton/core/pkg/core/validation"
 	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
 	"salespalm/server/app/backend"
@@ -60,23 +58,6 @@ func (c *GetTaskStatsAction) Run(arg interface{}) (interface{}, error) {
 	return c.TaskService.Stats(entities.ID(cp.Caller.Session.Account.ID)), nil
 }
 
-type GenerateDemoTasksAction struct {
-	pipeline.BaseActionImpl
-
-	TaskDemoService backend.ITaskDemoService
-}
-
-func (c *GenerateDemoTasksAction) Run(arg interface{}) (interface{}, error) {
-	p := arg.(*RetrievedEntityParams)
-	task := p.Entity.(*entities.Task)
-	count, _ := validation.CheckInt("count", p.CallParams.GetParamInt("count", 1))
-	if count == 0 {
-		count = 10
-	}
-	c.TaskDemoService.GenerateTasks(count, task)
-	return fmt.Sprintf("%v tasks generated", count), nil
-}
-
 type ClearTasksAction struct {
 	pipeline.BaseActionImpl
 
@@ -125,5 +106,24 @@ func (c *ExecuteTaskAction) Run(arg interface{}) (interface{}, error) {
 		BaseEntity: t.BaseEntity,
 		Status:     t.Status,
 		Alertness:  t.Alertness,
+	}, nil
+}
+
+type MarkRepliedTaskAction struct {
+	pipeline.BaseActionImpl
+
+	TaskService backend.ITaskService
+}
+
+func (c *MarkRepliedTaskAction) Run(arg interface{}) (interface{}, error) {
+	p := arg.(*RetrievedEntityParams)
+	task := p.Entity.(*entities.Task)
+	task, err := c.TaskService.MarkReplied(task)
+	if err != nil {
+		return nil, err
+	}
+	return &entities.Task{
+		BaseEntity: task.BaseEntity,
+		Status:     task.Status,
 	}, nil
 }
