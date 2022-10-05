@@ -1,31 +1,33 @@
 package app
 
 import (
+	"fmt"
 	"github.com/itskovichanton/core/pkg/core"
 	"github.com/itskovichanton/core/pkg/core/app"
+	"github.com/itskovichanton/core/pkg/core/email"
 	"github.com/itskovichanton/core/pkg/core/logger"
 	"github.com/itskovichanton/server/pkg/server/users"
 	"log"
 	"salespalm/server/app/backend"
-	"salespalm/server/app/entities"
 	"salespalm/server/app/frontend/http_server"
 )
 
 type PalmauticServerApp struct {
 	app.IApp
 
-	Config              *core.Config
-	EmailService        core.IEmailService
-	ErrorHandler        core.IErrorHandler
-	LoggerService       logger.ILoggerService
-	AuthService         users.IAuthService
-	opsLogger           *log.Logger
-	UserRepo            backend.IUserRepo
-	ContactService      backend.IContactService
-	TaskService         backend.ITaskService
-	HttpController      *http_server.PalmauticHttpController
-	TaskExecutorService backend.ITaskExecutorService
-	SequenceService     backend.ISequenceService
+	Config                   *core.Config
+	EmailService             core.IEmailService
+	ErrorHandler             core.IErrorHandler
+	LoggerService            logger.ILoggerService
+	AuthService              users.IAuthService
+	opsLogger                *log.Logger
+	AutoTaskProcessorService backend.IAutoTaskProcessorService
+	UserRepo                 backend.IUserRepo
+	ContactService           backend.IContactService
+	TaskService              backend.ITaskService
+	HttpController           *http_server.PalmauticHttpController
+	TaskExecutorService      backend.ITaskExecutorService
+	SequenceService          backend.ISequenceService
 }
 
 func (c *PalmauticServerApp) Run() error {
@@ -36,7 +38,20 @@ func (c *PalmauticServerApp) Run() error {
 
 func (c *PalmauticServerApp) tests() {
 
-	c.SequenceService.AddContact(entities.BaseEntity{Id: 228298, AccountId: 1001}, entities.BaseEntity{Id: 227631, AccountId: 1001})
+	c.EmailService.SendPreprocessed(
+		&core.Params{
+			From:    fmt.Sprintf("%v", "a.itskovich@molbulak.com"),
+			To:      []string{"itskovichae@gmail.com" /*, "evstigneeva.design@gmail.com", "a.itskovich@molbulak.ru", "tony5oprano@yandex.ru", "nikolaydemidovez@gmail.com" /*t.Contact.Email,*/},
+			Subject: "Привет Антон",
+		}, func(srv *email.Email, m *email.Message) {
+			m.BodyHTML = "<body><h1>Helllo!</h1></<body>"
+			srv.Header = map[string]string{
+				"Content-Type": "text/html; charset=UTF-8",
+			}
+		},
+	)
+
+	//c.SequenceService.AddContact(entities.BaseEntity{Id: 228298, AccountId: 1001}, entities.BaseEntity{Id: 227631, AccountId: 1001})
 
 	//var zeroTime time.Time
 	//s := utils.ToJson(entities.Sequence{

@@ -7,13 +7,16 @@ import (
 )
 
 type ISequenceRepo interface {
-	//Search(filter *entities.Sequence) []*entities.SequenceContainer
+	Search(filter *entities.Sequence, settings *SequenceSearchSettings) *SequenceSearchResult
 	//Delete(filter *entities.Sequence) *entities.Sequence
 	CreateOrUpdate(sequence *entities.Sequence)
 	Commons() *entities.SequenceCommons
 	GetByIndex(accountId entities.ID, index int) *entities.Sequence
-	Search(filter *entities.Sequence) []*entities.Sequence
 	FindFirst(filter *entities.Sequence) *entities.Sequence
+}
+
+type SequenceSearchSettings struct {
+	Offset, Count int
 }
 
 type SequenceRepoImpl struct {
@@ -23,7 +26,7 @@ type SequenceRepoImpl struct {
 }
 
 func (c *SequenceRepoImpl) FindFirst(filter *entities.Sequence) *entities.Sequence {
-	return *utils.FindFirst(c.Search(filter), filter)
+	return *utils.FindFirst(c.Search(filter, nil).Items, filter)
 }
 
 func (c *SequenceRepoImpl) GetByIndex(accountId entities.ID, index int) *entities.Sequence {
@@ -45,7 +48,12 @@ func (c *SequenceRepoImpl) GetByIndex(accountId entities.ID, index int) *entitie
 	return nil
 }
 
-func (c *SequenceRepoImpl) Search(filter *entities.Sequence) []*entities.Sequence {
+type SequenceSearchResult struct {
+	Items      []*entities.Sequence
+	TotalCount int
+}
+
+func (c *SequenceRepoImpl) Search(filter *entities.Sequence, settings *SequenceSearchSettings) *SequenceSearchResult {
 	var r []*entities.Sequence
 	if filter.AccountId == 0 {
 		for accountId, _ := range c.DBService.DBContent().GetSequenceContainer().Sequences {
@@ -53,9 +61,28 @@ func (c *SequenceRepoImpl) Search(filter *entities.Sequence) []*entities.Sequenc
 			r = append(r, c.searchForAccount(filter)...)
 		}
 	} else {
-		return c.searchForAccount(filter)
+		r = c.searchForAccount(filter)
 	}
-	return r
+	return c.applySettings(r, settings)
+}
+
+func (c *SequenceRepoImpl) applySettings(r []*entities.Sequence, settings *SequenceSearchSettings) *SequenceSearchResult {
+	result := &SequenceSearchResult{Items: r}
+	result.TotalCount = len(result.Items)
+	if settings != nil {
+		lastElemIndex := settings.Offset + settings.Count
+		if settings.Count > 0 && lastElemIndex < result.TotalCount {
+			result.Items = result.Items[settings.Offset:lastElemIndex]
+		} else if settings.Offset < len(result.Items) {
+			result.Items = result.Items[settings.Offset:]
+		} else {
+			result.Items = []*entities.Sequence{}
+		}
+	}
+	for _, item := range result.Items {
+		item.Progress = int(item.CalcProgress())
+	}
+	return result
 }
 
 func (c *SequenceRepoImpl) searchForAccount(filter *entities.Sequence) []*entities.Sequence {

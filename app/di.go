@@ -24,6 +24,7 @@ func (c *DI) InitDI() {
 	c.DI.InitDI(container)
 
 	container.Provide(c.NewApp)
+	container.Provide(c.NewAutoTaskProcessorService)
 	container.Provide(c.NewUploadFromFileB2BDataAction)
 	container.Provide(c.NewAddContactToSequenceAction)
 	container.Provide(c.NewGrpcController)
@@ -85,14 +86,14 @@ func (c *DI) NewSequenceRunnerService(ContactService backend.IContactService, Se
 	return r
 }
 
-func (c *DI) NewTaskExecutorService(manualEmailTaskExecutorService backend.IManualEmailTaskExecutorService) backend.ITaskExecutorService {
+func (c *DI) NewTaskExecutorService(manualEmailTaskExecutorService backend.IEmailTaskExecutorService) backend.ITaskExecutorService {
 	return &backend.TaskExecutorServiceImpl{
-		ManualEmailTaskExecutorService: manualEmailTaskExecutorService,
+		EmailTaskExecutorService: manualEmailTaskExecutorService,
 	}
 }
 
-func (c *DI) NewManualEmailTaskExecutorService(emailService core.IEmailService, AccountService backend.IUserService) backend.IManualEmailTaskExecutorService {
-	return &backend.ManualEmailTaskExecutorServiceImpl{
+func (c *DI) NewManualEmailTaskExecutorService(emailService core.IEmailService, AccountService backend.IUserService) backend.IEmailTaskExecutorService {
+	return &backend.EmailTaskExecutorServiceImpl{
 		EmailService:   emailService,
 		AccountService: AccountService,
 	}
@@ -144,6 +145,15 @@ func (c *DI) NewUserRepo(dbService backend.IDBService) backend.IUserRepo {
 	}
 }
 
+func (c *DI) NewAutoTaskProcessorService(TaskService backend.ITaskService, loggerService logger.ILoggerService) backend.IAutoTaskProcessorService {
+	r := &backend.AutoTaskProcessorServiceImpl{
+		TaskService:   TaskService,
+		LoggerService: loggerService,
+	}
+	go r.Start()
+	return r
+}
+
 func (c *DI) NewHttpController(MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
 	r := &http_server.PalmauticHttpController{
 		HttpControllerImpl:           *httpController,
@@ -184,18 +194,19 @@ func (c *DI) NewCreateOrUpdateSequenceAction(sequenceService backend.ISequenceSe
 	}
 }
 
-func (c *DI) NewApp(SequenceService backend.ISequenceService, TaskExecutorService backend.ITaskExecutorService, httpController *http_server.PalmauticHttpController, contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
+func (c *DI) NewApp(AutoTaskProcessorService backend.IAutoTaskProcessorService, SequenceService backend.ISequenceService, TaskExecutorService backend.ITaskExecutorService, httpController *http_server.PalmauticHttpController, contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
 	return &PalmauticServerApp{
-		HttpController:      httpController,
-		Config:              config,
-		EmailService:        emailService,
-		ErrorHandler:        errorHandler,
-		LoggerService:       loggerService,
-		AuthService:         authService,
-		UserRepo:            userRepo,
-		ContactService:      contactService,
-		TaskExecutorService: TaskExecutorService,
-		SequenceService:     SequenceService,
+		HttpController:           httpController,
+		Config:                   config,
+		AutoTaskProcessorService: AutoTaskProcessorService,
+		EmailService:             emailService,
+		ErrorHandler:             errorHandler,
+		LoggerService:            loggerService,
+		AuthService:              authService,
+		UserRepo:                 userRepo,
+		ContactService:           contactService,
+		TaskExecutorService:      TaskExecutorService,
+		SequenceService:          SequenceService,
 	}
 }
 

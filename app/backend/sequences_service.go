@@ -8,13 +8,10 @@ import (
 )
 
 type ISequenceService interface {
-	//Search(filter *entities.Sequence) []*entities.Sequence
-	//Delete(filter *entities.Sequence) (*entities.Sequence, error)
 	CreateOrUpdate(sequence *entities.Sequence) (*entities.Sequence, TemplatesMap, error)
-	//Stats(accountId entities.ID) *entities.SequenceStats
 	Commons(accountId entities.ID) *entities.SequenceCommons
 	GetByIndex(accountId entities.ID, index int) *entities.Sequence
-	Search(filter *entities.Sequence) []*entities.Sequence
+	Search(filter *entities.Sequence, settings *SequenceSearchSettings) *SequenceSearchResult
 	FindFirst(filter *entities.Sequence) *entities.Sequence
 	AddContact(sequenceCreds, contactCreds entities.BaseEntity) error
 }
@@ -42,8 +39,8 @@ func (c *SequenceServiceImpl) FindFirst(filter *entities.Sequence) *entities.Seq
 	return c.SequenceRepo.FindFirst(filter)
 }
 
-func (c *SequenceServiceImpl) Search(filter *entities.Sequence) []*entities.Sequence {
-	return c.SequenceRepo.Search(filter)
+func (c *SequenceServiceImpl) Search(filter *entities.Sequence, settings *SequenceSearchSettings) *SequenceSearchResult {
+	return c.SequenceRepo.Search(filter, settings)
 }
 
 func (c *SequenceServiceImpl) AddContact(sequenceCreds, contactCreds entities.BaseEntity) error {
@@ -84,9 +81,7 @@ func (c *SequenceServiceImpl) Stats(accountId entities.Id) *entities.SequenceSta
 	return r
 }
 
-func (c *SequenceServiceImpl) Search(filter *entities.Sequence) []*entities.Sequence {
-	return c.SequenceRepo.Search(filter)
-}
+
 
 func (c *SequenceServiceImpl) Delete(filter *entities.Sequence) (*entities.Sequence, error) {
 	SequenceContainer := c.SequenceRepo.Search(filter)

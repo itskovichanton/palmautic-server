@@ -12,13 +12,12 @@ type TaskExecResult struct {
 type TaskExecutorServiceImpl struct {
 	ITaskExecutorService
 
-	ManualEmailTaskExecutorService IManualEmailTaskExecutorService
+	EmailTaskExecutorService IEmailTaskExecutorService
 }
 
 func (c *TaskExecutorServiceImpl) Execute(t *entities.Task) *TaskExecResult {
-	switch t.Type {
-	case entities.TaskTypeManualEmail.Creds.Name:
-		return c.ManualEmailTaskExecutorService.Execute(t)
+	if t.HasTypeEmail() {
+		return c.EmailTaskExecutorService.Execute(t)
 	}
 	return &TaskExecResult{}
 }

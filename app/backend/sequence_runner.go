@@ -31,7 +31,7 @@ func (c *SequenceRunnerServiceImpl) Init() {
 
 	c.timeFormat = "15:04:05"
 
-	for _, sequence := range c.SequenceRepo.Search(&entities.Sequence{}) {
+	for _, sequence := range c.SequenceRepo.Search(&entities.Sequence{}, nil).Items {
 		if sequence.Process == nil || sequence.Process.ByContact == nil {
 			continue
 		}
@@ -63,7 +63,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 	if contactProcess == nil {
 
 		sequence.Process.ByContact[contact.Id] = &entities.SequenceInstance{}
-		c.buildProcess(sequence, contact)
+		c.buildProcess(sequence, contact, ld, lg)
 		contactProcess = sequence.Process.ByContact[contact.Id]
 		c.refreshTasks(lg, "Сценарий построен", contact.Id, contactProcess.Tasks)
 
@@ -71,7 +71,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 
 		c.refreshTasks(lg, "Актуализация статусов перед стартом", contact.Id, contactProcess.Tasks)
 
-		currentTask, currentTaskIndex := findFirstNonFinalTask(contactProcess.Tasks)
+		currentTask, currentTaskIndex := contactProcess.FindFirstNonFinalTask()
 		if currentTask != nil {
 			// Если после старта последовательность для контакта уже выполняется
 			if byRestore {
@@ -106,12 +106,11 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 	for {
 
 		logger.Action(ld, "Ищу нефинальный шаг")
-		currentTask, currentTaskIndex := findFirstNonFinalTask(tasks)
+		currentTask, currentTaskIndex := contactProcess.FindFirstNonFinalTask()
 
 		if currentTask == nil {
 			logger.Result(ld, fmt.Sprintf("Все задачи в финальном статусе. СТОП."))
 			logger.Print(lg, ld)
-			//delete(sequence.Process.ByContact, contact.Id)
 			return
 		}
 
@@ -213,7 +212,11 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 					t.StartTime = tasks[i-1].DueTime
 					t.DueTime.Add(-elapsedTimeDueDuration)
 				}
-				logger.Result(ld, fmt.Sprintf("Готово. След шаг начнется %s", tasks[currentTaskNumber].StartTime.Format(c.timeFormat)))
+				if currentTaskNumber == len(tasks) {
+					logger.Result(ld, "Готово. Это был последний шаг.")
+				} else {
+					logger.Result(ld, fmt.Sprintf("Готово. След шаг начнется %s", tasks[currentTaskNumber].StartTime.Format(c.timeFormat)))
+				}
 				logger.Print(lg, ld)
 
 				c.refreshTasks(lg, "Актуализация после сдвига", contact.Id, tasks)
@@ -235,7 +238,8 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 	}
 }
 
-func (c *SequenceRunnerServiceImpl) buildProcess(sequence *entities.Sequence, contact *entities.Contact) {
+func (c *SequenceRunnerServiceImpl) buildProcess(sequence *entities.Sequence, contact *entities.Contact, ld map[string]interface{}, lg *log.Logger) {
+
 	sequenceInstance := &entities.SequenceInstance{}
 	//_, exists := sequence.Process.ByContact[contact.Id]
 	//if exists {
@@ -250,6 +254,13 @@ func (c *SequenceRunnerServiceImpl) buildProcess(sequence *entities.Sequence, co
 	for stepIndex := 0; stepIndex < stepsCount; stepIndex++ {
 
 		currentStep := steps[stepIndex]
+		currentStep.Contact = contact
+		if !currentStep.CanExecute() {
+			logger.Action(ld, fmt.Sprintf("Шаг %v не войдет в сценарий, т.к. в контакте нет данных для его выполнения"))
+			logger.Result(ld, "готово")
+			logger.Print(lg, ld)
+			continue
+		}
 
 		// Создаем заготовку для реального таска из модели
 		currentTask := &entities.Task{}
@@ -281,13 +292,4 @@ func (c *SequenceRunnerServiceImpl) refreshTasks(lg *log.Logger, action string, 
 	logger.Result(ld, strings.TrimSpace(r))
 	logger.Action(ld, fmt.Sprintf("%v:контакт=%v", action, contactId))
 	logger.Print(lg, ld)
-}
-
-func findFirstNonFinalTask(tasks []*entities.Task) (*entities.Task, int) {
-	for i, t := range tasks {
-		if !t.HasFinalStatus() {
-			return t, i
-		}
-	}
-	return nil, -1
 }

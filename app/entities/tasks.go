@@ -39,14 +39,18 @@ func (t Task) HasTypeEmail() bool {
 	return t.Type == TaskTypeManualEmail.Creds.Name || t.Type == TaskTypeAutoEmail.Creds.Name
 }
 
+func (t Task) CanExecute() bool {
+	return t.IsMessenger() && len(t.Contact.Phone) > 0 || t.HasTypeEmail() && len(t.Contact.Email) > 0 || t.Type == TaskTypeLinkedin.Creds.Name && len(t.Contact.Linkedin) > 0
+}
+
+func (t Task) IsMessenger() bool {
+	return t.Type != TaskTypeManualEmail.Creds.Name && t.Type != TaskTypeLinkedin.Creds.Name
+}
+
 type TaskType struct {
 	Creds   *NameAndTitle
 	Actions []*TaskAction
 	Order   int
-}
-
-func (t TaskType) IsMessenger() bool {
-	return t.Creds.Name != TaskTypeManualEmail.Creds.Name && t.Creds.Name != TaskTypeLinkedin.Creds.Name
 }
 
 type TaskAction NameAndTitle
