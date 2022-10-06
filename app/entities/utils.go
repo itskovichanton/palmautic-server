@@ -1,9 +1,8 @@
-package utils
+package entities
 
 import (
 	"fmt"
 	"net/url"
-	"salespalm/server/app/entities"
 	"sort"
 )
 
@@ -27,7 +26,7 @@ func RandomEntry[K comparable, V any](r map[K]V) *V {
 	return nil
 }
 
-func FindFirst[V entities.IBaseEntity](r []V, filter entities.IBaseEntity) *V {
+func FindFirst[V IBaseEntity](r []V, filter IBaseEntity) *V {
 	for _, p := range r {
 		if p.GetId() == filter.GetId() && p.GetAccountId() == filter.GetAccountId() {
 			return &p
@@ -36,13 +35,13 @@ func FindFirst[V entities.IBaseEntity](r []V, filter entities.IBaseEntity) *V {
 	return nil
 }
 
-func SortById[V entities.IBaseEntity](r []V) {
+func SortById[V IBaseEntity](r []V) {
 	sort.Slice(r, func(i, j int) bool {
 		return r[i].GetId() > r[j].GetId()
 	})
 }
 
-func SortTasks(r []*entities.Task) {
+func SortTasks(r []*Task) {
 	sort.Slice(r, func(i, j int) bool {
 		if !r[i].HasFinalStatus() && r[j].HasFinalStatus() {
 			return true
@@ -55,6 +54,6 @@ func FormatUrl(host string, arg string) string {
 	return fmt.Sprintf("%v/%v", host, url.QueryEscape(arg))
 }
 
-func IDStr(id entities.ID) string {
+func IDStr(id ID) string {
 	return fmt.Sprintf("%v", id)
 }

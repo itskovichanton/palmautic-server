@@ -80,15 +80,15 @@ func (c *TaskServiceImpl) Clear(accountId entities.ID) {
 }
 
 func (c *TaskServiceImpl) Delete(filter *entities.Task) (*entities.Task, error) {
-	tasks := c.TaskRepo.Search(filter, nil).Items
-	if len(tasks) == 0 {
-		return nil, errs.NewBaseErrorWithReason("Задача не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
-	}
-	task := tasks[0]
-	if task.Status == entities.TaskStatusStarted {
-		return nil, errs.NewBaseErrorWithReason("Задача активна - ее нельзя удалить", frmclient.ReasonValidation)
-	}
-	deleted := c.TaskRepo.Delete(task)
+	//tasks := c.TaskRepo.Search(filter, nil).Items
+	//if len(tasks) == 0 {
+	//	return nil, errs.NewBaseErrorWithReason("Задача не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
+	//}
+	//task := tasks[0]
+	//if task.Status == entities.TaskStatusStarted {
+	//	return nil, errs.NewBaseErrorWithReason("Задача активна - ее нельзя удалить", frmclient.ReasonValidation)
+	//}
+	deleted := c.TaskRepo.Delete(filter)
 	return deleted, nil
 }
 
@@ -103,15 +103,6 @@ func (c *TaskServiceImpl) MarkReplied(task *entities.Task) (*entities.Task, erro
 		}
 
 		storedTask := foundTasks[0]
-
-		if storedTask.HasFinalStatus() {
-			var err error
-			if storedTask.Status != entities.TaskStatusReplied {
-				err = errs.NewBaseErrorWithReason("Нельзя пропустить задачу в финальном статусе", frmclient.ReasonServerRespondedWithError)
-			}
-			return storedTask, err
-		}
-
 		storedTask.Status = entities.TaskStatusReplied
 
 		// Оповещаем шину
@@ -226,7 +217,7 @@ func (c *TaskServiceImpl) CreateOrUpdate(task *entities.Task) (*entities.Task, e
 }
 
 func (c *TaskServiceImpl) RefreshTask(task *entities.Task) {
-	RefreshTask(task)
+	task.Refresh()
 	args := map[string]interface{}{"Contact": task.Contact}
 	task.Subject = c.TemplateService.Format(task.Subject, task.AccountId, args)
 	task.Description = c.TemplateService.Format(task.Description, task.AccountId, args)

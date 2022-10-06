@@ -6,36 +6,38 @@ import (
 	"salespalm/server/app/entities"
 )
 
-type IEmailTaskExecutorService interface {
-	Execute(t *entities.Task) *TaskExecResult
+type IMsgDeliveryEmailService interface {
+	SendEmail(t *entities.Task)
 }
 
-type EmailTaskExecutorServiceImpl struct {
-	IEmailTaskExecutorService
+type MsgDeliveryEmailServiceImpl struct {
+	IMsgDeliveryEmailService
 
-	EmailService   core.IEmailService
-	AccountService IUserService
+	EmailService    core.IEmailService
+	AccountService  IUserService
+	TemplateService ITemplateService
 }
 
-func (c *EmailTaskExecutorServiceImpl) Execute(t *entities.Task) *TaskExecResult {
+func (c *MsgDeliveryEmailServiceImpl) SendEmail(t *entities.Task) {
 	go func() {
 		err := c.sendEmailFromTask(t)
 		if err != nil {
 			// пока ничего не делаем
 		}
 	}()
-
-	return &TaskExecResult{}
 }
 
-func (c *EmailTaskExecutorServiceImpl) sendEmailFromTask(t *entities.Task) error {
+func (c *MsgDeliveryEmailServiceImpl) sendEmailFromTask(t *entities.Task) error {
+	args := map[string]interface{}{
+		"Contact": t.Contact,
+	}
 	return c.EmailService.SendPreprocessed(
 		&core.Params{
 			From:    "a.itskovich@molbulak.com", // c.AccountService.Accounts()[t.AccountId].Username,
 			To:      []string{"itskovichae@gmail.com" /*, "evstigneeva.design@gmail.com", "a.itskovich@molbulak.ru", "tony5oprano@yandex.ru", "nikolaydemidovez@gmail.com" /*t.Contact.Email,*/},
-			Subject: t.Subject,
+			Subject: c.TemplateService.Format(t.Subject, t.AccountId, args),
 		}, func(srv *email.Email, m *email.Message) {
-			m.BodyHTML = t.Body
+			m.BodyHTML = c.TemplateService.Format(t.Body, t.AccountId, args)
 			srv.Header = map[string]string{
 				"Content-Type": "text/html; charset=UTF-8",
 			}

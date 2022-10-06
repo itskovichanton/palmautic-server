@@ -14,9 +14,10 @@ type IAutoTaskProcessorService interface {
 type AutoTaskProcessorServiceImpl struct {
 	IAutoTaskProcessorService
 
-	TaskService   ITaskService
-	LoggerService logger.ILoggerService
-	logger        string
+	TaskService     ITaskService
+	SequenceService ISequenceService
+	LoggerService   logger.ILoggerService
+	logger          string
 }
 
 func (c *AutoTaskProcessorServiceImpl) Start() {
@@ -32,7 +33,19 @@ func (c *AutoTaskProcessorServiceImpl) Start() {
 
 	for {
 
-		tasks := c.TaskService.Search(&entities.Task{BaseEntity: entities.BaseEntity{AccountId: -1}, Status: "-completed"}, nil).Items
+		var tasks []*entities.Task
+		for _, sequence := range c.SequenceService.Search(&entities.Sequence{}, nil).Items {
+			if sequence.Process != nil && sequence.Process.ByContact != nil {
+				for _, sequenceInstance := range sequence.Process.ByContact {
+					for _, task := range sequenceInstance.Tasks {
+						if task.Status == entities.TaskStatusStarted && task.AutoExecutable() {
+							tasks = append(tasks, task)
+						}
+					}
+				}
+			}
+		}
+
 		if len(tasks) == 0 {
 			time.Sleep(30 * time.Second)
 			continue

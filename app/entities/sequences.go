@@ -22,6 +22,17 @@ func (s *Sequence) CalcProgress() float32 {
 	return r / float32(len(s.Process.ByContact))
 }
 
+func (s *Sequence) Refresh() {
+	s.Progress = int(s.CalcProgress())
+	if s.Process != nil && s.Process.ByContact != nil {
+		for _, process := range s.Process.ByContact {
+			for _, task := range process.Tasks {
+				task.Refresh()
+			}
+		}
+	}
+}
+
 func (s *SequenceInstance) StatusTask() *Task {
 	for i := len(s.Tasks) - 1; i >= 0; i-- {
 		t := s.Tasks[i]

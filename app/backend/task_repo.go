@@ -3,7 +3,6 @@ package backend
 import (
 	"golang.org/x/exp/maps"
 	"salespalm/server/app/entities"
-	"salespalm/server/app/utils"
 	"strings"
 )
 
@@ -56,9 +55,21 @@ func (c *TaskRepoImpl) Search(filter *entities.Task, settings *SearchSettings) *
 				}
 			}
 		}
-		if len(filter.Type) > 0 && t.Type != filter.Type {
-			fits = false
+
+		types := strings.Split(filter.Type, ",")
+		if fits && len(filter.Type) > 0 {
+			for _, typ := range types {
+				if strings.HasPrefix(typ, "-") {
+					typ = typ[1:]
+					if t.Type == typ {
+						fits = false
+					}
+				} else if t.Type != filter.Type {
+					fits = false
+				}
+			}
 		}
+
 		if filter.Sequence != nil && filter.Sequence.Id != t.Sequence.Id {
 			fits = false
 		}
@@ -69,7 +80,7 @@ func (c *TaskRepoImpl) Search(filter *entities.Task, settings *SearchSettings) *
 			r = append(r, t)
 		}
 	}
-	utils.SortTasks(r)
+	entities.SortTasks(r)
 	return c.applySettings(r, settings)
 }
 

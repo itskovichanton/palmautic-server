@@ -24,6 +24,7 @@ func (c *DI) InitDI() {
 	c.DI.InitDI(container)
 
 	container.Provide(c.NewApp)
+	container.Provide(c.NewMsgDeliveryEmailService)
 	container.Provide(c.NewAutoTaskProcessorService)
 	container.Provide(c.NewUploadFromFileB2BDataAction)
 	container.Provide(c.NewAddContactToSequenceAction)
@@ -92,10 +93,18 @@ func (c *DI) NewTaskExecutorService(manualEmailTaskExecutorService backend.IEmai
 	}
 }
 
-func (c *DI) NewManualEmailTaskExecutorService(emailService core.IEmailService, AccountService backend.IUserService) backend.IEmailTaskExecutorService {
+func (c *DI) NewMsgDeliveryEmailService(templateService backend.ITemplateService, emailService core.IEmailService, AccountService backend.IUserService) backend.IMsgDeliveryEmailService {
+	return &backend.MsgDeliveryEmailServiceImpl{
+		EmailService:    emailService,
+		AccountService:  AccountService,
+		TemplateService: templateService,
+	}
+}
+
+func (c *DI) NewManualEmailTaskExecutorService(msgDeliveryEmailService backend.IMsgDeliveryEmailService, AccountService backend.IUserService) backend.IEmailTaskExecutorService {
 	return &backend.EmailTaskExecutorServiceImpl{
-		EmailService:   emailService,
-		AccountService: AccountService,
+		MsgDeliveryEmailService: msgDeliveryEmailService,
+		AccountService:          AccountService,
 	}
 }
 
@@ -145,10 +154,11 @@ func (c *DI) NewUserRepo(dbService backend.IDBService) backend.IUserRepo {
 	}
 }
 
-func (c *DI) NewAutoTaskProcessorService(TaskService backend.ITaskService, loggerService logger.ILoggerService) backend.IAutoTaskProcessorService {
+func (c *DI) NewAutoTaskProcessorService(SequenceService backend.ISequenceService, TaskService backend.ITaskService, loggerService logger.ILoggerService) backend.IAutoTaskProcessorService {
 	r := &backend.AutoTaskProcessorServiceImpl{
-		TaskService:   TaskService,
-		LoggerService: loggerService,
+		SequenceService: SequenceService,
+		TaskService:     TaskService,
+		LoggerService:   loggerService,
 	}
 	go r.Start()
 	return r

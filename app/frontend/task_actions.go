@@ -79,14 +79,7 @@ type SkipTaskAction struct {
 func (c *SkipTaskAction) Run(arg interface{}) (interface{}, error) {
 	p := arg.(*RetrievedEntityParams)
 	task := p.Entity.(*entities.Task)
-	task, err := c.TaskService.Skip(task)
-	if err != nil {
-		return nil, err
-	}
-	return &entities.Task{
-		BaseEntity: task.BaseEntity,
-		Status:     task.Status,
-	}, nil
+	return c.TaskService.Skip(task)
 }
 
 type ExecuteTaskAction struct {
@@ -118,12 +111,5 @@ type MarkRepliedTaskAction struct {
 func (c *MarkRepliedTaskAction) Run(arg interface{}) (interface{}, error) {
 	p := arg.(*RetrievedEntityParams)
 	task := p.Entity.(*entities.Task)
-	task, err := c.TaskService.MarkReplied(task)
-	if err != nil {
-		return nil, err
-	}
-	return &entities.Task{
-		BaseEntity: task.BaseEntity,
-		Status:     task.Status,
-	}, nil
+	return c.TaskService.MarkReplied(task)
 }

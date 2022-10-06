@@ -3,7 +3,6 @@ package backend
 import (
 	"golang.org/x/exp/maps"
 	"salespalm/server/app/entities"
-	"salespalm/server/app/utils"
 )
 
 type ISequenceRepo interface {
@@ -26,7 +25,7 @@ type SequenceRepoImpl struct {
 }
 
 func (c *SequenceRepoImpl) FindFirst(filter *entities.Sequence) *entities.Sequence {
-	return *utils.FindFirst(c.Search(filter, nil).Items, filter)
+	return *entities.FindFirst(c.Search(filter, nil).Items, filter)
 }
 
 func (c *SequenceRepoImpl) GetByIndex(accountId entities.ID, index int) *entities.Sequence {
@@ -79,9 +78,6 @@ func (c *SequenceRepoImpl) applySettings(r []*entities.Sequence, settings *Seque
 			result.Items = []*entities.Sequence{}
 		}
 	}
-	for _, item := range result.Items {
-		item.Progress = int(item.CalcProgress())
-	}
 	return result
 }
 
@@ -115,10 +111,11 @@ func (c *SequenceRepoImpl) searchForAccount(filter *entities.Sequence) []*entiti
 		//	fits = false
 		//}
 		if fits {
+			t.Refresh()
 			r = append(r, t)
 		}
 	}
-	utils.SortById(r)
+	entities.SortById(r)
 	return r
 }
 

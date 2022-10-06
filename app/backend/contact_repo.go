@@ -4,7 +4,6 @@ import (
 	"github.com/jinzhu/copier"
 	"golang.org/x/exp/maps"
 	"salespalm/server/app/entities"
-	"salespalm/server/app/utils"
 	"strings"
 )
 
@@ -53,7 +52,7 @@ func (c *ContactRepoImpl) GetByIndex(accountId entities.ID, index int) *entities
 func (c *ContactRepoImpl) DeleteDuplicates(accountId entities.ID) {
 	contacts := c.DBService.DBContent().GetContacts().ForAccount(accountId)
 	if contacts != nil {
-		//utils2.UniqueMap(contacts)
+		//UniqueMap(contacts)
 	}
 }
 
@@ -80,7 +79,7 @@ func (c *ContactRepoImpl) Search(filter *entities.Contact, settings *ContactSear
 		}
 		r = rFiltered
 	}
-	utils.SortById(r)
+	entities.SortById(r)
 	return c.applySettings(r, settings)
 }
 

@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"salespalm/server/app/entities"
-	utils2 "salespalm/server/app/utils"
 	"strings"
 )
 
@@ -36,7 +35,7 @@ type TemplateServiceImpl struct {
 }
 
 func (c *TemplateServiceImpl) Clear(accountId entities.ID) {
-	c.templates.Delete(utils2.IDStr(accountId))
+	c.templates.Delete(entities.IDStr(accountId))
 }
 
 func (c *TemplateServiceImpl) CreateOrUpdate(entity entities.IBaseEntity, body string, arg ...interface{}) string {
@@ -69,7 +68,7 @@ func calcTemplateName(templateFileName string) string {
 }
 
 func (c *TemplateServiceImpl) Templates(accountId entities.ID) TemplatesMap {
-	key := utils2.IDStr(accountId)
+	key := entities.IDStr(accountId)
 	templatesMapI, _ := c.templates.Get(key)
 	if templatesMapI == nil {
 		templatesMap := TemplatesMap{}
@@ -110,7 +109,7 @@ func (c *TemplateServiceImpl) fillTemplatesMap(accountId entities.ID, templatesM
 		}
 
 		fBytes, _ := os.ReadFile(path)
-		templatesMap[calcTemplateName(f.Name())] = utils2.RemoveHtmlIndents(string(fBytes))
+		templatesMap[calcTemplateName(f.Name())] = entities.RemoveHtmlIndents(string(fBytes))
 
 		return nil
 	})
