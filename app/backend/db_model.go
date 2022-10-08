@@ -1,11 +1,10 @@
 package backend
 
 import (
-	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"salespalm/server/app/entities"
 )
 
-type Accounts map[entities.ID]*entities2.Account
+type Accounts map[entities.ID]*entities.User
 type Contacts map[entities.ID]*entities.Contact
 type Tasks map[entities.ID]*entities.Task
 type Sequences map[entities.ID]*entities.Sequence

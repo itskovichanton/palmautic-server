@@ -47,7 +47,6 @@ func (c *AutoTaskProcessorServiceImpl) Start() {
 		}
 
 		if len(tasks) == 0 {
-			time.Sleep(30 * time.Second)
 			continue
 		}
 
@@ -68,6 +67,8 @@ func (c *AutoTaskProcessorServiceImpl) Start() {
 			logger.Print(lg, ld)
 
 		}
+
+		time.Sleep(30 * time.Second)
 
 	}
 

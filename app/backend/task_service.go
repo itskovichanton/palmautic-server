@@ -106,7 +106,7 @@ func (c *TaskServiceImpl) MarkReplied(task *entities.Task) (*entities.Task, erro
 		storedTask.Status = entities.TaskStatusReplied
 
 		// Оповещаем шину
-		c.EventBus.Publish(TaskUpdatedEventName(storedTask.Id), storedTask)
+		c.EventBus.Publish(TaskUpdatedEventTopic(storedTask.Id), storedTask)
 
 		return storedTask, nil
 	}
@@ -137,7 +137,7 @@ func (c *TaskServiceImpl) Skip(task *entities.Task) (*entities.Task, error) {
 		storedTask.Status = entities.TaskStatusSkipped
 
 		// Оповещаем шину
-		c.EventBus.Publish(TaskUpdatedEventName(storedTask.Id), storedTask)
+		c.EventBus.Publish(TaskUpdatedEventTopic(storedTask.Id), storedTask)
 
 		return storedTask, nil
 	}
@@ -173,7 +173,7 @@ func (c *TaskServiceImpl) Execute(task *entities.Task) (*entities.Task, error) {
 		c.RefreshTask(storedTask)
 
 		// Оповещаем шину
-		c.EventBus.Publish(TaskUpdatedEventName(storedTask.Id), storedTask)
+		c.EventBus.Publish(TaskUpdatedEventTopic(storedTask.Id), storedTask)
 
 		return storedTask, nil
 	}

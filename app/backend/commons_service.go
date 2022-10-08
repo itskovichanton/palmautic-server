@@ -1,7 +1,6 @@
 package backend
 
 import (
-	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"salespalm/server/app/entities"
 )
 
@@ -13,7 +12,7 @@ type Commons struct {
 	Tasks         *entities.TaskCommons
 	Sequences     *entities.SequenceCommons
 	HtmlTemplates map[string]string
-	Account       *entities2.Account
+	Account       *entities.User
 }
 
 type CommonsServiceImpl struct {

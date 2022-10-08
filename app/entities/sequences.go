@@ -43,7 +43,11 @@ func (s *SequenceInstance) StatusTask() (*Task, int) {
 			return t, i
 		}
 	}
-	return s.Tasks[0], 0
+	if len(s.Tasks) > 0 {
+		return s.Tasks[0], 0
+	} else {
+		return nil, 0
+	}
 }
 
 func (s *SequenceInstance) CalcProgress() float32 {

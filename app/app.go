@@ -1,10 +1,8 @@
 package app
 
 import (
-	"fmt"
 	"github.com/itskovichanton/core/pkg/core"
 	"github.com/itskovichanton/core/pkg/core/app"
-	"github.com/itskovichanton/core/pkg/core/email"
 	"github.com/itskovichanton/core/pkg/core/logger"
 	"github.com/itskovichanton/server/pkg/server/users"
 	"log"
@@ -28,6 +26,7 @@ type PalmauticServerApp struct {
 	HttpController           *http_server.PalmauticHttpController
 	TaskExecutorService      backend.ITaskExecutorService
 	SequenceService          backend.ISequenceService
+	EmailScannerService      backend.IEmailScannerService
 }
 
 func (c *PalmauticServerApp) Run() error {
@@ -38,18 +37,18 @@ func (c *PalmauticServerApp) Run() error {
 
 func (c *PalmauticServerApp) tests() {
 
-	c.EmailService.SendPreprocessed(
-		&core.Params{
-			From:    fmt.Sprintf("%v", "a.itskovich@molbulak.com"),
-			To:      []string{"itskovichae@gmail.com" /*, "evstigneeva.design@gmail.com", "a.itskovich@molbulak.ru", "tony5oprano@yandex.ru", "nikolaydemidovez@gmail.com" /*t.Contact.Email,*/},
-			Subject: "Привет Антон",
-		}, func(srv *email.Email, m *email.Message) {
-			m.BodyHTML = "<body><h1>Helllo!</h1></<body>"
-			srv.Header = map[string]string{
-				"Content-Type": "text/html; charset=UTF-8",
-			}
-		},
-	)
+	//c.EmailService.SendPreprocessed(
+	//	&core.Params{
+	//		From:    fmt.Sprintf("%v", "a.itskovich@molbulak.com"),
+	//		To:      []string{"itskovichae@gmail.com" /*, "evstigneeva.design@gmail.com", "a.itskovich@molbulak.ru", "tony5oprano@yandex.ru", "nikolaydemidovez@gmail.com" /*t.Contact.Email,*/},
+	//		Subject: "Привет Антон",
+	//	}, func(srv *email.Email, m *email.Message) {
+	//		m.BodyHTML = "<body><h1>Helllo!</h1></<body>"
+	//		srv.Header = map[string]string{
+	//			"Content-Type": "text/html; charset=UTF-8",
+	//		}
+	//	},
+	//)
 
 	//c.SequenceService.AddContacts(entities.BaseEntity{Id: 228298, AccountId: 1001}, entities.BaseEntity{Id: 227631, AccountId: 1001})
 
@@ -100,7 +99,16 @@ func (c *PalmauticServerApp) tests() {
 }
 
 func (c *PalmauticServerApp) registerUsers() {
+	//anton := c.UserRepo.Accounts()[1001]
+	//shlomo := c.UserRepo.Accounts()[1002]
+	//anton.Subordinates = []*entities.User{shlomo}
+	//anton.InMailSettings = &entities.InMailSettings{
+	//	Server:   "mail.molbulak.com",
+	//	Login:    "a.itskovich@molbulak.com",
+	//	Password: "92y62uH9",
+	//	Port:     993,
+	//}
 	for _, a := range c.UserRepo.Accounts() {
-		c.AuthService.Register(a)
+		c.AuthService.Register(a.Account)
 	}
 }

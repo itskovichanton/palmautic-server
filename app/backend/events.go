@@ -5,6 +5,14 @@ import (
 	"salespalm/server/app/entities"
 )
 
-func TaskUpdatedEventName(taskId entities.ID) string {
-	return fmt.Sprintf("task-updated:%v", taskId)
+func TaskUpdatedEventTopic(taskId entities.ID) string {
+	return fmt.Sprintf("task-updated:task-%v", taskId)
+}
+
+func InMailReceivedEventTopic(sequenceId, contactId entities.ID) string {
+	return fmt.Sprintf("inmail-received:seq-%v:cont-%v", sequenceId, contactId)
+}
+
+func StopInMailScanEventTopic(sequenceId, contactId entities.ID) string {
+	return fmt.Sprintf("inmail-stop-scan:seq-%v:cont-%v", sequenceId, contactId)
 }

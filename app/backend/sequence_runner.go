@@ -3,6 +3,7 @@ package backend
 import (
 	"fmt"
 	"github.com/asaskevich/EventBus"
+	"github.com/emersion/go-imap"
 	"github.com/itskovichanton/core/pkg/core/logger"
 	"github.com/jinzhu/copier"
 	"golang.org/x/exp/slices"
@@ -13,19 +14,20 @@ import (
 )
 
 type ISequenceRunnerService interface {
-	Run(sequence *entities.Sequence, contact *entities.Contact, force bool)
+	Run(sequence *entities.Sequence, contact *entities.Contact, force bool) bool
 }
 
 type SequenceRunnerServiceImpl struct {
 	ISequenceRunnerService
 
-	TaskService    ITaskService
-	EventBus       EventBus.Bus
-	LoggerService  logger.ILoggerService
-	SequenceRepo   ISequenceRepo
-	ContactService IContactService
-	logger         string
-	timeFormat     string
+	TaskService         ITaskService
+	EventBus            EventBus.Bus
+	LoggerService       logger.ILoggerService
+	SequenceRepo        ISequenceRepo
+	ContactService      IContactService
+	logger              string
+	timeFormat          string
+	EmailScannerService IEmailScannerService
 }
 
 func (c *SequenceRunnerServiceImpl) Init() {
@@ -38,20 +40,21 @@ func (c *SequenceRunnerServiceImpl) Init() {
 		}
 		for contactId, _ := range sequence.Process.ByContact {
 			contact := c.ContactService.FindFirst(&entities.Contact{BaseEntity: entities.BaseEntity{Id: contactId, AccountId: sequence.AccountId}})
-			c.Run(sequence, contact, true)
-			time.Sleep(2 * time.Second)
+			if c.Run(sequence, contact, true) {
+				time.Sleep(2 * time.Second)
+			}
 		}
 	}
 }
 
-func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *entities.Contact, byRestore bool) {
+func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *entities.Contact, byRestore bool) bool {
 
 	lg := c.LoggerService.GetFileLogger(fmt.Sprintf("sequence-runner-%v", sequence.Id), "", 0)
 
 	ld := logger.NewLD()
 	logger.DisableSetChopOffFields(ld)
 
-	logger.Subject(ld, "**СТАРТ**")
+	logger.Action(ld, "**СТАРТ**")
 	logger.Args(ld, fmt.Sprintf("contact %v", contact.Id))
 	logger.Result(ld, "Начал")
 	logger.Print(lg, ld)
@@ -82,15 +85,15 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			} else {
 				logger.Result(ld, fmt.Sprintf("Уже выполняется для этого контакта (шаг %v). СТОП.", currentTaskIndex+1))
 				logger.Print(lg, ld)
-				return
+				return false
 			}
 		} else {
 			// Если после старта последовательность для контакта уже выполнена
 			statusTask, _ := contactProcess.StatusTask()
-			if statusTask.Status == entities.TaskStatusReplied {
+			if statusTask != nil && statusTask.Status == entities.TaskStatusReplied {
 				logger.Result(ld, "Контакт ответил для этой последовательности. СТОП.")
 				logger.Print(lg, ld)
-				return
+				return false
 			} else if !byRestore {
 				logger.Result(ld, "Выполнено для этого контакта, но он не ответил. Аннулирую процесс и перезапускаюсь.")
 				logger.Print(lg, ld)
@@ -99,165 +102,219 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			}
 		}
 	}
-	logger.Result(ld, "Готово к выполнению")
-	logger.Print(lg, ld)
 
-	logger.Subject(ld, "Касания")
-
-	taskUpdateChan := make(chan bool)
-	var taskUpdateTopics []string
+	// Все шаги уже выполнены?
 	var currentTask *entities.Task
 	currentTaskIndex := -1
-	taskUpdatedHandler := func(updated *entities.Task) {
-		currentTask = updated
-		taskUpdateChan <- true
+	currentTask, currentTaskIndex = contactProcess.FindFirstNonFinalTask()
+	if currentTask == nil {
+		logger.Result(ld, fmt.Sprintf("Все задачи в финальном статусе. СТОП."))
+		logger.Print(lg, ld)
+		return false
 	}
 
-	defer func() {
-		for _, topic := range taskUpdateTopics {
-			c.EventBus.Unsubscribe(topic, taskUpdatedHandler)
-		}
-		close(taskUpdateChan)
-	}()
+	go func() {
 
-	for {
-
-		logger.Action(ld, "Ищу нефинальный шаг")
-		currentTask, currentTaskIndex = contactProcess.FindFirstNonFinalTask()
-
-		if currentTask == nil {
-			logger.Result(ld, fmt.Sprintf("Все задачи в финальном статусе. СТОП."))
-			logger.Print(lg, ld)
-			return
-		}
-
-		tasksCount := len(contactProcess.Tasks)
-		currentTaskNumber := currentTaskIndex + 1
-		logger.Args(ld, fmt.Sprintf("шаг %v/%v, контакт %v, задача %v:%v", currentTaskNumber, tasksCount, contact.Id, currentTask.Id, currentTask.Status))
-		logger.Result(ld, fmt.Sprintf("Буду выполнять %vй шаг", currentTaskNumber))
-		logger.Print(lg, ld)
-
-		if currentTask.ReadyForSearch() {
-			logger.Action(ld, fmt.Sprintf("Задача для шага %v уже существует", currentTaskNumber))
-		} else {
-			// Нашли задачу, но это заготовка - надо ее создать
-			currentTask.AccountId = sequence.AccountId // назначаем создателю последовательности
-			currentTask.Contact = contact
-			currentTask.Sequence = sequence.ToIDAndName(sequence.Name)
-
-			logger.Action(ld, fmt.Sprintf("Создание задачи для шага %v", currentTaskNumber))
-
-			currentTask, _ = c.TaskService.CreateOrUpdate(currentTask)
-			contactProcess.Tasks[currentTaskIndex] = currentTask
-		}
-
-		logger.Args(ld, fmt.Sprintf("шаг %v/%v, контакт %v, задача %v:%v", currentTaskNumber, tasksCount, contact.Id, currentTask.Id, currentTask.Status))
-		logger.Result(ld, currentTask)
-		logger.Print(lg, ld)
-
-		// К этому моменту currentTask - реальная задача
-		now := time.Now()
-		delayToStart := currentTask.StartTime.Sub(now)
-
-		if delayToStart > 0 {
-
-			logger.Action(ld, fmt.Sprintf("Сплю %s до начала шага %v (задача %v)....", delayToStart, currentTaskNumber, currentTask.Id))
-			logger.Print(lg, ld)
-
-			// спим до начала задачи
-			time.Sleep(delayToStart)
-
-			logger.Result(ld, "Проснулась")
-			logger.Print(lg, ld)
-
-		}
-
-		c.TaskService.RefreshTask(currentTask)
-		timeOutDuration := currentTask.DueTime.Sub(now)
-
-		logger.Action(ld, fmt.Sprintf("Начинаю ждать выполнения, timeout=%s", timeOutDuration))
-		logger.Args(ld, fmt.Sprintf("шаг %v/%v, контакт %v, задача %v:%v", currentTaskNumber, tasksCount, contact.Id, currentTask.Id, currentTask.Status))
-		logger.Print(lg, ld)
-
-		// К этому моменту currentTask.status=started
-
-		taskUpdatedEventTopic := TaskUpdatedEventName(currentTask.Id)
-		c.EventBus.SubscribeAsync(taskUpdatedEventTopic, taskUpdatedHandler, true)
-
-		// Накапливаем список топиков для задач, чтобы потом отписаться по ним
-		taskUpdateTopics = append(taskUpdateTopics, taskUpdatedEventTopic)
-
-		taskReactionReceived := false
-		select {
-		case <-taskUpdateChan:
-			taskReactionReceived = true
-			break
-		case <-time.After(timeOutDuration):
-			break
-		}
-
-		// Начиная отсюда currentTask может быть изменен - если ответили на предыдущую задачу
-		c.TaskService.RefreshTask(currentTask)
-		currentTaskIndex = slices.IndexFunc(contactProcess.Tasks, func(t *entities.Task) bool { return t.Id == currentTask.Id })
-		currentTaskNumber = currentTaskIndex + 1
-		contactProcess.Tasks[currentTaskIndex] = currentTask
-
-		logger.Action(ld, "Ожидание закончено")
-		if taskReactionReceived {
-			logger.Result(ld, "Получена реакция на задачу")
-		} else {
-			logger.Result(ld, "Задача проигнорирована")
-		}
-		logger.Args(ld, fmt.Sprintf("шаг %v/%v, контакт %v, задача %v:%v", currentTaskNumber, tasksCount, contact.Id, currentTask.Id, currentTask.Status))
-		logger.Print(lg, ld)
-
-		// Смотрим на обновленную задачу
-		if currentTask.Status == entities.TaskStatusSkipped || currentTask.Status == entities.TaskStatusCompleted {
-
-			// пропустил или выполнил задачу - сдвигаем времена остальных задач назад на оставшееся время
-			elapsedTimeDueDuration := currentTask.DueTime.Sub(time.Now())
-
-			if currentTaskNumber <= len(contactProcess.Tasks) {
-
-				contactProcess.Tasks[currentTaskIndex].DueTime = time.Now() // текущая задача закончилась сейчас
-
-				logger.Action(ld, fmt.Sprintf("Сдвигаю времена задач на %s", elapsedTimeDueDuration))
-				for i := currentTaskNumber; i < len(contactProcess.Tasks); i++ {
-					t := contactProcess.Tasks[i]
-					t.StartTime = contactProcess.Tasks[i-1].DueTime
-					t.DueTime.Add(-elapsedTimeDueDuration)
+		// запускаем сканер ответов
+		inMailTopic := InMailReceivedEventTopic(sequence.Id, contact.Id)
+		onInMailReceivedHandler := func(m *imap.Message) {
+			ld2 := logger.NewLD()
+			logger.Action(ld2, "Получен inMail!")
+			var repliedTask *entities.Task
+			for _, t := range sequence.Process.ByContact[contact.Id].Tasks {
+				if t.HasFinalStatus() && t.HasTypeEmail() {
+					if repliedTask == nil {
+						repliedTask = t
+					} else if strings.Contains(strings.ToUpper(m.Envelope.Subject), strings.ToUpper(repliedTask.Subject)) {
+						repliedTask = t
+						break
+					}
 				}
-				if currentTaskNumber == len(contactProcess.Tasks) {
-					logger.Result(ld, "Готово. Это был последний шаг.")
-				} else {
-					logger.Result(ld, fmt.Sprintf("Готово. След шаг начнется %s", contactProcess.Tasks[currentTaskNumber].StartTime.Format(c.timeFormat)))
-				}
+			}
+			if repliedTask != nil {
+				c.TaskService.MarkReplied(repliedTask)
+				logger.Result(ld2, fmt.Sprintf("Пометил что ответ получен в задаче %v", repliedTask.Id))
+			} else {
+				logger.Result(ld2, fmt.Sprintf("никакая задача не будет отвечена"))
+			}
+			logger.Print(lg, ld2)
+		}
+
+		logger.Result(ld, "Готово к выполнению")
+		logger.Print(lg, ld)
+
+		logger.Subject(ld, "Касания")
+
+		taskUpdateChan := make(chan bool)
+		var taskUpdateTopics []string
+
+		taskUpdatedHandler := func(updated *entities.Task) {
+
+			currentTask = updated
+
+			ld2 := logger.NewLD()
+			logger.Result(ld2, fmt.Sprintf("Пришел ответ на задачу %v", currentTask.Id))
+			logger.Print(lg, ld2)
+
+			if taskUpdateChan != nil {
+				taskUpdateChan <- true
+			}
+		}
+
+		c.EventBus.SubscribeAsync(inMailTopic, onInMailReceivedHandler, true)
+		go c.EmailScannerService.Run(sequence, contact)
+
+		defer func() {
+			// После окончания процесса - отписываемся от событий
+			c.EventBus.Publish(StopInMailScanEventTopic(sequence.Id, contact.Id))
+			//c.EventBus.Unsubscribe(inMailTopic, onInMailReceivedHandler)
+			//for _, topic := range taskUpdateTopics {
+			//	c.EventBus.Unsubscribe(topic, taskUpdatedHandler)
+			//}
+			//close(taskUpdateChan)
+			//taskUpdateChan = nil
+		}()
+
+		for {
+
+			logger.Action(ld, "Ищу нефинальный шаг")
+			currentTask, currentTaskIndex = contactProcess.FindFirstNonFinalTask()
+
+			if currentTask == nil {
+				logger.Result(ld, fmt.Sprintf("Все задачи в финальном статусе. СТОП."))
+				logger.Print(lg, ld)
+				return
+			}
+
+			tasksCount := len(contactProcess.Tasks)
+			currentTaskNumber := currentTaskIndex + 1
+			logger.Args(ld, fmt.Sprintf("шаг %v/%v, контакт %v, задача %v:%v", currentTaskNumber, tasksCount, contact.Id, currentTask.Id, currentTask.Status))
+			logger.Result(ld, fmt.Sprintf("Буду выполнять %vй шаг", currentTaskNumber))
+			logger.Print(lg, ld)
+
+			if currentTask.ReadyForSearch() {
+				logger.Action(ld, fmt.Sprintf("Задача для шага %v уже существует", currentTaskNumber))
+			} else {
+				// Нашли задачу, но это заготовка - надо ее создать
+				currentTask.AccountId = sequence.AccountId // назначаем создателю последовательности
+				currentTask.Contact = contact
+				currentTask.Sequence = sequence.ToIDAndName(sequence.Name)
+
+				logger.Action(ld, fmt.Sprintf("Создание задачи для шага %v", currentTaskNumber))
+
+				currentTask, _ = c.TaskService.CreateOrUpdate(currentTask)
+				contactProcess.Tasks[currentTaskIndex] = currentTask
+			}
+
+			logger.Args(ld, fmt.Sprintf("шаг %v/%v, контакт %v, задача %v:%v", currentTaskNumber, tasksCount, contact.Id, currentTask.Id, currentTask.Status))
+			logger.Result(ld, currentTask)
+			logger.Print(lg, ld)
+
+			// К этому моменту currentTask - реальная задача
+			now := time.Now()
+			delayToStart := currentTask.StartTime.Sub(now)
+
+			if delayToStart > 0 {
+
+				logger.Action(ld, fmt.Sprintf("Сплю %s до начала шага %v (задача %v)....", delayToStart, currentTaskNumber, currentTask.Id))
 				logger.Print(lg, ld)
 
-				c.refreshTasks(lg, "Актуализация после сдвига", contact.Id, contactProcess.Tasks)
-			}
-		} else if currentTask.Status == entities.TaskStatusReplied {
+				// спим до начала задачи
+				time.Sleep(delayToStart)
 
-			// клиент ответил
-			c.deleteTasksInContactProcess(lg, contactProcess)
-			c.refreshTasks(lg, "Получен ответ на задачу. Статусы тасков актуализированы", contact.Id, contactProcess.Tasks)
+				logger.Result(ld, "Проснулась")
+				logger.Print(lg, ld)
+
+			}
+
+			c.TaskService.RefreshTask(currentTask)
+			timeOutDuration := currentTask.DueTime.Sub(now)
+
+			logger.Action(ld, fmt.Sprintf("Начинаю ждать выполнения, timeout=%s", timeOutDuration))
+			logger.Args(ld, fmt.Sprintf("шаг %v/%v, контакт %v, задача %v:%v", currentTaskNumber, tasksCount, contact.Id, currentTask.Id, currentTask.Status))
+			logger.Print(lg, ld)
+
+			// К этому моменту currentTask.status=started
+
+			taskUpdatedEventTopic := TaskUpdatedEventTopic(currentTask.Id)
+			c.EventBus.SubscribeAsync(taskUpdatedEventTopic, taskUpdatedHandler, true)
+
+			// Накапливаем список топиков для задач, чтобы потом отписаться по ним
+			taskUpdateTopics = append(taskUpdateTopics, taskUpdatedEventTopic)
+
+			taskReactionReceived := false
+			select {
+			case <-taskUpdateChan:
+				taskReactionReceived = true
+				break
+			case <-time.After(timeOutDuration):
+				break
+			}
+
+			// Начиная отсюда currentTask может быть изменен - если ответили на предыдущую задачу
+			c.TaskService.RefreshTask(currentTask)
+			currentTaskIndex = slices.IndexFunc(contactProcess.Tasks, func(t *entities.Task) bool { return t.Id == currentTask.Id })
+			currentTaskNumber = currentTaskIndex + 1
+			contactProcess.Tasks[currentTaskIndex] = currentTask
+
+			logger.Action(ld, "Ожидание закончено")
+			if taskReactionReceived {
+				logger.Result(ld, "Получена реакция на задачу")
+			} else {
+				logger.Result(ld, "Задача проигнорирована")
+			}
+			logger.Args(ld, fmt.Sprintf("шаг %v/%v, контакт %v, задача %v:%v", currentTaskNumber, tasksCount, contact.Id, currentTask.Id, currentTask.Status))
+			logger.Print(lg, ld)
+
+			// Смотрим на обновленную задачу
+			if currentTask.Status == entities.TaskStatusSkipped || currentTask.Status == entities.TaskStatusCompleted {
+
+				// пропустил или выполнил задачу - сдвигаем времена остальных задач назад на оставшееся время
+				elapsedTimeDueDuration := currentTask.DueTime.Sub(time.Now())
+
+				if currentTaskNumber <= len(contactProcess.Tasks) {
+
+					contactProcess.Tasks[currentTaskIndex].DueTime = time.Now() // текущая задача закончилась сейчас
+
+					logger.Action(ld, fmt.Sprintf("Сдвигаю времена задач на %s", elapsedTimeDueDuration))
+					for i := currentTaskNumber; i < len(contactProcess.Tasks); i++ {
+						t := contactProcess.Tasks[i]
+						t.StartTime = contactProcess.Tasks[i-1].DueTime
+						t.DueTime.Add(-elapsedTimeDueDuration)
+					}
+					if currentTaskNumber == len(contactProcess.Tasks) {
+						logger.Result(ld, "Готово. Это был последний шаг.")
+					} else {
+						logger.Result(ld, fmt.Sprintf("Готово. След шаг начнется %s", contactProcess.Tasks[currentTaskNumber].StartTime.Format(c.timeFormat)))
+					}
+					logger.Print(lg, ld)
+
+					c.refreshTasks(lg, "Актуализация после сдвига", contact.Id, contactProcess.Tasks)
+				}
+			} else if currentTask.Status == entities.TaskStatusReplied {
+
+				// клиент ответил
+				c.deleteTasksInContactProcess(lg, contactProcess)
+				c.refreshTasks(lg, "Получен ответ на задачу. Статусы тасков актуализированы", contact.Id, contactProcess.Tasks)
+
+			}
+			// expired - просто идем дальше
+			// archived - задачу нельзя архивировать извне
 
 		}
-		// expired - просто идем дальше
-		// archived - задачу нельзя архивировать извне
+	}()
 
-	}
+	return true
 }
 
 func (c *SequenceRunnerServiceImpl) buildProcess(sequence *entities.Sequence, contact *entities.Contact, ld map[string]interface{}, lg *log.Logger) {
 
-	sequenceInstance := &entities.SequenceInstance{}
-	//_, exists := sequence.Process.ByContact[contact.Id]
-	//if exists {
-	//	return
-	//}
-	sequence.Process.ByContact[contact.Id] = sequenceInstance
+	if sequence.Model == nil {
+		return
+	}
 
+	sequenceInstance := &entities.SequenceInstance{}
+	sequence.Process.ByContact[contact.Id] = sequenceInstance
 	steps := sequence.Model.Steps
 	stepsCount := len(steps)
 	var lastDueTime time.Time

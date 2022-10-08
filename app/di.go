@@ -70,19 +70,31 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewSkipTaskAction)
 	container.Provide(c.NewSequenceRunnerService)
 	container.Provide(c.NewEventBus)
+	container.Provide(c.NewEmailScannerService)
+}
+
+func (c *DI) NewEmailScannerService(EventBus EventBus.Bus, AccountService backend.IUserService, LoggerService logger.ILoggerService) backend.IEmailScannerService {
+	r := &backend.EmailScannerServiceImpl{
+		AccountService: AccountService,
+		LoggerService:  LoggerService,
+		EventBus:       EventBus,
+	}
+	r.Init()
+	return r
 }
 
 func (c *DI) NewEventBus() EventBus.Bus {
 	return EventBus.New()
 }
 
-func (c *DI) NewSequenceRunnerService(ContactService backend.IContactService, SequenceRepo backend.ISequenceRepo, LoggerService logger.ILoggerService, EventBus EventBus.Bus, TaskService backend.ITaskService) backend.ISequenceRunnerService {
+func (c *DI) NewSequenceRunnerService(EmailScannerService backend.IEmailScannerService, ContactService backend.IContactService, SequenceRepo backend.ISequenceRepo, LoggerService logger.ILoggerService, EventBus EventBus.Bus, TaskService backend.ITaskService) backend.ISequenceRunnerService {
 	r := &backend.SequenceRunnerServiceImpl{
-		TaskService:    TaskService,
-		EventBus:       EventBus,
-		LoggerService:  LoggerService,
-		SequenceRepo:   SequenceRepo,
-		ContactService: ContactService,
+		EmailScannerService: EmailScannerService,
+		TaskService:         TaskService,
+		EventBus:            EventBus,
+		LoggerService:       LoggerService,
+		SequenceRepo:        SequenceRepo,
+		ContactService:      ContactService,
 	}
 	go r.Init()
 	return r
@@ -206,7 +218,7 @@ func (c *DI) NewCreateOrUpdateSequenceAction(sequenceService backend.ISequenceSe
 	}
 }
 
-func (c *DI) NewApp(AutoTaskProcessorService backend.IAutoTaskProcessorService, SequenceService backend.ISequenceService, TaskExecutorService backend.ITaskExecutorService, httpController *http_server.PalmauticHttpController, contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
+func (c *DI) NewApp(EmailScannerService backend.IEmailScannerService, AutoTaskProcessorService backend.IAutoTaskProcessorService, SequenceService backend.ISequenceService, TaskExecutorService backend.ITaskExecutorService, httpController *http_server.PalmauticHttpController, contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
 	return &PalmauticServerApp{
 		HttpController:           httpController,
 		Config:                   config,
@@ -219,6 +231,7 @@ func (c *DI) NewApp(AutoTaskProcessorService backend.IAutoTaskProcessorService, 
 		ContactService:           contactService,
 		TaskExecutorService:      TaskExecutorService,
 		SequenceService:          SequenceService,
+		EmailScannerService:      EmailScannerService,
 	}
 }
 
