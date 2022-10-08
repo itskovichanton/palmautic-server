@@ -2,8 +2,10 @@ package entities
 
 import (
 	"fmt"
+	"github.com/itskovichanton/core/pkg/core/validation"
 	"net/url"
 	"sort"
+	"strings"
 )
 
 func RemoveHtmlIndents(s string) string {
@@ -56,4 +58,22 @@ func FormatUrl(host string, arg string) string {
 
 func IDStr(id ID) string {
 	return fmt.Sprintf("%v", id)
+}
+
+func BaseEntitiesFromIds(ids string) []BaseEntity {
+	var r []BaseEntity
+	for idIndex, idStr := range strings.Split(ids, ",") {
+		id, _ := validation.CheckInt(fmt.Sprintf("id on %v", idIndex), idStr)
+		r = append(r, BaseEntity{Id: ID(id)})
+	}
+	return r
+}
+
+func Ids(ids string) []ID {
+	var r []ID
+	for idIndex, idStr := range strings.Split(ids, ",") {
+		id, _ := validation.CheckInt(fmt.Sprintf("id on %v", idIndex), idStr)
+		r = append(r, ID(id))
+	}
+	return r
 }

@@ -5,6 +5,7 @@ import (
 	"github.com/itskovichanton/goava/pkg/goava/errs"
 	"salespalm/server/app/entities"
 	"strings"
+	"time"
 )
 
 type ISequenceService interface {
@@ -13,7 +14,7 @@ type ISequenceService interface {
 	GetByIndex(accountId entities.ID, index int) *entities.Sequence
 	Search(filter *entities.Sequence, settings *SequenceSearchSettings) *SequenceSearchResult
 	FindFirst(filter *entities.Sequence) *entities.Sequence
-	AddContact(sequenceCreds, contactCreds entities.BaseEntity) error
+	AddContacts(sequenceCreds entities.BaseEntity, contactIds []entities.ID) error
 }
 
 type SequenceServiceImpl struct {
@@ -43,23 +44,25 @@ func (c *SequenceServiceImpl) Search(filter *entities.Sequence, settings *Sequen
 	return c.SequenceRepo.Search(filter, settings)
 }
 
-func (c *SequenceServiceImpl) AddContact(sequenceCreds, contactCreds entities.BaseEntity) error {
+func (c *SequenceServiceImpl) AddContacts(sequenceCreds entities.BaseEntity, contactIds []entities.ID) error {
 
-	sequence := c.SequenceRepo.FindFirst(&entities.Sequence{
-		BaseEntity: sequenceCreds,
-	})
+	sequence := c.SequenceRepo.FindFirst(&entities.Sequence{BaseEntity: sequenceCreds})
 	if sequence == nil {
 		return errs.NewBaseError("Последовательность не найдена")
 	}
 
-	contact := c.ContactService.FindFirst(&entities.Contact{
-		BaseEntity: contactCreds,
-	})
-	if contact == nil {
-		return errs.NewBaseError("Контакт не найден")
+	var contactFilters []*entities.Contact
+	for _, contactId := range contactIds {
+		contactFilters = append(contactFilters, &entities.Contact{BaseEntity: entities.BaseEntity{Id: contactId, AccountId: sequence.AccountId}})
 	}
 
-	go c.SequenceRunnerService.Run(sequence, contact, false)
+	go func() {
+		contactsToAdd := c.ContactService.SearchAll(contactFilters)
+		for _, contact := range contactsToAdd {
+			go c.SequenceRunnerService.Run(sequence, contact, false)
+			time.Sleep(3 * time.Second)
+		}
+	}()
 
 	return nil
 }
@@ -72,10 +75,10 @@ func (c *SequenceServiceImpl) Stats(accountId entities.Id) *entities.SequenceSta
 		ByType:   map[string]int{},
 		ByStatus: map[string]int{},
 	}
-	for _, t := range c.SequenceRepo.Commons().Types {
+	for _, t := range c.SequenceService.Commons().Types {
 		r.ByType[t.Creds.Name] = len(c.Search(&entities.Sequence{BaseEntity: be, Type: t.Creds.Name}))
 	}
-	for _, s := range c.SequenceRepo.Commons().Statuses {
+	for _, s := range c.SequenceService.Commons().Statuses {
 		r.ByStatus[s] = len(c.Search(&entities.Sequence{BaseEntity: be, Status: s}))
 	}
 	return r
@@ -84,7 +87,7 @@ func (c *SequenceServiceImpl) Stats(accountId entities.Id) *entities.SequenceSta
 
 
 func (c *SequenceServiceImpl) Delete(filter *entities.Sequence) (*entities.Sequence, error) {
-	SequenceContainer := c.SequenceRepo.Search(filter)
+	SequenceContainer := c.SequenceService.Search(filter)
 	if len(SequenceContainer) == 0 {
 		return nil, errs.NewBaseErrorWithReason("Задача не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
 	}
@@ -92,7 +95,7 @@ func (c *SequenceServiceImpl) Delete(filter *entities.Sequence) (*entities.Seque
 	if Sequence.Status == entities.SequenceStatusStarted {
 		return nil, errs.NewBaseErrorWithReason("Задача активна - ее нельзя удалить", frmclient.ReasonValidation)
 	}
-	deleted := c.SequenceRepo.Delete(Sequence)
+	deleted := c.SequenceService.Delete(Sequence)
 	return deleted, nil
 }
 */

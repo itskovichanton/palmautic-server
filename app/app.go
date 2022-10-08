@@ -51,7 +51,7 @@ func (c *PalmauticServerApp) tests() {
 		},
 	)
 
-	//c.SequenceService.AddContact(entities.BaseEntity{Id: 228298, AccountId: 1001}, entities.BaseEntity{Id: 227631, AccountId: 1001})
+	//c.SequenceService.AddContacts(entities.BaseEntity{Id: 228298, AccountId: 1001}, entities.BaseEntity{Id: 227631, AccountId: 1001})
 
 	//var zeroTime time.Time
 	//s := utils.ToJson(entities.Sequence{

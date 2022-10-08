@@ -28,6 +28,7 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewAutoTaskProcessorService)
 	container.Provide(c.NewUploadFromFileB2BDataAction)
 	container.Provide(c.NewAddContactToSequenceAction)
+	container.Provide(c.NewSearchSequenceAction)
 	container.Provide(c.NewGrpcController)
 	container.Provide(c.NewClearTemplatesAction)
 	container.Provide(c.NewAddContactFromB2BAction)
@@ -83,7 +84,7 @@ func (c *DI) NewSequenceRunnerService(ContactService backend.IContactService, Se
 		SequenceRepo:   SequenceRepo,
 		ContactService: ContactService,
 	}
-	r.Init()
+	go r.Init()
 	return r
 }
 
@@ -164,16 +165,17 @@ func (c *DI) NewAutoTaskProcessorService(SequenceService backend.ISequenceServic
 	return r
 }
 
-func (c *DI) NewHttpController(MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
+func (c *DI) NewHttpController(SearchSequenceAction *frontend.SearchSequenceAction, MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactsToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
 	r := &http_server.PalmauticHttpController{
 		HttpControllerImpl:           *httpController,
+		SearchSequenceAction:         SearchSequenceAction,
 		MarkRepliedTaskAction:        MarkRepliedTaskAction,
 		ClearTemplatesAction:         ClearTemplatesAction,
 		CreateOrUpdateContactAction:  createOrUpdateContactAction,
 		DeleteContactAction:          deleteContactAction,
 		SearchContactAction:          searchContactAction,
 		UploadContactsAction:         uploadContactsAction,
-		AddContactToSequenceAction:   AddContactToSequenceAction,
+		AddContactsToSequenceAction:  AddContactToSequenceAction,
 		UploadB2BDataAction:          uploadB2BDataAction,
 		GetB2BInfoAction:             getB2BInfoAction,
 		ClearB2BTableAction:          clearB2BTableAction,
@@ -192,8 +194,8 @@ func (c *DI) NewHttpController(MarkRepliedTaskAction *frontend.MarkRepliedTaskAc
 	return r
 }
 
-func (c *DI) NewAddContactToSequenceAction(sequenceService backend.ISequenceService) *frontend.AddContactToSequenceAction {
-	return &frontend.AddContactToSequenceAction{
+func (c *DI) NewAddContactToSequenceAction(sequenceService backend.ISequenceService) *frontend.AddContactsToSequenceAction {
+	return &frontend.AddContactsToSequenceAction{
 		SequenceService: sequenceService,
 	}
 }
@@ -391,5 +393,11 @@ func (c *DI) NewExecuteTaskAction(TaskService backend.ITaskService) *frontend.Ex
 func (c *DI) NewMarkRepliedTaskAction(TaskService backend.ITaskService) *frontend.MarkRepliedTaskAction {
 	return &frontend.MarkRepliedTaskAction{
 		TaskService: TaskService,
+	}
+}
+
+func (c *DI) NewSearchSequenceAction(sequenceService backend.ISequenceService) *frontend.SearchSequenceAction {
+	return &frontend.SearchSequenceAction{
+		SequenceService: sequenceService,
 	}
 }

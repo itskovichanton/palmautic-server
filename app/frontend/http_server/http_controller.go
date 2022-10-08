@@ -17,7 +17,7 @@ type PalmauticHttpController struct {
 
 	CreateOrUpdateContactAction  *frontend.CreateOrUpdateContactAction
 	CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction
-	AddContactToSequenceAction   *frontend.AddContactToSequenceAction
+	AddContactsToSequenceAction  *frontend.AddContactsToSequenceAction
 	SearchContactAction          *frontend.SearchContactAction
 	DeleteContactAction          *frontend.DeleteContactAction
 	ClearTemplatesAction         *frontend.ClearTemplatesAction
@@ -35,13 +35,15 @@ type PalmauticHttpController struct {
 	SkipTaskAction               *frontend.SkipTaskAction
 	ExecuteTaskAction            *frontend.ExecuteTaskAction
 	MarkRepliedTaskAction        *frontend.MarkRepliedTaskAction
+	SearchSequenceAction         *frontend.SearchSequenceAction
 }
 
 func (c *PalmauticHttpController) Init() {
 
 	// sequences
 	c.EchoEngine.POST("/sequences/createOrUpdate", c.GetDefaultHandler(c.prepareAction(true, c.readSequence(), c.CreateOrUpdateSequenceAction)))
-	c.EchoEngine.GET("/sequences/addContact", c.GetDefaultHandler(c.prepareAction(true, c.AddContactToSequenceAction)))
+	c.EchoEngine.GET("/sequences/addContacts", c.GetDefaultHandler(c.prepareAction(true, c.AddContactsToSequenceAction)))
+	c.EchoEngine.POST("/sequences/search", c.GetDefaultHandler(c.prepareAction(true, c.readSequence(), c.SearchSequenceAction)))
 
 	// templates
 	c.EchoEngine.GET("/templates/clear", c.GetDefaultHandler(c.prepareAction(true, c.ClearTemplatesAction)))

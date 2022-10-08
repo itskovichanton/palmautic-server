@@ -105,6 +105,9 @@ func (c *ContactRepoImpl) CreateOrUpdate(contact *entities.Contact) {
 func (c *ContactRepoImpl) applySettings(r []*entities.Contact, settings *ContactSearchSettings) *ContactSearchResult {
 	result := &ContactSearchResult{Items: r}
 	result.TotalCount = len(result.Items)
+	if settings == nil {
+		return result
+	}
 	lastElemIndex := settings.Offset + settings.Count
 	if settings.Count > 0 && lastElemIndex < result.TotalCount {
 		result.Items = result.Items[settings.Offset:lastElemIndex]

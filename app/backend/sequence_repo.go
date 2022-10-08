@@ -3,6 +3,7 @@ package backend
 import (
 	"golang.org/x/exp/maps"
 	"salespalm/server/app/entities"
+	"strings"
 )
 
 type ISequenceRepo interface {
@@ -25,7 +26,11 @@ type SequenceRepoImpl struct {
 }
 
 func (c *SequenceRepoImpl) FindFirst(filter *entities.Sequence) *entities.Sequence {
-	return *entities.FindFirst(c.Search(filter, nil).Items, filter)
+	r := entities.FindFirst(c.Search(filter, nil).Items, filter)
+	if r != nil {
+		return *r
+	}
+	return nil
 }
 
 func (c *SequenceRepoImpl) GetByIndex(accountId entities.ID, index int) *entities.Sequence {
@@ -90,6 +95,7 @@ func (c *SequenceRepoImpl) searchForAccount(filter *entities.Sequence) []*entiti
 		var r []*entities.Sequence
 		searchResult := rMap[filter.Id]
 		if searchResult != nil {
+			searchResult.Refresh()
 			r = append(r, searchResult)
 		}
 		return r
@@ -97,23 +103,21 @@ func (c *SequenceRepoImpl) searchForAccount(filter *entities.Sequence) []*entiti
 	unfiltered := maps.Values(rMap)
 	var r []*entities.Sequence
 	for _, t := range unfiltered {
+
 		fits := true
-		//if len(filter.Status) > 0 && t.Status != filter.Status {
-		//	fits = false
-		//}
-		//if len(filter.Type) > 0 && t.Type != filter.Type {
-		//	fits = false
-		//}
-		//if filter.Sequence != nil && filter.Sequence.Id != t.Sequence.Id {
-		//	fits = false
-		//}
-		//if len(filter.Name) > 0 && !strings.Contains(strings.ToUpper(t.Name), strings.ToUpper(filter.Name)) {
-		//	fits = false
-		//}
+
+		if filter.Id != 0 && filter.Id != t.Id {
+			fits = false
+		} else if filter.FolderID > 0 && t.FolderID != filter.FolderID {
+			fits = false
+		} else if len(filter.Name) > 0 && !strings.Contains(strings.ToUpper(t.Name), strings.ToUpper(filter.Name)) {
+			fits = false
+		}
 		if fits {
 			t.Refresh()
 			r = append(r, t)
 		}
+
 	}
 	entities.SortById(r)
 	return r

@@ -8,7 +8,8 @@ type Sequence struct {
 	Description string
 	Model       *SequenceModel
 	Process     *SequenceProcess
-	Progress    int
+	Progress    float32
+	People      int
 }
 
 func (s *Sequence) CalcProgress() float32 {
@@ -23,8 +24,10 @@ func (s *Sequence) CalcProgress() float32 {
 }
 
 func (s *Sequence) Refresh() {
-	s.Progress = int(s.CalcProgress())
+	s.Progress = s.CalcProgress()
+	s.People = 0
 	if s.Process != nil && s.Process.ByContact != nil {
+		s.People = len(s.Process.ByContact)
 		for _, process := range s.Process.ByContact {
 			for _, task := range process.Tasks {
 				task.Refresh()
@@ -33,26 +36,19 @@ func (s *Sequence) Refresh() {
 	}
 }
 
-func (s *SequenceInstance) StatusTask() *Task {
+func (s *SequenceInstance) StatusTask() (*Task, int) {
 	for i := len(s.Tasks) - 1; i >= 0; i-- {
 		t := s.Tasks[i]
 		if len(t.Status) > 0 && t.Status != TaskStatusArchived {
-			return t
+			return t, i
 		}
 	}
-	return s.Tasks[0]
+	return s.Tasks[0], 0
 }
 
 func (s *SequenceInstance) CalcProgress() float32 {
-	_, firstNonFinalTask := s.FindFirstNonFinalTask()
-	firstNonFinalTask--
-	if firstNonFinalTask < 0 {
-		firstNonFinalTask = 0
-	}
-	if firstNonFinalTask == 0 {
-		return 0
-	}
-	return float32(firstNonFinalTask) / float32(len(s.Tasks))
+	_, statusTaskIndex := s.StatusTask()
+	return float32(statusTaskIndex) / float32(len(s.Tasks))
 }
 
 func (s *SequenceInstance) FindFirstNonFinalTask() (*Task, int) {

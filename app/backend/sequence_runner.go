@@ -38,7 +38,8 @@ func (c *SequenceRunnerServiceImpl) Init() {
 		}
 		for contactId, _ := range sequence.Process.ByContact {
 			contact := c.ContactService.FindFirst(&entities.Contact{BaseEntity: entities.BaseEntity{Id: contactId, AccountId: sequence.AccountId}})
-			go c.Run(sequence, contact, true)
+			c.Run(sequence, contact, true)
+			time.Sleep(2 * time.Second)
 		}
 	}
 }
@@ -61,7 +62,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 
 	contactProcess := sequence.Process.ByContact[contact.Id]
 
-	if contactProcess == nil {
+	if contactProcess == nil || len(contactProcess.Tasks) == 0 {
 
 		sequence.Process.ByContact[contact.Id] = &entities.SequenceInstance{}
 		c.buildProcess(sequence, contact, ld, lg)
@@ -85,14 +86,15 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			}
 		} else {
 			// Если после старта последовательность для контакта уже выполнена
-			if contactProcess.StatusTask().Status == entities.TaskStatusReplied {
+			statusTask, _ := contactProcess.StatusTask()
+			if statusTask.Status == entities.TaskStatusReplied {
 				logger.Result(ld, "Контакт ответил для этой последовательности. СТОП.")
 				logger.Print(lg, ld)
 				return
 			} else if !byRestore {
 				logger.Result(ld, "Выполнено для этого контакта, но он не ответил. Аннулирую процесс и перезапускаюсь.")
 				logger.Print(lg, ld)
-				sequence.Process = nil
+				c.deleteTasksInContactProcess(lg, contactProcess)
 				c.Run(sequence, contact, byRestore)
 			}
 		}
@@ -236,20 +238,8 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			}
 		} else if currentTask.Status == entities.TaskStatusReplied {
 
-			// клиент ответил - остальные задачи архивируем (может потом удалить надо будет)
-			for i := currentTaskNumber; i < len(contactProcess.Tasks); i++ {
-				//tasks[i].Status = entities.TaskStatusArchived
-				t := contactProcess.Tasks[i]
-				if t.Id > 0 {
-					ld2 := logger.NewLD()
-					logger.Action(ld2, "Удаляю таски после выполненного")
-					c.TaskService.Delete(t)
-					logger.Result(ld2, fmt.Sprintf("Удален таск #%v", t.Id))
-					logger.Print(lg, ld2)
-				}
-			}
-			contactProcess.Tasks = contactProcess.Tasks[:currentTaskNumber] // задачи которые не понадобились - удаляются
-			tasksCount = len(contactProcess.Tasks)
+			// клиент ответил
+			c.deleteTasksInContactProcess(lg, contactProcess)
 			c.refreshTasks(lg, "Получен ответ на задачу. Статусы тасков актуализированы", contact.Id, contactProcess.Tasks)
 
 		}
@@ -313,4 +303,19 @@ func (c *SequenceRunnerServiceImpl) refreshTasks(lg *log.Logger, action string, 
 	logger.Result(ld, strings.TrimSpace(r))
 	logger.Action(ld, fmt.Sprintf("%v:контакт=%v", action, contactId))
 	logger.Print(lg, ld)
+}
+
+func (c *SequenceRunnerServiceImpl) deleteTasksInContactProcess(lg *log.Logger, contactProcess *entities.SequenceInstance) {
+	for i := 0; i < len(contactProcess.Tasks); i++ {
+		//tasks[i].Status = entities.TaskStatusArchived
+		t := contactProcess.Tasks[i]
+		if t.Id > 0 {
+			ld2 := logger.NewLD()
+			logger.Action(ld2, "Удаляю все таски")
+			c.TaskService.Delete(t)
+			logger.Result(ld2, fmt.Sprintf("Удален таск #%v", t.Id))
+			logger.Print(lg, ld2)
+		}
+	}
+	contactProcess.Tasks = []*entities.Task{}
 }

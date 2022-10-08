@@ -7,6 +7,7 @@ import (
 
 type IContactService interface {
 	Search(filter *entities.Contact, settings *ContactSearchSettings) *ContactSearchResult
+	SearchAll(filter []*entities.Contact) []*entities.Contact
 	FindFirst(filter *entities.Contact) *entities.Contact
 	Delete(accountId entities.ID, ids []entities.ID)
 	CreateOrUpdate(contact *entities.Contact) error
@@ -18,6 +19,17 @@ type ContactServiceImpl struct {
 	IContactService
 
 	ContactRepo IContactRepo
+}
+
+func (c *ContactServiceImpl) SearchAll(filters []*entities.Contact) []*entities.Contact {
+	var r []*entities.Contact
+	for _, f := range filters {
+		found := c.Search(f, nil)
+		if found != nil {
+			r = append(r, found.Items...)
+		}
+	}
+	return r
 }
 
 func (c *ContactServiceImpl) GetByIndex(accountId entities.ID, index int) *entities.Contact {

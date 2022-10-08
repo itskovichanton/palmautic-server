@@ -3,6 +3,7 @@ package frontend
 import (
 	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
+	"github.com/jinzhu/copier"
 	"salespalm/server/app/backend"
 	"salespalm/server/app/entities"
 )
@@ -11,13 +12,13 @@ import (
 //type DeleteSequenceAction struct {
 //	pipeline.BaseActionImpl
 //
-//	SequenceRepo backend.ISequenceService
+//	SequenceService backend.ISequenceService
 //}
 //
 //func (c *DeleteSequenceAction) Run(arg interface{}) (interface{}, error) {
 //	p := arg.(*RetrievedEntityParams)
 //	Sequence := p.Entity.(*entities.Sequence)
-//	return c.SequenceRepo.Delete(Sequence)
+//	return c.SequenceService.Delete(Sequence)
 //}
 
 type CreateOrUpdateSequenceAction struct {
@@ -39,41 +40,52 @@ func (c *CreateOrUpdateSequenceAction) Run(arg interface{}) (interface{}, error)
 	}, nil
 }
 
-type AddContactToSequenceAction struct {
+type AddContactsToSequenceAction struct {
 	pipeline.BaseActionImpl
 
 	SequenceService backend.ISequenceService
 }
 
-func (c *AddContactToSequenceAction) Run(arg interface{}) (interface{}, error) {
+func (c *AddContactsToSequenceAction) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*entities2.CallParams)
 	accountId := entities.ID(cp.Caller.Session.Account.ID)
-	return nil, c.SequenceService.AddContact(
+	return nil, c.SequenceService.AddContacts(
 		entities.BaseEntity{Id: entities.ID(cp.GetParamInt("sequenceId", 0)), AccountId: accountId},
-		entities.BaseEntity{Id: entities.ID(cp.GetParamInt("contactId", 0)), AccountId: accountId},
+		entities.Ids(cp.GetParamStr("contactIds")),
 	)
 }
 
-//
-//type SearchSequenceAction struct {
-//	pipeline.BaseActionImpl
-//
-//	SequenceRepo backend.ISequenceService
-//}
-//
-//func (c *SearchSequenceAction) Run(arg interface{}) (interface{}, error) {
-//	p := arg.(*RetrievedEntityParams)
-//	Sequence := p.Entity.(*entities.Sequence)
-//	return c.SequenceRepo.Search(Sequence), nil
-//}
-//
+type SearchSequenceAction struct {
+	pipeline.BaseActionImpl
+
+	SequenceService backend.ISequenceService
+}
+
+func (c *SearchSequenceAction) Run(arg interface{}) (interface{}, error) {
+	p := arg.(*RetrievedEntityParams)
+	cp := p.CallParams
+	Sequence := p.Entity.(*entities.Sequence)
+	r := c.SequenceService.Search(Sequence, &backend.SequenceSearchSettings{
+		Offset: cp.GetParamInt("offset", 0),
+		Count:  cp.GetParamInt("count", 0),
+	})
+	for index, p := range r.Items {
+		resP := entities.Sequence{}
+		copier.Copy(&resP, &p)
+		resP.Process = nil
+		resP.Model = nil
+		r.Items[index] = &resP
+	}
+	return r, nil
+}
+
 //type GetSequenceStatsAction struct {
 //	pipeline.BaseActionImpl
 //
-//	SequenceRepo backend.ISequenceService
+//	SequenceService backend.ISequenceService
 //}
 //
 //func (c *GetSequenceStatsAction) Run(arg interface{}) (interface{}, error) {
 //	cp := arg.(*entities2.CallParams)
-//	return c.SequenceRepo.Stats(entities.Id(cp.Caller.Session.Account.Id)), nil
+//	return c.SequenceService.Stats(entities.Id(cp.Caller.Session.Account.Id)), nil
 //}
