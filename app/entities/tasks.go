@@ -54,14 +54,14 @@ func (t Task) IsMessenger() bool {
 
 func (t *Task) Refresh() {
 
-	//if len(t.Name) == 0 {
-	t.Name = calcName(t)
-	//}
-	//if len(t.Description) == 0 {
-	if t.Contact != nil {
-		t.Description = calcDescription(t)
+	if len(t.Name) == 0 {
+		t.Name = calcName(t)
 	}
-	//}
+	if len(t.Description) == 0 {
+		if t.Contact != nil {
+			t.Description = calcDescription(t)
+		}
+	}
 
 	calcAlertness(t)
 	if !t.HasFinalStatus() {

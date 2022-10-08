@@ -59,7 +59,7 @@ func (c *SequenceServiceImpl) AddContacts(sequenceCreds entities.BaseEntity, con
 	go func() {
 		contactsToAdd := c.ContactService.SearchAll(contactFilters)
 		for _, contact := range contactsToAdd {
-			go c.SequenceRunnerService.Run(sequence, contact, false)
+			c.SequenceRunnerService.Run(sequence, contact, false)
 			time.Sleep(3 * time.Second)
 		}
 	}()

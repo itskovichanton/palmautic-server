@@ -7,6 +7,7 @@ import (
 	"github.com/emersion/go-imap/client"
 	"github.com/itskovichanton/core/pkg/core/logger"
 	"github.com/patrickmn/go-cache"
+	"log"
 	"salespalm/server/app/entities"
 	"strings"
 	"time"
@@ -127,10 +128,9 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 
 			fromIndex := uint32(1)
 			toIndex := mbox.Messages
-			if mbox.Messages > 99 {
-				// We're using unsigned integers here, only subtract if the result is > 0
-				fromIndex = mbox.Messages - 99
-			}
+			//if mbox.Messages > 99 {
+			//	fromIndex = mbox.Messages - 200
+			//}
 			seqset := new(imap.SeqSet)
 			seqset.AddRange(fromIndex, toIndex)
 			//seqset.Add()
@@ -139,9 +139,9 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 			done := make(chan error, 1)
 			go func() {
 				msgIds, err := cl.Search(&imap.SearchCriteria{
-					Since:        time.Now().Add(-2 * time.Hour),
-					SeqNum:       seqset,
-					WithFlags:    nil,
+					SentSince: time.Now().Add(-2 * time.Hour),
+					//SeqNum: seqset,
+					//WithFlags:    nil,
 					WithoutFlags: []string{imap.SeenFlag},
 				})
 				if err != nil {
@@ -164,20 +164,12 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 					continue
 				}
 
-				logger.Result(ld, "Пришло письмо от "+from+": "+msg.Envelope.Subject)
-				logger.Print(lg, ld)
-
 				if from == contact.Email || from == "itskovichae@gmail.com" {
-					seqset1 := new(imap.SeqSet)
-					seqset1.AddNum(msg.Uid)
-					err = cl.Store(seqset1, imap.FormatFlagsOp(imap.AddFlags, true), []interface{}{imap.SeenFlag}, nil)
-					if err != nil {
-						logger.Err(ld, err)
-					} else {
-						logger.Action(ld, "Пометил письмо как прочитанные. Сообщаю что пришел inMail по для "+InMailReceivedEventTopic(sequence.Id, contact.Id))
+					logger.Result(ld, fmt.Sprintf("Пришло письмо от %v: %v, date=%v", from, msg.Envelope.Subject, msg.Envelope.Date))
+					logger.Print(lg, ld)
+					if c.markMsgSeen(cl, msg, ld, lg, sequence.Id, contact.Id) {
 						c.EventBus.Publish(InMailReceivedEventTopic(sequence.Id, contact.Id), msg)
 					}
-					logger.Print(lg, ld)
 				}
 			}
 
@@ -189,4 +181,20 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 			time.Sleep(10 * time.Second)
 		}
 	}
+}
+
+func (c *EmailScannerServiceImpl) markMsgSeen(cl *client.Client, msg *imap.Message, ld map[string]interface{}, lg *log.Logger, sequenceId entities.ID, contactId entities.ID) bool {
+	defer logger.Print(lg, ld)
+	seqset := new(imap.SeqSet)
+	seqset.AddNum(msg.Uid)
+	logger.Action(ld, "Помечаю письмо как прочитанное")
+	err := cl.Store(seqset, imap.FormatFlagsOp(imap.AddFlags, true), []interface{}{imap.SeenFlag}, nil)
+	if err != nil {
+		logger.Err(ld, err)
+	} else {
+		logger.Err(ld, nil)
+		logger.Result(ld, "Пометил письмо как прочитанные. Сообщаю что пришел inMail по для "+InMailReceivedEventTopic(sequenceId, contactId))
+		return true
+	}
+	return false
 }

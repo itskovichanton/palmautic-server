@@ -1,5 +1,7 @@
 package entities
 
+import "sync"
+
 type Sequence struct {
 	BaseEntity
 
@@ -10,11 +12,12 @@ type Sequence struct {
 	Process     *SequenceProcess
 	Progress    float32
 	People      int
+	lock        sync.Mutex
 }
 
 func (s *Sequence) CalcProgress() float32 {
 	var r float32 = 0.0
-	if s.Process == nil || len(s.Process.ByContact) == 0 {
+	if s.Process == nil || s.Process.ByContact == nil || len(s.Process.ByContact) == 0 {
 		return r
 	}
 	for _, seqInstance := range s.Process.ByContact {
@@ -26,6 +29,8 @@ func (s *Sequence) CalcProgress() float32 {
 func (s *Sequence) Refresh() {
 	s.Progress = s.CalcProgress()
 	s.People = 0
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	if s.Process != nil && s.Process.ByContact != nil {
 		s.People = len(s.Process.ByContact)
 		for _, process := range s.Process.ByContact {
@@ -52,6 +57,9 @@ func (s *SequenceInstance) StatusTask() (*Task, int) {
 
 func (s *SequenceInstance) CalcProgress() float32 {
 	_, statusTaskIndex := s.StatusTask()
+	if len(s.Tasks) == 0 || statusTaskIndex < 0 {
+		return 0
+	}
 	return float32(statusTaskIndex) / float32(len(s.Tasks))
 }
 

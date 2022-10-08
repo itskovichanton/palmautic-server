@@ -27,6 +27,7 @@ type PalmauticHttpController struct {
 	ClearB2BTableAction          *frontend.ClearB2BTableAction
 	SearchB2BAction              *frontend.SearchB2BAction
 	UploadFromFileB2BDataAction  *frontend.UploadFromFileB2BDataAction
+	GetNotificationsAction       *frontend.GetNotificationsAction
 	AddContactFromB2BAction      *frontend.AddContactFromB2BAction
 	GetCommonsAction             *frontend.GetCommonsAction
 	GetTaskStatsAction           *frontend.GetTaskStatsAction
@@ -50,6 +51,7 @@ func (c *PalmauticHttpController) Init() {
 
 	// other
 	c.EchoEngine.GET("/commons", c.GetDefaultHandler(c.prepareAction(true, c.GetCommonsAction)))
+	c.EchoEngine.GET("/notifications", c.GetDefaultHandler(c.prepareAction(true, c.GetNotificationsAction)))
 
 	// tasks
 	c.EchoEngine.GET("/tasks/stats", c.GetDefaultHandler(c.prepareAction(true, c.GetTaskStatsAction)))

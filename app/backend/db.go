@@ -58,11 +58,6 @@ func (c *InMemoryDemoDBServiceImpl) Load() error {
 		IDGenerator: c.IDGenerator,
 	}
 
-	//err = c.preprocess(dataBytes)
-	//if err != nil {
-	//	return err
-	//}
-
 	err = json.Unmarshal(dataBytes, &c.data)
 	if c.data.B2Bdb != nil {
 		for _, t := range c.data.B2Bdb.Tables {
@@ -73,6 +68,7 @@ func (c *InMemoryDemoDBServiceImpl) Load() error {
 		}
 	}
 	err = json.Unmarshal(dataBytes, &c.data)
+	c.optimize()
 	return err
 }
 
@@ -98,4 +94,26 @@ func (c *InMemoryDemoDBServiceImpl) Save() error {
 
 func (c *InMemoryDemoDBServiceImpl) getDBFileName() string {
 	return path.Join(c.Config.GetDir("db"), "db.json")
+}
+
+func (c *InMemoryDemoDBServiceImpl) optimize() {
+	for accountId, _ := range c.data.Accounts {
+		for _, seq := range c.data.SequenceContainer.Sequences[accountId] {
+			if seq.Process != nil && seq.Process.ByContact != nil {
+				for _, pr := range seq.Process.ByContact {
+					for taskIndex, task := range pr.Tasks {
+						if task.Id > 0 {
+							linkedTask := c.data.TaskContainer.Tasks[accountId][task.Id]
+							if linkedTask != nil {
+								pr.Tasks[taskIndex] = linkedTask
+							}
+						}
+					}
+				}
+			}
+		}
+		for _, task := range c.data.TaskContainer.Tasks[accountId] {
+			task.Contact = c.data.Contacts[accountId][task.Contact.Id]
+		}
+	}
 }

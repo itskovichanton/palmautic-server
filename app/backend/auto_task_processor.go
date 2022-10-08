@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/itskovichanton/core/pkg/core/logger"
 	"salespalm/server/app/entities"
+	"sync"
 	"time"
 )
 
@@ -14,10 +15,11 @@ type IAutoTaskProcessorService interface {
 type AutoTaskProcessorServiceImpl struct {
 	IAutoTaskProcessorService
 
-	TaskService     ITaskService
-	SequenceService ISequenceService
-	LoggerService   logger.ILoggerService
-	logger          string
+	TaskService        ITaskService
+	SequenceService    ISequenceService
+	LoggerService      logger.ILoggerService
+	logger             string
+	lock, lock2, lock3 sync.Mutex
 }
 
 func (c *AutoTaskProcessorServiceImpl) Start() {
@@ -33,23 +35,30 @@ func (c *AutoTaskProcessorServiceImpl) Start() {
 
 	for {
 
+		c.lock.Lock()
 		var tasks []*entities.Task
 		for _, sequence := range c.SequenceService.Search(&entities.Sequence{}, nil).Items {
 			if sequence.Process != nil && sequence.Process.ByContact != nil {
+				c.lock2.Lock()
 				for _, sequenceInstance := range sequence.Process.ByContact {
+					c.lock3.Lock()
 					for _, task := range sequenceInstance.Tasks {
 						if task.Status == entities.TaskStatusStarted && task.AutoExecutable() {
 							tasks = append(tasks, task)
 						}
 					}
+					c.lock3.Lock()
 				}
+				c.lock2.Lock()
 			}
 		}
+		c.lock.Unlock()
 
 		if len(tasks) == 0 {
 			continue
 		}
 
+		c.lock.Lock()
 		logger.Subject(ld, "Ищу")
 		logger.Result(ld, fmt.Sprintf("Получил %v тасков", len(tasks)))
 		logger.Print(lg, ld)
@@ -67,6 +76,7 @@ func (c *AutoTaskProcessorServiceImpl) Start() {
 			logger.Print(lg, ld)
 
 		}
+		c.lock.Unlock()
 
 		time.Sleep(30 * time.Second)
 

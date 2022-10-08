@@ -28,6 +28,7 @@ type SequenceRunnerServiceImpl struct {
 	logger              string
 	timeFormat          string
 	EmailScannerService IEmailScannerService
+	NotificationService INotificationService
 }
 
 func (c *SequenceRunnerServiceImpl) Init() {
@@ -116,61 +117,50 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 	go func() {
 
 		// запускаем сканер ответов
-		inMailTopic := InMailReceivedEventTopic(sequence.Id, contact.Id)
-		onInMailReceivedHandler := func(m *imap.Message) {
-			ld2 := logger.NewLD()
-			logger.Action(ld2, "Получен inMail!")
-			var repliedTask *entities.Task
-			for _, t := range sequence.Process.ByContact[contact.Id].Tasks {
-				if t.HasFinalStatus() && t.HasTypeEmail() {
-					if repliedTask == nil {
-						repliedTask = t
-					} else if strings.Contains(strings.ToUpper(m.Envelope.Subject), strings.ToUpper(repliedTask.Subject)) {
-						repliedTask = t
-						break
-					}
-				}
-			}
-			if repliedTask != nil {
-				c.TaskService.MarkReplied(repliedTask)
-				logger.Result(ld2, fmt.Sprintf("Пометил что ответ получен в задаче %v", repliedTask.Id))
-			} else {
-				logger.Result(ld2, fmt.Sprintf("никакая задача не будет отвечена"))
-			}
-			logger.Print(lg, ld2)
-		}
-
 		logger.Result(ld, "Готово к выполнению")
 		logger.Print(lg, ld)
 
 		logger.Subject(ld, "Касания")
 
 		taskUpdateChan := make(chan bool)
-		var taskUpdateTopics []string
 
-		taskUpdatedHandler := func(updated *entities.Task) {
+		c.EventBus.SubscribeAsync(
+			InMailReceivedEventTopic(sequence.Id, contact.Id),
+			func(m *imap.Message) {
+				ld2 := logger.NewLD()
+				logger.Action(ld2, "Получен inMail!")
+				logger.Args(ld2, fmt.Sprintf("contact=%v, mail-subject=%v", contact.Name, m.Envelope.Subject))
+				var repliedTask *entities.Task
+				println(strings.ToUpper(m.Envelope.Subject))
+				for _, t := range sequence.Process.ByContact[contact.Id].Tasks {
+					if t.HasFinalStatus() && t.HasTypeEmail() {
+						println(strings.ToUpper("TO " + t.Subject))
+						if repliedTask == nil {
+							repliedTask = t
+						}
+						if strings.Contains(strings.TrimSpace(strings.ToUpper(m.Envelope.Subject)), strings.TrimSpace(strings.ToUpper(t.Subject))) {
+							repliedTask = t
+							break
+						}
+					}
+				}
+				if repliedTask != nil {
+					c.TaskService.MarkReplied(repliedTask)
+					logger.Result(ld2, fmt.Sprintf("Пометил что ответ получен в задаче %v", repliedTask.Id))
+				} else {
+					logger.Result(ld2, fmt.Sprintf("никакая задача не будет отвечена"))
+				}
+				logger.Print(lg, ld2)
+			},
+			true)
 
-			currentTask = updated
-
-			ld2 := logger.NewLD()
-			logger.Result(ld2, fmt.Sprintf("Пришел ответ на задачу %v", currentTask.Id))
-			logger.Print(lg, ld2)
-
-			if taskUpdateChan != nil {
-				taskUpdateChan <- true
-			}
-		}
-
-		c.EventBus.SubscribeAsync(inMailTopic, onInMailReceivedHandler, true)
+		//defer c.EventBus.Unsubscribe(inMailTopic, onInMailReceivedHandler)
 		go c.EmailScannerService.Run(sequence, contact)
 
 		defer func() {
 			// После окончания процесса - отписываемся от событий
 			c.EventBus.Publish(StopInMailScanEventTopic(sequence.Id, contact.Id))
-			//c.EventBus.Unsubscribe(inMailTopic, onInMailReceivedHandler)
-			//for _, topic := range taskUpdateTopics {
-			//	c.EventBus.Unsubscribe(topic, taskUpdatedHandler)
-			//}
+			c.EventBus.UnsubscribeAll(InMailReceivedEventTopic(sequence.Id, contact.Id))
 			//close(taskUpdateChan)
 			//taskUpdateChan = nil
 		}()
@@ -183,6 +173,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			if currentTask == nil {
 				logger.Result(ld, fmt.Sprintf("Все задачи в финальном статусе. СТОП."))
 				logger.Print(lg, ld)
+				c.sendNotification(sequence, contact)
 				return
 			}
 
@@ -237,10 +228,18 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			// К этому моменту currentTask.status=started
 
 			taskUpdatedEventTopic := TaskUpdatedEventTopic(currentTask.Id)
-			c.EventBus.SubscribeAsync(taskUpdatedEventTopic, taskUpdatedHandler, true)
+			c.EventBus.SubscribeAsync(taskUpdatedEventTopic, func(updated *entities.Task) {
 
-			// Накапливаем список топиков для задач, чтобы потом отписаться по ним
-			taskUpdateTopics = append(taskUpdateTopics, taskUpdatedEventTopic)
+				currentTask = updated
+
+				ld2 := logger.NewLD()
+				logger.Result(ld2, fmt.Sprintf("Пришел ответ на задачу %v", currentTask.Id))
+				logger.Print(lg, ld2)
+
+				if taskUpdateChan != nil {
+					taskUpdateChan <- true
+				}
+			}, true)
 
 			taskReactionReceived := false
 			select {
@@ -357,7 +356,11 @@ func (c *SequenceRunnerServiceImpl) refreshTasks(lg *log.Logger, action string, 
 		t.Refresh()
 		r += fmt.Sprintf("[%v - %v - %v] ", t.StartTime.Format(c.timeFormat), t.DueTime.Format(c.timeFormat), t.Status)
 	}
-	logger.Result(ld, strings.TrimSpace(r))
+	r = strings.TrimSpace(r)
+	if len(r) == 0 {
+		r = "<НЕТ ЗАДАЧ>"
+	}
+	logger.Result(ld, r)
 	logger.Action(ld, fmt.Sprintf("%v:контакт=%v", action, contactId))
 	logger.Print(lg, ld)
 }
@@ -370,9 +373,18 @@ func (c *SequenceRunnerServiceImpl) deleteTasksInContactProcess(lg *log.Logger, 
 			ld2 := logger.NewLD()
 			logger.Action(ld2, "Удаляю все таски")
 			c.TaskService.Delete(t)
+			c.EventBus.UnsubscribeAll(InMailReceivedEventTopic(t.Sequence.Id, t.Contact.Id))
 			logger.Result(ld2, fmt.Sprintf("Удален таск #%v", t.Id))
 			logger.Print(lg, ld2)
 		}
 	}
 	contactProcess.Tasks = []*entities.Task{}
+}
+
+func (c *SequenceRunnerServiceImpl) sendNotification(sequence *entities.Sequence, contact *entities.Contact) {
+	c.NotificationService.Add(sequence.AccountId, &Notification{
+		Subject:   "Последовательность финишировала",
+		Message:   fmt.Sprintf(`"%v" финишировала для контакта %v`, sequence.Name, contact.Name),
+		Alertness: "green",
+	})
 }

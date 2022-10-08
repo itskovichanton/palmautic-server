@@ -8,13 +8,13 @@ type IAccountService interface {
 	GetAccount(accountId entities.ID) *entities.Contact
 }
 
-type IAccountServiceImpl struct {
+type AccountServiceImpl struct {
 	IAccountService
 
 	UserService IUserService
 }
 
-func (c *IAccountServiceImpl) GetAccount(accountId entities.ID) *entities.Contact {
+func (c *AccountServiceImpl) GetAccount(accountId entities.ID) *entities.Contact {
 	r := c.UserService.Accounts()[accountId]
 	if r == nil {
 		return nil

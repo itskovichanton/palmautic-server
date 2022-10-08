@@ -7,6 +7,7 @@ import (
 	"github.com/itskovichanton/server/pkg/server/users"
 	"log"
 	"salespalm/server/app/backend"
+	"salespalm/server/app/entities"
 	"salespalm/server/app/frontend/http_server"
 )
 
@@ -36,6 +37,30 @@ func (c *PalmauticServerApp) Run() error {
 }
 
 func (c *PalmauticServerApp) tests() {
+
+	c.EmailScannerService.Run(&entities.Sequence{
+		BaseEntity: entities.BaseEntity{
+			Id:        1,
+			AccountId: 1001,
+		},
+		FolderID:    0,
+		Name:        "testseq",
+		Description: "",
+		Model:       nil,
+		Process:     nil,
+		Progress:    0,
+		People:      0,
+	}, &entities.Contact{
+		BaseEntity: entities.BaseEntity{
+			Id:        10,
+			AccountId: 1001,
+		},
+		Phone:    "",
+		Name:     "",
+		Email:    "vfg@fs.c",
+		Company:  "",
+		Linkedin: "",
+	})
 
 	//c.EmailService.SendPreprocessed(
 	//	&core.Params{

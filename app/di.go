@@ -24,6 +24,8 @@ func (c *DI) InitDI() {
 	c.DI.InitDI(container)
 
 	container.Provide(c.NewApp)
+	container.Provide(c.NewGetNotificationsAction)
+	container.Provide(c.NewNotificationService)
 	container.Provide(c.NewMsgDeliveryEmailService)
 	container.Provide(c.NewAutoTaskProcessorService)
 	container.Provide(c.NewUploadFromFileB2BDataAction)
@@ -87,8 +89,9 @@ func (c *DI) NewEventBus() EventBus.Bus {
 	return EventBus.New()
 }
 
-func (c *DI) NewSequenceRunnerService(EmailScannerService backend.IEmailScannerService, ContactService backend.IContactService, SequenceRepo backend.ISequenceRepo, LoggerService logger.ILoggerService, EventBus EventBus.Bus, TaskService backend.ITaskService) backend.ISequenceRunnerService {
+func (c *DI) NewSequenceRunnerService(NotificationService backend.INotificationService, EmailScannerService backend.IEmailScannerService, ContactService backend.IContactService, SequenceRepo backend.ISequenceRepo, LoggerService logger.ILoggerService, EventBus EventBus.Bus, TaskService backend.ITaskService) backend.ISequenceRunnerService {
 	r := &backend.SequenceRunnerServiceImpl{
+		NotificationService: NotificationService,
 		EmailScannerService: EmailScannerService,
 		TaskService:         TaskService,
 		EventBus:            EventBus,
@@ -97,6 +100,12 @@ func (c *DI) NewSequenceRunnerService(EmailScannerService backend.IEmailScannerS
 		ContactService:      ContactService,
 	}
 	go r.Init()
+	return r
+}
+
+func (c *DI) NewNotificationService() backend.INotificationService {
+	r := &backend.NotificationServiceImpl{}
+	r.Init()
 	return r
 }
 
@@ -177,9 +186,10 @@ func (c *DI) NewAutoTaskProcessorService(SequenceService backend.ISequenceServic
 	return r
 }
 
-func (c *DI) NewHttpController(SearchSequenceAction *frontend.SearchSequenceAction, MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactsToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
+func (c *DI) NewHttpController(GetNotificationsAction *frontend.GetNotificationsAction, SearchSequenceAction *frontend.SearchSequenceAction, MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactsToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
 	r := &http_server.PalmauticHttpController{
 		HttpControllerImpl:           *httpController,
+		GetNotificationsAction:       GetNotificationsAction,
 		SearchSequenceAction:         SearchSequenceAction,
 		MarkRepliedTaskAction:        MarkRepliedTaskAction,
 		ClearTemplatesAction:         ClearTemplatesAction,
@@ -204,6 +214,12 @@ func (c *DI) NewHttpController(SearchSequenceAction *frontend.SearchSequenceActi
 	}
 	r.Init()
 	return r
+}
+
+func (c *DI) NewGetNotificationsAction(NotificationService backend.INotificationService) *frontend.GetNotificationsAction {
+	return &frontend.GetNotificationsAction{
+		NotificationService: NotificationService,
+	}
 }
 
 func (c *DI) NewAddContactToSequenceAction(sequenceService backend.ISequenceService) *frontend.AddContactsToSequenceAction {
