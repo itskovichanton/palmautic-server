@@ -15,8 +15,9 @@ type ISequenceService interface {
 	Search(filter *entities.Sequence, settings *SequenceSearchSettings) *SequenceSearchResult
 	FindFirst(filter *entities.Sequence) *entities.Sequence
 	AddContacts(sequenceCreds entities.BaseEntity, contactIds []entities.ID) error
-	Start(sequence entities.BaseEntity)
-	Stop(sequence entities.BaseEntity)
+	Start(sequence entities.BaseEntity) bool
+	Stop(sequence entities.BaseEntity) bool
+	Delete(sequence entities.BaseEntity) bool
 }
 
 type SequenceServiceImpl struct {
@@ -102,7 +103,7 @@ func (c *SequenceServiceImpl) Delete(filter *entities.Sequence) (*entities.Seque
 }
 */
 
-func (c *SequenceServiceImpl) Start(sequence entities.BaseEntity) {
+func (c *SequenceServiceImpl) Start(sequence entities.BaseEntity) bool {
 	seq := c.SequenceRepo.FindFirst(&entities.Sequence{BaseEntity: sequence})
 	if seq != nil {
 		seq.Stopped = false
@@ -113,13 +114,23 @@ func (c *SequenceServiceImpl) Start(sequence entities.BaseEntity) {
 			}
 		}
 	}
+	return seq.Stopped
 }
 
-func (c *SequenceServiceImpl) Stop(sequence entities.BaseEntity) {
+func (c *SequenceServiceImpl) Stop(sequence entities.BaseEntity) bool {
 	seq := c.SequenceRepo.FindFirst(&entities.Sequence{BaseEntity: sequence})
 	if seq != nil {
 		seq.Stopped = true
 	}
+	return seq.Stopped
+}
+
+func (c *SequenceServiceImpl) Delete(sequence entities.BaseEntity) bool {
+	stopped := c.Stop(sequence)
+	if stopped {
+		c.SequenceRepo.Delete(sequence.AccountId, []entities.ID{sequence.Id})
+	}
+	return stopped
 }
 
 func (c *SequenceServiceImpl) CreateOrUpdate(sequence *entities.Sequence) (*entities.Sequence, TemplatesMap, error) {

@@ -13,6 +13,7 @@ type ISequenceRepo interface {
 	Commons() *entities.SequenceCommons
 	GetByIndex(accountId entities.ID, index int) *entities.Sequence
 	FindFirst(filter *entities.Sequence) *entities.Sequence
+	Delete(accountId entities.ID, ids []entities.ID)
 }
 
 type SequenceSearchSettings struct {
@@ -23,6 +24,15 @@ type SequenceRepoImpl struct {
 	ISequenceRepo
 
 	DBService IDBService
+}
+
+func (c *SequenceRepoImpl) Delete(accountId entities.ID, ids []entities.ID) {
+	sequences := c.DBService.DBContent().GetSequenceContainer().Sequences[accountId]
+	for _, id := range ids {
+		delete(sequences, id)
+	}
+	c.DBService.DBContent().GetSequenceContainer().Sequences[accountId] = sequences
+	c.DBService.Reload()
 }
 
 func (c *SequenceRepoImpl) FindFirst(filter *entities.Sequence) *entities.Sequence {

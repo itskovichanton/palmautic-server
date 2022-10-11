@@ -108,3 +108,18 @@ func (c *StartSequenceAction) Run(arg interface{}) (interface{}, error) {
 	)
 	return "started", nil
 }
+
+type DeleteSequenceAction struct {
+	pipeline.BaseActionImpl
+
+	SequenceService backend.ISequenceService
+}
+
+func (c *DeleteSequenceAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*entities2.CallParams)
+	accountId := entities.ID(cp.Caller.Session.Account.ID)
+	c.SequenceService.Delete(
+		entities.BaseEntity{Id: entities.ID(cp.GetParamInt("sequenceId", 0)), AccountId: accountId},
+	)
+	return "started", nil
+}
