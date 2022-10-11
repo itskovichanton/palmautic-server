@@ -42,6 +42,9 @@ func (c *TaskRepoImpl) Search(filter *entities.Task, settings *SearchSettings) *
 	statuses := strings.Split(filter.Status, ",")
 
 	for _, t := range unfiltered {
+		if t.Invisible {
+			continue
+		}
 		fits := true
 		if len(filter.Status) > 0 {
 			for _, status := range statuses {

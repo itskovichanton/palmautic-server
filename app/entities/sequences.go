@@ -13,6 +13,7 @@ type Sequence struct {
 	Progress    float32
 	People      int
 	lock        sync.Mutex
+	Stopped     bool
 }
 
 func (s *Sequence) CalcProgress() float32 {

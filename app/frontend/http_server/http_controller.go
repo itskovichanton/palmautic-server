@@ -39,6 +39,8 @@ type PalmauticHttpController struct {
 	SearchSequenceAction         *frontend.SearchSequenceAction
 	NotifyMessageOpenedAction    *frontend.NotifyMessageOpenedAction
 	AddToSequenceFromB2BAction   *frontend.AddToSequenceFromB2BAction
+	StartSequenceAction          *frontend.StartSequenceAction
+	StopSequenceAction           *frontend.StopSequenceAction
 }
 
 func (c *PalmauticHttpController) Init() {
@@ -47,6 +49,8 @@ func (c *PalmauticHttpController) Init() {
 	c.EchoEngine.POST("/sequences/createOrUpdate", c.GetDefaultHandler(c.prepareAction(true, c.readSequence(), c.CreateOrUpdateSequenceAction)))
 	c.EchoEngine.GET("/sequences/addContacts", c.GetDefaultHandler(c.prepareAction(true, c.AddContactsToSequenceAction)))
 	c.EchoEngine.POST("/sequences/search", c.GetDefaultHandler(c.prepareAction(true, c.readSequence(), c.SearchSequenceAction)))
+	c.EchoEngine.GET("/sequences/stop", c.GetDefaultHandler(c.prepareAction(true, c.StopSequenceAction)))
+	c.EchoEngine.GET("/sequences/start", c.GetDefaultHandler(c.prepareAction(true, c.StartSequenceAction)))
 
 	// templates
 	c.EchoEngine.GET("/templates/clear", c.GetDefaultHandler(c.prepareAction(true, c.ClearTemplatesAction)))

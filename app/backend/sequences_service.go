@@ -15,6 +15,8 @@ type ISequenceService interface {
 	Search(filter *entities.Sequence, settings *SequenceSearchSettings) *SequenceSearchResult
 	FindFirst(filter *entities.Sequence) *entities.Sequence
 	AddContacts(sequenceCreds entities.BaseEntity, contactIds []entities.ID) error
+	Start(sequence entities.BaseEntity)
+	Stop(sequence entities.BaseEntity)
 }
 
 type SequenceServiceImpl struct {
@@ -99,6 +101,26 @@ func (c *SequenceServiceImpl) Delete(filter *entities.Sequence) (*entities.Seque
 	return deleted, nil
 }
 */
+
+func (c *SequenceServiceImpl) Start(sequence entities.BaseEntity) {
+	seq := c.SequenceRepo.FindFirst(&entities.Sequence{BaseEntity: sequence})
+	if seq != nil {
+		seq.Stopped = false
+		if seq.Process != nil && seq.Process.ByContact != nil {
+			for contactId, _ := range seq.Process.ByContact {
+				contactToRun := c.ContactService.FindFirst(&entities.Contact{BaseEntity: entities.BaseEntity{AccountId: sequence.AccountId, Id: contactId}})
+				c.SequenceRunnerService.Run(seq, contactToRun, true)
+			}
+		}
+	}
+}
+
+func (c *SequenceServiceImpl) Stop(sequence entities.BaseEntity) {
+	seq := c.SequenceRepo.FindFirst(&entities.Sequence{BaseEntity: sequence})
+	if seq != nil {
+		seq.Stopped = true
+	}
+}
 
 func (c *SequenceServiceImpl) CreateOrUpdate(sequence *entities.Sequence) (*entities.Sequence, TemplatesMap, error) {
 

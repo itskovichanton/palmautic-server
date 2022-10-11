@@ -19,6 +19,7 @@ type Task struct {
 	Body               string
 	Subject            string
 	Alertness          string
+	Invisible          bool
 }
 
 type TaskCommons struct {

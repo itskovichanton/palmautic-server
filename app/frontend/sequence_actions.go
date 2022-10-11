@@ -79,13 +79,32 @@ func (c *SearchSequenceAction) Run(arg interface{}) (interface{}, error) {
 	return r, nil
 }
 
-//type GetSequenceStatsAction struct {
-//	pipeline.BaseActionImpl
-//
-//	SequenceService backend.ISequenceService
-//}
-//
-//func (c *GetSequenceStatsAction) Run(arg interface{}) (interface{}, error) {
-//	cp := arg.(*entities2.CallParams)
-//	return c.SequenceService.Stats(entities.Id(cp.Caller.Session.Account.Id)), nil
-//}
+type StopSequenceAction struct {
+	pipeline.BaseActionImpl
+
+	SequenceService backend.ISequenceService
+}
+
+func (c *StopSequenceAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*entities2.CallParams)
+	accountId := entities.ID(cp.Caller.Session.Account.ID)
+	c.SequenceService.Stop(
+		entities.BaseEntity{Id: entities.ID(cp.GetParamInt("sequenceId", 0)), AccountId: accountId},
+	)
+	return "stopped", nil
+}
+
+type StartSequenceAction struct {
+	pipeline.BaseActionImpl
+
+	SequenceService backend.ISequenceService
+}
+
+func (c *StartSequenceAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*entities2.CallParams)
+	accountId := entities.ID(cp.Caller.Session.Account.ID)
+	c.SequenceService.Start(
+		entities.BaseEntity{Id: entities.ID(cp.GetParamInt("sequenceId", 0)), AccountId: accountId},
+	)
+	return "started", nil
+}
