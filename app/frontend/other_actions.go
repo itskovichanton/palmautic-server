@@ -28,3 +28,15 @@ func (c *GetNotificationsAction) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*entities2.CallParams)
 	return c.NotificationService.Get(entities.ID(cp.Caller.Session.Account.ID), true), nil
 }
+
+type NotifyMessageOpenedAction struct {
+	pipeline.BaseActionImpl
+
+	//NotificationService backend.INotificationService
+}
+
+func (c *NotifyMessageOpenedAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*entities2.CallParams)
+	println(cp.GetParamStr("taskId"))
+	return "cool", nil
+}

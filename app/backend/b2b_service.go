@@ -14,7 +14,8 @@ type IB2BService interface {
 	Table(table string) *entities.B2BTable
 	ClearTable(table string)
 	UploadFromDir(table string, dirName string) (int, error)
-	AddToContacts(accountId entities.ID, ids []entities.ID) int
+	AddToContacts(accountId entities.ID, b2bItemIds []entities.ID) []entities.ID
+	AddToSequence(accountId entities.ID, ids []entities.ID, sequenceId entities.ID) ([]entities.ID, error)
 }
 
 type SearchResult struct {
@@ -32,28 +33,40 @@ type UploadSettings struct {
 type B2BServiceImpl struct {
 	IContactService
 
-	B2BRepo     IB2BRepo
-	ContactRepo IContactRepo
+	B2BRepo         IB2BRepo
+	ContactRepo     IContactRepo
+	SequenceService ISequenceService
 }
 
-func (c *B2BServiceImpl) AddToContacts(accountId entities.ID, b2bItemIds []entities.ID) int {
+func (c *B2BServiceImpl) AddToSequence(accountId entities.ID, ids []entities.ID, sequenceId entities.ID) ([]entities.ID, error) {
+	addedContactIds := c.AddToContacts(accountId, ids)
+	err := c.SequenceService.AddContacts(entities.BaseEntity{Id: sequenceId, AccountId: accountId}, addedContactIds)
+	return addedContactIds, err
+}
+
+func (c *B2BServiceImpl) AddToContacts(accountId entities.ID, b2bItemIds []entities.ID) []entities.ID {
+	var added []entities.ID
 	for _, b2bItemId := range b2bItemIds {
 		item := c.B2BRepo.FindById(b2bItemId)
 		if item != nil {
-			c.ContactRepo.CreateOrUpdate(&entities.Contact{
-				BaseEntity: entities.BaseEntity{
-					AccountId: accountId,
-				},
-				Phone:    cast.ToString(item["Phone"]),
-				Name:     cast.ToString(item["FullName"]),
-				Email:    cast.ToString(item["Email"]),
-				Company:  cast.ToString(item["Company"]),
-				Linkedin: cast.ToString(item["Linkedin"]),
-			})
-			//c.ContactRepo.DeleteDuplicates(accountId)
+			newContact := &entities.Contact{
+				BaseEntity: entities.BaseEntity{AccountId: accountId},
+				Phone:      cast.ToString(item["Phone"]),
+				Name:       cast.ToString(item["FullName"]),
+				Email:      cast.ToString(item["Email"]),
+				Company:    cast.ToString(item["Company"]),
+				Linkedin:   cast.ToString(item["Linkedin"]),
+			}
+			if len(newContact.Name) == 0 {
+				newContact.Name = cast.ToString(item["Name"])
+			}
+			c.ContactRepo.CreateOrUpdateIfNoDuplicate(newContact)
+			if newContact.ReadyForSearch() {
+				added = append(added, newContact.Id)
+			}
 		}
 	}
-	return len(b2bItemIds)
+	return added
 }
 
 func (c *B2BServiceImpl) UploadFromDir(table string, dirName string) (int, error) {

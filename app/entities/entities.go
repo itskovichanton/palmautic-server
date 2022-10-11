@@ -57,6 +57,10 @@ type Contact struct {
 	Linkedin string `json:"linkedin"`
 }
 
+func (c Contact) SeemsLike(contact *Contact) bool {
+	return c.Name == contact.Name && (c.Email == contact.Email || c.Phone == contact.Phone || c.Linkedin == c.Linkedin)
+}
+
 type NameAndTitle struct {
 	Name, Title string
 }

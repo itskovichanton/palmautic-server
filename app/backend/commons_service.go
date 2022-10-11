@@ -9,10 +9,10 @@ type ICommonsService interface {
 }
 
 type Commons struct {
-	Tasks         *entities.TaskCommons
-	Sequences     *entities.SequenceCommons
-	HtmlTemplates map[string]string
-	Account       *entities.User
+	Tasks     *entities.TaskCommons
+	Sequences *entities.SequenceCommons
+	Templates *TemplateCommons
+	Account   *entities.User
 }
 
 type CommonsServiceImpl struct {
@@ -26,9 +26,9 @@ type CommonsServiceImpl struct {
 
 func (c *CommonsServiceImpl) Commons(accountId entities.ID) *Commons {
 	return &Commons{
-		Tasks:         c.TaskService.Commons(accountId),
-		Sequences:     c.SequenceService.Commons(accountId),
-		HtmlTemplates: c.TemplateService.Templates(accountId),
-		Account:       c.AccountService.Accounts()[accountId],
+		Tasks:     c.TaskService.Commons(accountId),
+		Sequences: c.SequenceService.Commons(accountId),
+		Templates: c.TemplateService.Commons(accountId),
+		Account:   c.AccountService.Accounts()[accountId],
 	}
 }

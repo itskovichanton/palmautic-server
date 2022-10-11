@@ -3,7 +3,6 @@ package backend
 import (
 	"fmt"
 	"github.com/asaskevich/EventBus"
-	"github.com/emersion/go-imap"
 	"github.com/itskovichanton/core/pkg/core/logger"
 	"github.com/jinzhu/copier"
 	"golang.org/x/exp/slices"
@@ -126,19 +125,19 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 
 		c.EventBus.SubscribeAsync(
 			InMailReceivedEventTopic(sequence.Id, contact.Id),
-			func(m *imap.Message) {
+			func(m *InMail) {
 				ld2 := logger.NewLD()
 				logger.Action(ld2, "Получен inMail!")
-				logger.Args(ld2, fmt.Sprintf("contact=%v, mail-subject=%v", contact.Name, m.Envelope.Subject))
+				logger.Args(ld2, fmt.Sprintf("contact=%v, mail-subject=%v", contact.Name, m.ImapMsg.Envelope.Subject))
 				var repliedTask *entities.Task
-				println(strings.ToUpper(m.Envelope.Subject))
+				println(strings.ToUpper(m.ImapMsg.Envelope.Subject))
 				for _, t := range sequence.Process.ByContact[contact.Id].Tasks {
 					if t.HasFinalStatus() && t.HasTypeEmail() {
 						println(strings.ToUpper("TO " + t.Subject))
 						if repliedTask == nil {
 							repliedTask = t
 						}
-						if strings.Contains(strings.TrimSpace(strings.ToUpper(m.Envelope.Subject)), strings.TrimSpace(strings.ToUpper(t.Subject))) {
+						if strings.Contains(strings.TrimSpace(strings.ToUpper(m.ImapMsg.Envelope.Subject)), strings.TrimSpace(strings.ToUpper(t.Subject))) {
 							repliedTask = t
 							break
 						}
@@ -146,6 +145,11 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 				}
 				if repliedTask != nil {
 					c.TaskService.MarkReplied(repliedTask)
+					c.NotificationService.Add(repliedTask.AccountId, &Notification{
+						Subject:   contact.Name + ":",
+						Message:   m.Body,
+						Alertness: entities.TaskAlertnessBlue,
+					})
 					logger.Result(ld2, fmt.Sprintf("Пометил что ответ получен в задаче %v", repliedTask.Id))
 				} else {
 					logger.Result(ld2, fmt.Sprintf("никакая задача не будет отвечена"))

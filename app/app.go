@@ -9,6 +9,7 @@ import (
 	"salespalm/server/app/backend"
 	"salespalm/server/app/entities"
 	"salespalm/server/app/frontend/http_server"
+	"time"
 )
 
 type PalmauticServerApp struct {
@@ -28,6 +29,7 @@ type PalmauticServerApp struct {
 	TaskExecutorService      backend.ITaskExecutorService
 	SequenceService          backend.ISequenceService
 	EmailScannerService      backend.IEmailScannerService
+	EmailTaskExecutorService backend.IEmailTaskExecutorService
 }
 
 func (c *PalmauticServerApp) Run() error {
@@ -37,6 +39,44 @@ func (c *PalmauticServerApp) Run() error {
 }
 
 func (c *PalmauticServerApp) tests() {
+
+	c.EmailTaskExecutorService.Execute(&entities.Task{
+		BaseEntity: entities.BaseEntity{
+			Id:        2,
+			AccountId: 1001,
+		},
+		Name:        "11",
+		Description: "22",
+		Type:        entities.TaskTypeManualEmail.Creds.Name,
+		Status:      "started",
+		StartTime:   time.Time{},
+		DueTime:     time.Time{},
+		Sequence: &entities.IDAndTitle{
+			Name: "test",
+			Id:   1232,
+		},
+		Contact: &entities.Contact{
+			Phone:    "",
+			Name:     "",
+			Email:    "",
+			Company:  "",
+			Linkedin: "",
+		},
+		Action:    "send_email",
+		Body:      "<body>Hello, Anton!</body>",
+		Subject:   "Deliver me!",
+		Alertness: "",
+	})
+	//c.UserRepo.Accounts()[1001].Contact = &entities.Contact{
+	//	Phone:    "+79296315812",
+	//	Name:     "Антон Ицкович",
+	//	Email:    "a.itskovich@molbulak.com",
+	//	Company:  "МБулак",
+	//	Linkedin: "https://www.linkedin.com/antonitsk1987",
+	//}
+}
+
+func (c *PalmauticServerApp) tests2() {
 
 	c.EmailScannerService.Run(&entities.Sequence{
 		BaseEntity: entities.BaseEntity{
@@ -86,7 +126,7 @@ func (c *PalmauticServerApp) tests() {
 	//			Type:    entities.TaskTypeManualEmail.Creds.Name,
 	//			DueTime: zeroTime.Add(5 * time.Minute).UTC(),
 	//			Action:  "send_letter",
-	//			Body:    "template:hr_business1.html",
+	//			Body:    "template:Бизнес письмо__hr_business1.html",
 	//			Subject: "Первое письмо для {{.Contact.Name}}",
 	//		}, {
 	//			Type:    entities.TaskTypeTelegram.Creds.Name,

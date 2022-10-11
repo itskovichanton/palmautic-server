@@ -20,6 +20,7 @@ type ITemplateService interface {
 	Templates(accountId entities.ID) TemplatesMap
 	CreateOrUpdate(entity entities.IBaseEntity, body string, arg ...interface{}) string
 	Clear(accountId entities.ID)
+	Commons(accountId entities.ID) *TemplateCommons
 }
 
 type TemplatesMap map[string]string
@@ -27,11 +28,12 @@ type TemplatesMap map[string]string
 type TemplateServiceImpl struct {
 	ITemplateService
 
-	Config         *core.Config
-	AccountService IUserService
-	templates      *cache.Cache
-	templatesDir   string
-	optimize       bool
+	Config                  *core.Config
+	AccountService          IUserService
+	templates               *cache.Cache
+	TemplateCompilerService ITemplateCompilerService
+	templatesDir            string
+	optimize                bool
 }
 
 func (c *TemplateServiceImpl) Clear(accountId entities.ID) {
@@ -62,6 +64,10 @@ func (c *TemplateServiceImpl) CreateOrUpdate(entity entities.IBaseEntity, body s
 }
 
 func calcTemplateName(templateFileName string) string {
+	nameSplitterIndex := strings.Index(templateFileName, "__")
+	if nameSplitterIndex > -1 {
+		return templateFileName[:nameSplitterIndex]
+	}
 	_, templateFileName = filepath.Split(templateFileName)
 	templateFileName = templateFileName[:len(templateFileName)-len(path.Ext(templateFileName))]
 	return templateFileName
@@ -125,4 +131,18 @@ func (c *TemplateServiceImpl) prepareArgs(accountId entities.ID, args map[string
 	}
 	args["Me"] = c.AccountService.Accounts()[accountId]
 	return args
+}
+
+func (c *TemplateServiceImpl) Commons(accountId entities.ID) *TemplateCommons {
+	return &TemplateCommons{
+		Cache:       c.Templates(accountId),
+		Compiler:    c.TemplateCompilerService.Commons(),
+		Marketplace: c.Templates(0),
+	}
+}
+
+type TemplateCommons struct {
+	Cache       TemplatesMap
+	Compiler    *TemplateCompilerCommons
+	Marketplace TemplatesMap
 }

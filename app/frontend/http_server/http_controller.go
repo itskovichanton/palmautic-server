@@ -37,6 +37,8 @@ type PalmauticHttpController struct {
 	ExecuteTaskAction            *frontend.ExecuteTaskAction
 	MarkRepliedTaskAction        *frontend.MarkRepliedTaskAction
 	SearchSequenceAction         *frontend.SearchSequenceAction
+	NotifyMessageOpenedAction    *frontend.NotifyMessageOpenedAction
+	AddToSequenceFromB2BAction   *frontend.AddToSequenceFromB2BAction
 }
 
 func (c *PalmauticHttpController) Init() {
@@ -52,6 +54,9 @@ func (c *PalmauticHttpController) Init() {
 	// other
 	c.EchoEngine.GET("/commons", c.GetDefaultHandler(c.prepareAction(true, c.GetCommonsAction)))
 	c.EchoEngine.GET("/notifications", c.GetDefaultHandler(c.prepareAction(true, c.GetNotificationsAction)))
+
+	// webhooks
+	c.EchoEngine.GET("/webhooks/notifyMessageOpened", c.GetDefaultHandler(c.NotifyMessageOpenedAction))
 
 	// tasks
 	c.EchoEngine.GET("/tasks/stats", c.GetDefaultHandler(c.prepareAction(true, c.GetTaskStatsAction)))
@@ -76,7 +81,8 @@ func (c *PalmauticHttpController) Init() {
 	c.EchoEngine.GET("/b2b/info/:table", c.GetDefaultHandler(c.prepareAction(false, c.GetB2BInfoAction)))
 	c.EchoEngine.GET("/b2b/clear/:table", c.GetDefaultHandler(c.prepareAction(false, c.ClearB2BTableAction)))
 	c.EchoEngine.GET("/b2b/search/:table", c.GetDefaultHandler(c.prepareAction(false, c.SearchB2BAction)))
-	c.EchoEngine.POST("/b2b/addToContacts/:table", c.GetDefaultHandler(c.prepareAction(true, c.AddContactFromB2BAction)))
+	c.EchoEngine.GET("/b2b/addToContacts", c.GetDefaultHandler(c.prepareAction(true, c.AddContactFromB2BAction)))
+	c.EchoEngine.GET("/b2b/addToSequence", c.GetDefaultHandler(c.prepareAction(true, c.AddContactsToSequenceAction)))
 
 }
 

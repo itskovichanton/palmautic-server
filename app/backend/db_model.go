@@ -85,6 +85,20 @@ func (c AccountContactsMap) ForAccount(accountId entities.ID) Contacts {
 	return c[accountId]
 }
 
+func (c AccountContactsMap) Exists(contact *entities.Contact) entities.ID {
+	contacts := c.ForAccount(contact.AccountId)
+	if contacts == nil {
+		return -1
+	}
+
+	for contactId, existingContact := range contacts {
+		if existingContact.SeemsLike(contact) {
+			return contactId
+		}
+	}
+	return -1
+}
+
 type AccountTasksMap map[entities.ID]Tasks
 
 func (c AccountTasksMap) ForAccount(accountId entities.ID) Tasks {

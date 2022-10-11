@@ -9,8 +9,6 @@ import (
 	"github.com/patrickmn/go-cache"
 	"log"
 	"salespalm/server/app/entities"
-	"strings"
-	"time"
 )
 
 type IEmailScannerService interface {
@@ -28,6 +26,11 @@ type EmailScannerServiceImpl struct {
 
 func (c *EmailScannerServiceImpl) Init() {
 	c.ImapClientCache = cache.New(cache.NoExpiration, cache.NoExpiration)
+}
+
+type InMail struct {
+	Body    string
+	ImapMsg *imap.Message
 }
 
 func (c *EmailScannerServiceImpl) Client(accountId entities.ID, forceRecreate bool) (*client.Client, error) {
@@ -79,109 +82,135 @@ func (c *EmailScannerServiceImpl) prepareClient(accountId entities.ID, forceRecr
 
 func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *entities.Contact) {
 
-	lg := c.LoggerService.GetFileLogger(fmt.Sprintf("inmail-scanner-%v", sequence.Id), "", 0)
-	ld := logger.NewLD()
-	logger.Args(ld, fmt.Sprintf("seq=%v cont=%v", sequence.Id, contact.Id))
-	forceRecreate := false
-	stopRequested := false
-	stopRequestedHandler := func() { stopRequested = true }
-	c.EventBus.SubscribeAsync(StopInMailScanEventTopic(sequence.Id, contact.Id), stopRequestedHandler, true)
-	defer func() {
-		logger.Subject(ld, "Сессия")
-		logger.Action(ld, "СТОП")
-		c.EventBus.Unsubscribe(StopInMailScanEventTopic(sequence.Id, contact.Id), stopRequestedHandler)
-		logger.Result(ld, "Выход")
-		logger.Print(lg, ld)
-	}()
-
-	for {
-
-		if forceRecreate {
-			time.Sleep(10 * time.Second)
-		}
-
-		if stopRequested {
-			return
-		}
-
-		logger.Subject(ld, "Сессия")
-		logger.Action(ld, "Подключаюсь")
-		cl, mbox, err := c.prepareClient(sequence.AccountId, forceRecreate)
-		if err != nil {
-			logger.Err(ld, err)
-			logger.Print(lg, ld)
-			forceRecreate = true
-			continue
-		}
-
-		logger.Result(ld, "Подключился")
-		logger.Print(lg, ld)
-
-		for {
-
-			if stopRequested {
-				return
-			}
-
-			logger.Action(ld, "Начинаю искать письма...")
-			logger.Print(lg, ld)
-
-			fromIndex := uint32(1)
-			toIndex := mbox.Messages
-			//if mbox.Messages > 99 {
-			//	fromIndex = mbox.Messages - 200
-			//}
-			seqset := new(imap.SeqSet)
-			seqset.AddRange(fromIndex, toIndex)
-			//seqset.Add()
-
-			messages := make(chan *imap.Message, 100)
-			done := make(chan error, 1)
-			go func() {
-				msgIds, err := cl.Search(&imap.SearchCriteria{
-					SentSince: time.Now().Add(-2 * time.Hour),
-					//SeqNum: seqset,
-					//WithFlags:    nil,
-					WithoutFlags: []string{imap.SeenFlag},
-				})
-				if err != nil {
-					done <- err
-				} else {
-					logger.Action(ld, fmt.Sprintf("Найдено %v писем", len(msgIds)))
-					logger.Print(lg, ld)
-					seqset = new(imap.SeqSet)
-					seqset.AddNum(msgIds...)
-					done <- cl.Fetch(seqset, []imap.FetchItem{imap.FetchEnvelope}, messages)
-				}
-			}()
-
-			for msg := range messages {
-				if stopRequested {
-					return
-				}
-				from := msg.Envelope.From[0].Address()
-				if strings.Contains(from, "molbulak") {
-					continue
-				}
-
-				if from == contact.Email || from == "itskovichae@gmail.com" {
-					logger.Result(ld, fmt.Sprintf("Пришло письмо от %v: %v, date=%v", from, msg.Envelope.Subject, msg.Envelope.Date))
-					logger.Print(lg, ld)
-					if c.markMsgSeen(cl, msg, ld, lg, sequence.Id, contact.Id) {
-						c.EventBus.Publish(InMailReceivedEventTopic(sequence.Id, contact.Id), msg)
-					}
-				}
-			}
-
-			if err = <-done; err != nil {
-				forceRecreate = true
-				break
-			}
-
-			time.Sleep(10 * time.Second)
-		}
-	}
 }
+
+//func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *entities.Contact) {
+//
+//	lg := c.LoggerService.GetFileLogger(fmt.Sprintf("inmail-scanner-%v", sequence.Id), "", 0)
+//	ld := logger.NewLD()
+//	logger.Args(ld, fmt.Sprintf("seq=%v cont=%v", sequence.Id, contact.Id))
+//	forceRecreate := false
+//	stopRequested := false
+//	stopRequestedHandler := func() { stopRequested = true }
+//	c.EventBus.SubscribeAsync(StopInMailScanEventTopic(sequence.Id, contact.Id), stopRequestedHandler, true)
+//	defer func() {
+//		logger.Subject(ld, "Сессия")
+//		logger.Action(ld, "СТОП")
+//		c.EventBus.Unsubscribe(StopInMailScanEventTopic(sequence.Id, contact.Id), stopRequestedHandler)
+//		logger.Result(ld, "Выход")
+//		logger.Print(lg, ld)
+//	}()
+//
+//	for {
+//
+//		if forceRecreate {
+//			time.Sleep(10 * time.Second)
+//		}
+//
+//		if stopRequested {
+//			return
+//		}
+//
+//		logger.Subject(ld, "Сессия")
+//		logger.Action(ld, "Подключаюсь")
+//		cl, mbox, err := c.prepareClient(sequence.AccountId, forceRecreate)
+//		if err != nil {
+//			logger.Err(ld, err)
+//			logger.Print(lg, ld)
+//			forceRecreate = true
+//			continue
+//		}
+//
+//		logger.Result(ld, "Подключился")
+//		logger.Print(lg, ld)
+//
+//		for {
+//
+//			if stopRequested {
+//				return
+//			}
+//
+//			logger.Action(ld, "Начинаю искать письма...")
+//			logger.Print(lg, ld)
+//
+//			fromIndex := uint32(1)
+//			toIndex := mbox.Messages
+//			//if mbox.Messages > 99 {
+//			//	fromIndex = mbox.Messages - 200
+//			//}
+//			seqset := new(imap.SeqSet)
+//			seqset.AddRange(fromIndex, toIndex)
+//			//seqset.Add()
+//
+//			messages := make(chan *imap.Message, 100)
+//			done := make(chan error, 1)
+//			go func() {
+//				msgIds, err := cl.Search(&imap.SearchCriteria{
+//					SentSince: time.Now().Add(-2 * time.Hour),
+//					//SeqNum: seqset,
+//					//WithFlags:    nil,
+//					WithoutFlags: []string{imap.SeenFlag},
+//				})
+//				if err != nil {
+//					done <- err
+//				} else {
+//					logger.Action(ld, fmt.Sprintf("Найдено %v писем", len(msgIds)))
+//					logger.Print(lg, ld)
+//					seqset = new(imap.SeqSet)
+//					seqset.AddNum(msgIds...)
+//					done <- cl.Fetch(seqset, []imap.FetchItem{imap.FetchEnvelope, "BODY.PEEK[]"}, messages)
+//				}
+//			}()
+//
+//			for msg := range messages {
+//				if stopRequested {
+//					return
+//				}
+//				from := msg.Envelope.From[0].Address()
+//				if strings.Contains(from, "molbulak") {
+//					continue
+//				}
+//
+//				if from == contact.Email || from == "itskovichae@gmail.com" {
+//
+//					r := msg.GetBody(&imap.BodySectionName{
+//						BodyPartName: imap.BodyPartName{
+//							Specifier: "",
+//							Path:      nil,
+//							Fields:    nil,
+//							NotFields: false,
+//						},
+//						Peek:    false,
+//						Partial: nil,
+//					})
+//					if r == nil {
+//						continue
+//					}
+//
+//					bodyBytes, err := io.ReadAll(r)
+//					if err == nil {
+//						inMail := &InMail{
+//							ImapMsg: msg,
+//							Body:    string(bodyBytes),
+//						}
+//						logger.Result(ld, fmt.Sprintf("Пришло письмо от %v: %v, date=%v", from, msg.Envelope.Subject, msg.Envelope.Date))
+//						logger.Print(lg, ld)
+//						if c.markMsgSeen(cl, msg, ld, lg, sequence.Id, contact.Id) {
+//							c.EventBus.Publish(InMailReceivedEventTopic(sequence.Id, contact.Id), inMail)
+//						}
+//					}
+//				}
+//			}
+//
+//			if err = <-done; err != nil {
+//				forceRecreate = true
+//				break
+//			}
+//
+//			time.Sleep(10 * time.Second)
+//		}
+//	}
+//}
 
 func (c *EmailScannerServiceImpl) markMsgSeen(cl *client.Client, msg *imap.Message, ld map[string]interface{}, lg *log.Logger, sequenceId entities.ID, contactId entities.ID) bool {
 	defer logger.Print(lg, ld)

@@ -12,6 +12,7 @@ type IContactRepo interface {
 	Delete(accountId entities.ID, ids []entities.ID)
 	CreateOrUpdate(contact *entities.Contact)
 	DeleteDuplicates(accountId entities.ID)
+	CreateOrUpdateIfNoDuplicate(contact *entities.Contact)
 	GetByIndex(accountId entities.ID, index int) *entities.Contact
 }
 
@@ -92,7 +93,17 @@ func (c *ContactRepoImpl) Delete(accountId entities.ID, ids []entities.ID) {
 	c.DBService.Reload()
 }
 
+func (c *ContactRepoImpl) CreateOrUpdateIfNoDuplicate(contact *entities.Contact) {
+	if c.DBService.DBContent().GetContacts().Exists(contact) > 0 {
+		return
+	}
+	c.CreateOrUpdate(contact)
+}
+
 func (c *ContactRepoImpl) CreateOrUpdate(contact *entities.Contact) {
+	if c.DBService.DBContent().GetContacts().Exists(contact) > 0 {
+		return
+	}
 	c.DBService.DBContent().IDGenerator.AssignId(contact)
 	old := c.DBService.DBContent().GetContacts().ForAccount(contact.AccountId)[contact.Id]
 	if old == nil {

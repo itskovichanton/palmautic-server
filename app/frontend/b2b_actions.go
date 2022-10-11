@@ -1,11 +1,9 @@
 package frontend
 
 import (
-	"encoding/json"
-	"github.com/itskovichanton/echo-http"
+	"github.com/itskovichanton/core/pkg/core/validation"
 	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
-	"io"
 	"mime/multipart"
 	"salespalm/server/app/backend"
 	"salespalm/server/app/entities"
@@ -91,15 +89,28 @@ type AddContactFromB2BAction struct {
 
 func (c *AddContactFromB2BAction) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*entities2.CallParams)
-	bodyBytes, err := io.ReadAll(cp.Request.(echo.Context).Request().Body)
-	if err != nil {
-		return nil, err
-	}
-	var ids []entities.ID
-	err = json.Unmarshal(bodyBytes, &ids)
-	if err != nil {
-		return nil, err
-	}
-	addedCount := c.B2BService.AddToContacts(entities.ID(cp.Caller.Session.Account.ID), ids)
+	addedCount := c.B2BService.AddToContacts(
+		entities.ID(cp.Caller.Session.Account.ID),
+		entities.Ids(cp.GetParamStr("entityIds")),
+	)
 	return addedCount, nil
+}
+
+type AddToSequenceFromB2BAction struct {
+	pipeline.BaseActionImpl
+
+	B2BService backend.IB2BService
+}
+
+func (c *AddToSequenceFromB2BAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*entities2.CallParams)
+	sequenceId, err := validation.CheckInt("sequenceId", cp.GetParamStr("sequenceId"))
+	if err != nil {
+		return nil, err
+	}
+	return c.B2BService.AddToSequence(
+		entities.ID(cp.Caller.Session.Account.ID),
+		entities.Ids(cp.GetParamStr("entityIds")),
+		entities.ID(sequenceId),
+	)
 }
