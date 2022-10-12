@@ -87,10 +87,7 @@ type StopSequenceAction struct {
 
 func (c *StopSequenceAction) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*entities2.CallParams)
-	accountId := entities.ID(cp.Caller.Session.Account.ID)
-	c.SequenceService.Stop(
-		entities.BaseEntity{Id: entities.ID(cp.GetParamInt("sequenceId", 0)), AccountId: accountId},
-	)
+	c.SequenceService.Stop(entities.ID(cp.Caller.Session.Account.ID), entities.Ids(cp.GetParamStr("sequenceIds")))
 	return "stopped", nil
 }
 
@@ -102,10 +99,7 @@ type StartSequenceAction struct {
 
 func (c *StartSequenceAction) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*entities2.CallParams)
-	accountId := entities.ID(cp.Caller.Session.Account.ID)
-	c.SequenceService.Start(
-		entities.BaseEntity{Id: entities.ID(cp.GetParamInt("sequenceId", 0)), AccountId: accountId},
-	)
+	c.SequenceService.Start(entities.ID(cp.Caller.Session.Account.ID), entities.Ids(cp.GetParamStr("sequenceIds")))
 	return "started", nil
 }
 
@@ -117,9 +111,6 @@ type DeleteSequenceAction struct {
 
 func (c *DeleteSequenceAction) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*entities2.CallParams)
-	accountId := entities.ID(cp.Caller.Session.Account.ID)
-	c.SequenceService.Delete(
-		entities.BaseEntity{Id: entities.ID(cp.GetParamInt("sequenceId", 0)), AccountId: accountId},
-	)
+	c.SequenceService.Delete(entities.ID(cp.Caller.Session.Account.ID), entities.Ids(cp.GetParamStr("sequenceIds")))
 	return "started", nil
 }

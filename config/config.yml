@@ -40,6 +40,9 @@ server:
 templates:
   optimize: true
 
+java-tools:
+  url: http://localhost:5007
+
 profile: dev
 
 prod:

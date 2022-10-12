@@ -9,6 +9,7 @@ import (
 	"github.com/itskovichanton/server/pkg/server/pipeline"
 	"github.com/itskovichanton/server/pkg/server/users"
 	"go.uber.org/dig"
+	"net/http"
 	"salespalm/server/app/backend"
 	"salespalm/server/app/frontend"
 	"salespalm/server/app/frontend/http_server"
@@ -24,6 +25,7 @@ func (c *DI) InitDI() {
 	c.DI.InitDI(container)
 
 	container.Provide(c.NewApp)
+	container.Provide(c.NewJavaToolClient)
 	container.Provide(c.NewStopSequenceAction)
 	container.Provide(c.NewDeleteSequenceAction)
 	container.Provide(c.NewStartSequenceAction)
@@ -81,11 +83,12 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewEmailScannerService)
 }
 
-func (c *DI) NewEmailScannerService(EventBus EventBus.Bus, AccountService backend.IUserService, LoggerService logger.ILoggerService) backend.IEmailScannerService {
+func (c *DI) NewEmailScannerService(JavaToolClient backend.IJavaToolClient, EventBus EventBus.Bus, AccountService backend.IUserService, LoggerService logger.ILoggerService) backend.IEmailScannerService {
 	r := &backend.EmailScannerServiceImpl{
 		AccountService: AccountService,
 		LoggerService:  LoggerService,
 		EventBus:       EventBus,
+		JavaToolClient: JavaToolClient,
 	}
 	r.Init()
 	return r
@@ -97,7 +100,6 @@ func (c *DI) NewEventBus() EventBus.Bus {
 
 func (c *DI) NewSequenceRunnerService(NotificationService backend.INotificationService, EmailScannerService backend.IEmailScannerService, ContactService backend.IContactService, SequenceRepo backend.ISequenceRepo, LoggerService logger.ILoggerService, EventBus EventBus.Bus, TaskService backend.ITaskService) backend.ISequenceRunnerService {
 	r := &backend.SequenceRunnerServiceImpl{
-		NotificationService: NotificationService,
 		EmailScannerService: EmailScannerService,
 		TaskService:         TaskService,
 		EventBus:            EventBus,
@@ -109,8 +111,19 @@ func (c *DI) NewSequenceRunnerService(NotificationService backend.INotificationS
 	return r
 }
 
-func (c *DI) NewNotificationService() backend.INotificationService {
-	r := &backend.NotificationServiceImpl{}
+func (c *DI) NewJavaToolClient(httpClient *http.Client, config *core.Config) backend.IJavaToolClient {
+	r := &backend.JavaToolClientImpl{
+		HttpClient: httpClient,
+		Config:     config,
+	}
+	r.Init()
+	return r
+}
+
+func (c *DI) NewNotificationService(EventBus EventBus.Bus) backend.INotificationService {
+	r := &backend.NotificationServiceImpl{
+		EventBus: EventBus,
+	}
 	r.Init()
 	return r
 }
@@ -279,10 +292,11 @@ func (c *DI) NewAddToSequenceFromB2BAction(B2BService backend.IB2BService) *fron
 	}
 }
 
-func (c *DI) NewApp(EmailTaskExecutorService backend.IEmailTaskExecutorService, EmailScannerService backend.IEmailScannerService, AutoTaskProcessorService backend.IAutoTaskProcessorService, SequenceService backend.ISequenceService, TaskExecutorService backend.ITaskExecutorService, httpController *http_server.PalmauticHttpController, contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
+func (c *DI) NewApp(NotificationService backend.INotificationService, EmailTaskExecutorService backend.IEmailTaskExecutorService, EmailScannerService backend.IEmailScannerService, AutoTaskProcessorService backend.IAutoTaskProcessorService, SequenceService backend.ISequenceService, TaskExecutorService backend.ITaskExecutorService, httpController *http_server.PalmauticHttpController, contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
 	return &PalmauticServerApp{
 		HttpController:           httpController,
 		Config:                   config,
+		NotificationService:      NotificationService,
 		AutoTaskProcessorService: AutoTaskProcessorService,
 		EmailService:             emailService,
 		ErrorHandler:             errorHandler,

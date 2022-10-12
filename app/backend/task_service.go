@@ -226,3 +226,9 @@ func (c *TaskServiceImpl) RefreshTask(task *entities.Task) {
 		task.Body = c.TemplateService.Format(task.Body, task.AccountId, args)
 	}
 }
+
+func SetTasksVisibility(tasks []*entities.Task, visible bool) {
+	for _, t := range tasks {
+		t.Invisible = !visible
+	}
+}

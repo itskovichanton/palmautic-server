@@ -12,7 +12,7 @@ type Sequence struct {
 	Process     *SequenceProcess
 	Progress    float32
 	People      int
-	lock        sync.Mutex
+	lock, lock1 sync.Mutex
 	Stopped     bool
 }
 
@@ -21,24 +21,42 @@ func (s *Sequence) CalcProgress() float32 {
 	if s.Process == nil || s.Process.ByContact == nil || len(s.Process.ByContact) == 0 {
 		return r
 	}
+	s.Process.Lock()
 	for _, seqInstance := range s.Process.ByContact {
 		r += seqInstance.CalcProgress()
 	}
+	s.Process.Unlock()
 	return r / float32(len(s.Process.ByContact))
 }
 
 func (s *Sequence) Refresh() {
 	s.Progress = s.CalcProgress()
 	s.People = 0
-	s.lock.Lock()
-	defer s.lock.Unlock()
 	if s.Process != nil && s.Process.ByContact != nil {
 		s.People = len(s.Process.ByContact)
+		s.Process.Lock()
 		for _, process := range s.Process.ByContact {
+			s.lock1.Lock()
 			for _, task := range process.Tasks {
 				task.Refresh()
 			}
+			s.lock1.Unlock()
 		}
+		s.Process.Unlock()
+	}
+}
+
+func (s *Sequence) SetTasksVisibility(visible bool) {
+	if s.Process != nil && s.Process.ByContact != nil {
+		s.Process.Lock()
+		for _, process := range s.Process.ByContact {
+			s.lock1.Lock()
+			for _, task := range process.Tasks {
+				task.Invisible = !visible
+			}
+			s.lock1.Unlock()
+		}
+		s.Process.Unlock()
 	}
 }
 
@@ -79,6 +97,7 @@ type SequenceModel struct {
 
 type SequenceProcess struct {
 	ByContact map[ID]*SequenceInstance
+	sync.Mutex
 }
 
 type SequenceInstance struct {

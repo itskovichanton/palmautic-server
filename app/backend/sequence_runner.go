@@ -9,6 +9,7 @@ import (
 	"log"
 	"salespalm/server/app/entities"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -27,7 +28,7 @@ type SequenceRunnerServiceImpl struct {
 	logger              string
 	timeFormat          string
 	EmailScannerService IEmailScannerService
-	NotificationService INotificationService
+	lock                sync.Mutex
 }
 
 func (c *SequenceRunnerServiceImpl) Init() {
@@ -35,15 +36,17 @@ func (c *SequenceRunnerServiceImpl) Init() {
 	c.timeFormat = "15:04:05"
 
 	for _, sequence := range c.SequenceRepo.Search(&entities.Sequence{}, nil).Items {
-		if sequence.Process == nil || sequence.Process.ByContact == nil {
+		if sequence.Stopped || sequence.Process == nil || sequence.Process.ByContact == nil {
 			continue
 		}
+		sequence.Process.Lock()
 		for contactId, _ := range sequence.Process.ByContact {
 			contact := c.ContactService.FindFirst(&entities.Contact{BaseEntity: entities.BaseEntity{Id: contactId, AccountId: sequence.AccountId}})
-			if c.Run(sequence, contact, true) {
+			if contact != nil && c.Run(sequence, contact, true) {
 				time.Sleep(2 * time.Second)
 			}
 		}
+		sequence.Process.Unlock()
 	}
 }
 
@@ -71,14 +74,17 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 
 	if contactProcess == nil || len(contactProcess.Tasks) == 0 {
 
+		sequence.Process.Lock()
 		sequence.Process.ByContact[contact.Id] = &entities.SequenceInstance{}
+		sequence.Process.Unlock()
+
 		c.buildProcess(sequence, contact, ld, lg)
 		contactProcess = sequence.Process.ByContact[contact.Id]
-		c.refreshTasks(lg, "Сценарий построен", contact.Id, contactProcess.Tasks)
+		c.refreshTasks(lg, "Сценарий построен", contact, contactProcess.Tasks)
 
 	} else {
 
-		c.refreshTasks(lg, "Актуализация статусов перед стартом", contact.Id, contactProcess.Tasks)
+		c.refreshTasks(lg, "Актуализация статусов перед стартом", contact, contactProcess.Tasks)
 
 		currentTask, currentTaskIndex := contactProcess.FindFirstNonFinalTask()
 		if currentTask != nil {
@@ -117,7 +123,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 		return false
 	}
 
-	c.makeVisibility(contactProcess, true)
+	SetTasksVisibility(contactProcess.Tasks, true)
 
 	go func() {
 
@@ -131,19 +137,19 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 
 		c.EventBus.SubscribeAsync(
 			InMailReceivedEventTopic(sequence.Id, contact.Id),
-			func(m *InMail) {
+			func(m *FindEmailResult) {
 				ld2 := logger.NewLD()
 				logger.Action(ld2, "Получен inMail!")
-				logger.Args(ld2, fmt.Sprintf("contact=%v, mail-subject=%v", contact.Name, m.ImapMsg.Envelope.Subject))
+				logger.Args(ld2, fmt.Sprintf("contact=%v, mail-subject=%v", contact.Name, m.Subject))
 				var repliedTask *entities.Task
-				println(strings.ToUpper(m.ImapMsg.Envelope.Subject))
+				println(strings.ToUpper(m.Subject))
 				for _, t := range sequence.Process.ByContact[contact.Id].Tasks {
 					if t.HasFinalStatus() && t.HasTypeEmail() {
 						println(strings.ToUpper("TO " + t.Subject))
 						if repliedTask == nil {
 							repliedTask = t
 						}
-						if strings.Contains(strings.TrimSpace(strings.ToUpper(m.ImapMsg.Envelope.Subject)), strings.TrimSpace(strings.ToUpper(t.Subject))) {
+						if strings.Contains(strings.TrimSpace(strings.ToUpper(m.Subject)), strings.TrimSpace(strings.ToUpper(t.Subject))) {
 							repliedTask = t
 							break
 						}
@@ -151,11 +157,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 				}
 				if repliedTask != nil {
 					c.TaskService.MarkReplied(repliedTask)
-					c.NotificationService.Add(repliedTask.AccountId, &Notification{
-						Subject:   contact.Name + ":",
-						Message:   m.Body,
-						Alertness: entities.TaskAlertnessBlue,
-					})
+					c.EventBus.Publish(EmailResponseReceivedEventTopic, &TaskInMailResponseReceivedEventArgs{Sequence: sequence, Contact: contact, Task: repliedTask, InMail: m})
 					logger.Result(ld2, fmt.Sprintf("Пометил что ответ получен в задаче %v", repliedTask.Id))
 				} else {
 					logger.Result(ld2, fmt.Sprintf("никакая задача не будет отвечена"))
@@ -178,7 +180,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 		for {
 
 			if sequence.Stopped {
-				c.makeVisibility(contactProcess, false)
+				SetTasksVisibility(contactProcess.Tasks, false)
 				logger.Action(ld, "Останавливаю последовательность, скрываю ее таски")
 				logger.Result(ld, fmt.Sprintf("СТОП"))
 				logger.Print(lg, ld)
@@ -191,7 +193,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			if currentTask == nil {
 				logger.Result(ld, fmt.Sprintf("Все задачи в финальном статусе. СТОП."))
 				logger.Print(lg, ld)
-				c.sendNotification(sequence, contact)
+				c.EventBus.Publish(SequenceFinishedEventTopic, &SequenceFinishedEventArgs{Sequence: sequence, Contact: contact})
 				return
 			}
 
@@ -310,13 +312,13 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 					}
 					logger.Print(lg, ld)
 
-					c.refreshTasks(lg, "Актуализация после сдвига", contact.Id, contactProcess.Tasks)
+					c.refreshTasks(lg, "Актуализация после сдвига", contact, contactProcess.Tasks)
 				}
 			} else if currentTask.Status == entities.TaskStatusReplied {
 
 				// клиент ответил
 				c.deleteTasksInContactProcess(lg, contactProcess)
-				c.refreshTasks(lg, "Получен ответ на задачу. Статусы тасков актуализированы", contact.Id, contactProcess.Tasks)
+				c.refreshTasks(lg, "Получен ответ на задачу. Статусы тасков актуализированы", contact, contactProcess.Tasks)
 
 			}
 			// expired - просто идем дальше
@@ -335,7 +337,9 @@ func (c *SequenceRunnerServiceImpl) buildProcess(sequence *entities.Sequence, co
 	}
 
 	sequenceInstance := &entities.SequenceInstance{}
+	sequence.Process.Lock()
 	sequence.Process.ByContact[contact.Id] = sequenceInstance
+	sequence.Process.Unlock()
 	steps := sequence.Model.Steps
 	stepsCount := len(steps)
 	var lastDueTime time.Time
@@ -353,7 +357,9 @@ func (c *SequenceRunnerServiceImpl) buildProcess(sequence *entities.Sequence, co
 
 		// Создаем заготовку для реального таска из модели
 		currentTask := &entities.Task{}
+		c.lock.Lock()
 		copier.Copy(currentTask, currentStep)
+		c.lock.Unlock()
 
 		timeForTask := currentStep.DueTime.Sub(currentStep.StartTime)
 		if stepIndex == 0 {
@@ -369,7 +375,7 @@ func (c *SequenceRunnerServiceImpl) buildProcess(sequence *entities.Sequence, co
 	}
 }
 
-func (c *SequenceRunnerServiceImpl) refreshTasks(lg *log.Logger, action string, contactId entities.ID, tasks []*entities.Task) {
+func (c *SequenceRunnerServiceImpl) refreshTasks(lg *log.Logger, action string, contact *entities.Contact, tasks []*entities.Task) {
 
 	ld := logger.NewLD()
 	logger.Subject(ld, "Обновлено расписание тасков")
@@ -383,7 +389,7 @@ func (c *SequenceRunnerServiceImpl) refreshTasks(lg *log.Logger, action string, 
 		r = "<НЕТ ЗАДАЧ>"
 	}
 	logger.Result(ld, r)
-	logger.Action(ld, fmt.Sprintf("%v:контакт=%v", action, contactId))
+	logger.Action(ld, fmt.Sprintf("%v:контакт=%v", action, contact.Name))
 	logger.Print(lg, ld)
 }
 
@@ -401,20 +407,4 @@ func (c *SequenceRunnerServiceImpl) deleteTasksInContactProcess(lg *log.Logger, 
 		}
 	}
 	contactProcess.Tasks = []*entities.Task{}
-}
-
-func (c *SequenceRunnerServiceImpl) sendNotification(sequence *entities.Sequence, contact *entities.Contact) {
-	c.NotificationService.Add(sequence.AccountId, &Notification{
-		Subject:   "Последовательность финишировала",
-		Message:   fmt.Sprintf(`"%v" финишировала для контакта %v`, sequence.Name, contact.Name),
-		Alertness: "green",
-	})
-}
-
-func (c *SequenceRunnerServiceImpl) makeVisibility(process *entities.SequenceInstance, visible bool) {
-	if process != nil {
-		for _, t := range process.Tasks {
-			t.Invisible = visible
-		}
-	}
 }

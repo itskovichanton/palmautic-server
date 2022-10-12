@@ -10,6 +10,8 @@ type User struct {
 }
 
 type InMailSettings struct {
-	Server, Login, Password string
-	Port                    int
+	Server   string
+	Login    string
+	Password string
+	Port     int
 }
