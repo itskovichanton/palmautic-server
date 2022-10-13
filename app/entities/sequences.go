@@ -1,6 +1,9 @@
 package entities
 
-import "sync"
+import (
+	"github.com/viney-shih/go-lock"
+	"time"
+)
 
 type Sequence struct {
 	BaseEntity
@@ -12,7 +15,6 @@ type Sequence struct {
 	Process     *SequenceProcess
 	Progress    float32
 	People      int
-	lock, lock1 sync.Mutex
 	Stopped     bool
 }
 
@@ -36,11 +38,9 @@ func (s *Sequence) Refresh() {
 		s.People = len(s.Process.ByContact)
 		s.Process.Lock()
 		for _, process := range s.Process.ByContact {
-			s.lock1.Lock()
 			for _, task := range process.Tasks {
 				task.Refresh()
 			}
-			s.lock1.Unlock()
 		}
 		s.Process.Unlock()
 	}
@@ -50,11 +50,9 @@ func (s *Sequence) SetTasksVisibility(visible bool) {
 	if s.Process != nil && s.Process.ByContact != nil {
 		s.Process.Lock()
 		for _, process := range s.Process.ByContact {
-			s.lock1.Lock()
 			for _, task := range process.Tasks {
 				task.Invisible = !visible
 			}
-			s.lock1.Unlock()
 		}
 		s.Process.Unlock()
 	}
@@ -97,7 +95,18 @@ type SequenceModel struct {
 
 type SequenceProcess struct {
 	ByContact map[ID]*SequenceInstance
-	sync.Mutex
+	casMut    *lock.CASMutex
+}
+
+func (p *SequenceProcess) Lock() {
+	if p.casMut == nil {
+		p.casMut = lock.NewCASMutex()
+	}
+	p.casMut.RTryLockWithTimeout(5 * time.Second)
+}
+
+func (p *SequenceProcess) Unlock() {
+	p.casMut.RUnlock()
 }
 
 type SequenceInstance struct {

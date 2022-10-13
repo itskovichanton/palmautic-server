@@ -108,17 +108,22 @@ func (c *SequenceServiceImpl) Start(accountId entities.ID, sequenceIds []entitie
 		seq := c.SequenceRepo.FindFirst(&entities.Sequence{BaseEntity: entities.BaseEntity{AccountId: accountId, Id: sequenceId}})
 		if seq != nil {
 			seq.Stopped = false
-			if seq.Process != nil && seq.Process.ByContact != nil {
-				seq.Process.Lock()
-				for contactId, _ := range seq.Process.ByContact {
-					contactToRun := c.ContactService.FindFirst(&entities.Contact{BaseEntity: entities.BaseEntity{AccountId: accountId, Id: contactId}})
-					if contactToRun != nil {
-						c.SequenceRunnerService.Run(seq, contactToRun, true)
-						seq.SetTasksVisibility(true)
+			go func() {
+				if seq.Process != nil && seq.Process.ByContact != nil {
+					//utils.LockIfReleased(&seq.Process.Mutex)
+					for contactId, _ := range seq.Process.ByContact {
+						contactToRun := c.ContactService.FindFirst(&entities.Contact{BaseEntity: entities.BaseEntity{AccountId: accountId, Id: contactId}})
+						if contactToRun != nil {
+							seq.SetTasksVisibility(true)
+							if c.SequenceRunnerService.Run(seq, contactToRun, true) {
+								time.Sleep(10 * time.Second)
+							}
+						}
 					}
+					//seq.Process.Unlock()
 				}
-				seq.Process.Unlock()
-			}
+			}()
+
 		}
 	}
 }

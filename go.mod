@@ -4,7 +4,6 @@ go 1.19
 
 require (
 	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef
-	github.com/emersion/go-imap v1.2.1
 	github.com/itskovichanton/core v1.0.4
 	github.com/itskovichanton/echo-http v1.0.2
 	github.com/itskovichanton/goava v1.0.6
@@ -12,13 +11,13 @@ require (
 	github.com/jinzhu/copier v0.3.5
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/spf13/cast v1.5.0
+	github.com/viney-shih/go-lock v1.1.2
 	go.uber.org/dig v1.15.0
 	golang.org/x/exp v0.0.0-20220916125017-b168a2c6b86b
 )
 
 require (
 	github.com/c2h5oh/datasize v0.0.0-20220606134207-859f65c6625b // indirect
-	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
@@ -44,6 +43,7 @@ require (
 	github.com/valyala/fasttemplate v1.2.1 // indirect
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
 	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f // indirect
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
