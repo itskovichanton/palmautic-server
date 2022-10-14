@@ -25,6 +25,11 @@ func (c *DI) InitDI() {
 	c.DI.InitDI(container)
 
 	container.Provide(c.NewApp)
+	container.Provide(c.NewFolderRepo)
+	container.Provide(c.NewCreateOrUpdateFolderAction)
+	container.Provide(c.NewDeleteFolderAction)
+	container.Provide(c.NewSearchFolderAction)
+	container.Provide(c.NewFolderService)
 	container.Provide(c.NewJavaToolClient)
 	container.Provide(c.NewStopSequenceAction)
 	container.Provide(c.NewDeleteSequenceAction)
@@ -128,6 +133,12 @@ func (c *DI) NewNotificationService(EventBus EventBus.Bus) backend.INotification
 	return r
 }
 
+func (c *DI) NewFolderService(folderRepo backend.IFolderRepo) backend.IFolderService {
+	return &backend.FolderServiceImpl{
+		FolderRepo: folderRepo,
+	}
+}
+
 func (c *DI) NewTaskExecutorService(manualEmailTaskExecutorService backend.IEmailTaskExecutorService) backend.ITaskExecutorService {
 	return &backend.TaskExecutorServiceImpl{
 		EmailTaskExecutorService: manualEmailTaskExecutorService,
@@ -176,6 +187,12 @@ func (c *DI) NewIDGenerator() backend.IDGenerator {
 	return &backend.IDGeneratorImpl{}
 }
 
+func (c *DI) NewFolderRepo(dbService backend.IDBService) backend.IFolderRepo {
+	return &backend.FolderRepoImpl{
+		DBService: dbService,
+	}
+}
+
 func (c *DI) NewContactRepo(dbService backend.IDBService) backend.IContactRepo {
 	return &backend.ContactRepoImpl{
 		DBService: dbService,
@@ -212,9 +229,12 @@ func (c *DI) NewTemplateCompilerService() backend.ITemplateCompilerService {
 	return r
 }
 
-func (c *DI) NewHttpController(DeleteSequenceAction *frontend.DeleteSequenceAction, StartSequenceAction *frontend.StartSequenceAction, StopSequenceAction *frontend.StopSequenceAction, NotifyMessageOpenedAction *frontend.NotifyMessageOpenedAction, GetNotificationsAction *frontend.GetNotificationsAction, SearchSequenceAction *frontend.SearchSequenceAction, MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactsToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
+func (c *DI) NewHttpController(CreateOrUpdateFolderAction *frontend.CreateOrUpdateFolderAction, SearchFolderAction *frontend.SearchFolderAction, DeleteFolderAction *frontend.DeleteFolderAction, DeleteSequenceAction *frontend.DeleteSequenceAction, StartSequenceAction *frontend.StartSequenceAction, StopSequenceAction *frontend.StopSequenceAction, NotifyMessageOpenedAction *frontend.NotifyMessageOpenedAction, GetNotificationsAction *frontend.GetNotificationsAction, SearchSequenceAction *frontend.SearchSequenceAction, MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactsToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
 	r := &http_server.PalmauticHttpController{
 		HttpControllerImpl:           *httpController,
+		CreateOrUpdateFolderAction:   CreateOrUpdateFolderAction,
+		DeleteFolderAction:           DeleteFolderAction,
+		SearchFolderAction:           SearchFolderAction,
 		StopSequenceAction:           StopSequenceAction,
 		DeleteSequenceAction:         DeleteSequenceAction,
 		StartSequenceAction:          StartSequenceAction,
@@ -244,6 +264,24 @@ func (c *DI) NewHttpController(DeleteSequenceAction *frontend.DeleteSequenceActi
 	}
 	r.Init()
 	return r
+}
+
+func (c *DI) NewCreateOrUpdateFolderAction(folderService backend.IFolderService) *frontend.CreateOrUpdateFolderAction {
+	return &frontend.CreateOrUpdateFolderAction{
+		FolderService: folderService,
+	}
+}
+
+func (c *DI) NewDeleteFolderAction(folderService backend.IFolderService) *frontend.DeleteFolderAction {
+	return &frontend.DeleteFolderAction{
+		FolderService: folderService,
+	}
+}
+
+func (c *DI) NewSearchFolderAction(folderService backend.IFolderService) *frontend.SearchFolderAction {
+	return &frontend.SearchFolderAction{
+		FolderService: folderService,
+	}
 }
 
 func (c *DI) NewGetNotificationsAction(NotificationService backend.INotificationService) *frontend.GetNotificationsAction {
@@ -383,12 +421,13 @@ func (c *DI) NewSearchContactAction(contactService backend.IContactService) *fro
 	}
 }
 
-func (c *DI) NewCommonsService(AccountService backend.IUserService, TemplateService backend.ITemplateService, taskService backend.ITaskService, sequenceService backend.ISequenceService) backend.ICommonsService {
+func (c *DI) NewCommonsService(FolderService backend.IFolderService, AccountService backend.IUserService, TemplateService backend.ITemplateService, taskService backend.ITaskService, sequenceService backend.ISequenceService) backend.ICommonsService {
 	return &backend.CommonsServiceImpl{
 		TaskService:     taskService,
 		SequenceService: sequenceService,
 		TemplateService: TemplateService,
 		AccountService:  AccountService,
+		FolderService:   FolderService,
 	}
 }
 
@@ -438,9 +477,11 @@ func (c *DI) NewTaskService(EventBus EventBus.Bus, SequenceRepo backend.ISequenc
 }
 
 func (c *DI) NewSequenceRepo(dbService backend.IDBService) backend.ISequenceRepo {
-	return &backend.SequenceRepoImpl{
+	r := &backend.SequenceRepoImpl{
 		DBService: dbService,
 	}
+	r.Init()
+	return r
 }
 
 func (c *DI) NewTaskRepo(idinmetor backend.IDGenerator, dbService backend.IDBService) backend.ITaskRepo {

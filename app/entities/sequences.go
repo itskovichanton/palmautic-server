@@ -8,14 +8,60 @@ import (
 type Sequence struct {
 	BaseEntity
 
-	FolderID    ID
-	Name        string
-	Description string
-	Model       *SequenceModel
-	Process     *SequenceProcess
-	Progress    float32
-	People      int
-	Stopped     bool
+	FolderID                             ID
+	Name                                 string
+	Description                          string
+	Model                                *SequenceModel
+	Process                              *SequenceProcess
+	Progress, ReplyRate, BounceRate      float32
+	People                               int
+	Stopped                              bool
+	EmailSendingCount, EmailBouncedCount int
+}
+
+func (s *Sequence) CalcDeliveriesByStatus(deliveryStatus string) int {
+	r := 0
+	if s.Process == nil || s.Process.ByContact == nil || len(s.Process.ByContact) == 0 {
+		return r
+	}
+	locked := s.Process.RLock()
+	for _, seqInstance := range s.Process.ByContact {
+		for _, t := range seqInstance.Tasks {
+			if t.DeliveryStatus == deliveryStatus {
+				r++
+			}
+		}
+	}
+	if locked {
+		s.Process.RUnlock()
+	}
+	return r
+}
+
+func (s *Sequence) CalcReplyRate() float32 {
+	people := s.CalcPeople()
+	if people == 0 {
+		return 0
+	}
+	return float32(s.CalcReplies()) / float32(people)
+}
+
+func (s *Sequence) CalcReplies() int {
+	r := 0
+	if s.Process == nil || s.Process.ByContact == nil || len(s.Process.ByContact) == 0 {
+		return r
+	}
+	locked := s.Process.RLock()
+	for _, seqInstance := range s.Process.ByContact {
+		repliedTask, _ := seqInstance.FindTaskByStatus(TaskStatusReplied)
+		if repliedTask != nil {
+			r++
+		}
+	}
+	if locked {
+		s.Process.RUnlock()
+	}
+	return r
 }
 
 func (s *Sequence) CalcProgress() float32 {
@@ -23,39 +69,56 @@ func (s *Sequence) CalcProgress() float32 {
 	if s.Process == nil || s.Process.ByContact == nil || len(s.Process.ByContact) == 0 {
 		return r
 	}
-	s.Process.Lock()
+	locked := s.Process.RLock()
 	for _, seqInstance := range s.Process.ByContact {
 		r += seqInstance.CalcProgress()
 	}
-	s.Process.Unlock()
+	if locked {
+		s.Process.RUnlock()
+	}
 	return r / float32(len(s.Process.ByContact))
 }
 
 func (s *Sequence) Refresh() {
+	s.EmailBouncedCount = s.CalcDeliveriesByStatus(DeliveryStatusBounced)
+	s.EmailSendingCount = s.CalcDeliveriesByStatus(DeliveryStatusSent)
+	s.BounceRate = 0
+	if s.EmailSendingCount != 0 {
+		s.BounceRate = float32(s.EmailBouncedCount) / float32(s.EmailSendingCount)
+	}
 	s.Progress = s.CalcProgress()
+	s.ReplyRate = s.CalcReplyRate()
 	s.People = 0
 	if s.Process != nil && s.Process.ByContact != nil {
-		s.People = len(s.Process.ByContact)
-		s.Process.Lock()
+		s.People = s.CalcPeople()
+		locked := s.Process.RLock()
 		for _, process := range s.Process.ByContact {
 			for _, task := range process.Tasks {
 				task.Refresh()
 			}
 		}
-		s.Process.Unlock()
+		if locked {
+			s.Process.RUnlock()
+		}
 	}
 }
 
 func (s *Sequence) SetTasksVisibility(visible bool) {
 	if s.Process != nil && s.Process.ByContact != nil {
-		s.Process.Lock()
+		locked := s.Process.RLock()
 		for _, process := range s.Process.ByContact {
 			for _, task := range process.Tasks {
 				task.Invisible = !visible
 			}
 		}
-		s.Process.Unlock()
+		if locked {
+			s.Process.RUnlock()
+		}
 	}
+}
+
+func (s *Sequence) CalcPeople() int {
+	return len(s.Process.ByContact)
 }
 
 func (s *SequenceInstance) StatusTask() (*Task, int) {
@@ -89,24 +152,44 @@ func (s *SequenceInstance) FindFirstNonFinalTask() (*Task, int) {
 	return nil, -1
 }
 
+func (s *SequenceInstance) FindTaskByStatus(status string) (*Task, int) {
+	for i, t := range s.Tasks {
+		if t.Status == status {
+			return t, i
+		}
+	}
+	return nil, -1
+}
+
 type SequenceModel struct {
 	Steps []*Task
 }
 
 type SequenceProcess struct {
-	ByContact map[ID]*SequenceInstance
-	casMut    *lock.CASMutex
+	ByContact       map[ID]*SequenceInstance
+	casMut, casMutR *lock.CASMutex
 }
 
-func (p *SequenceProcess) Lock() {
+func (p *SequenceProcess) RLock() bool {
+	if p.casMutR == nil {
+		p.casMutR = lock.NewCASMutex()
+	}
+	return p.casMutR.RTryLockWithTimeout(5 * time.Second)
+}
+
+func (p *SequenceProcess) Lock() bool {
 	if p.casMut == nil {
 		p.casMut = lock.NewCASMutex()
 	}
-	p.casMut.RTryLockWithTimeout(5 * time.Second)
+	return p.casMut.TryLockWithTimeout(5 * time.Second)
 }
 
 func (p *SequenceProcess) Unlock() {
-	p.casMut.RUnlock()
+	p.casMut.Unlock()
+}
+
+func (p *SequenceProcess) RUnlock() {
+	p.casMutR.RUnlock()
 }
 
 type SequenceInstance struct {

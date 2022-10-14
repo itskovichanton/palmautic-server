@@ -1,15 +1,13 @@
 package backend
 
 import (
-	"fmt"
 	"github.com/itskovichanton/goava/pkg/goava/errs"
 	"salespalm/server/app/entities"
-	"strings"
 	"time"
 )
 
 type ISequenceService interface {
-	CreateOrUpdate(sequence *entities.Sequence) (*entities.Sequence, TemplatesMap, error)
+	CreateOrUpdate(sequence *entities.SequenceSpec) (*entities.Sequence, TemplatesMap, error)
 	Commons(accountId entities.ID) *entities.SequenceCommons
 	GetByIndex(accountId entities.ID, index int) *entities.Sequence
 	Search(filter *entities.Sequence, settings *SequenceSearchSettings) *SequenceSearchResult
@@ -71,24 +69,6 @@ func (c *SequenceServiceImpl) AddContacts(sequenceCreds entities.BaseEntity, con
 }
 
 /*
-func (c *SequenceServiceImpl) Stats(accountId entities.Id) *entities.SequenceStats {
-	be := entities.BaseEntity{AccountId: accountId}
-	r := &entities.SequenceStats{
-		All:      len(c.Search(&entities.Sequence{BaseEntity: be})),
-		ByType:   map[string]int{},
-		ByStatus: map[string]int{},
-	}
-	for _, t := range c.SequenceService.Commons().Types {
-		r.ByType[t.Creds.Name] = len(c.Search(&entities.Sequence{BaseEntity: be, Type: t.Creds.Name}))
-	}
-	for _, s := range c.SequenceService.Commons().Statuses {
-		r.ByStatus[s] = len(c.Search(&entities.Sequence{BaseEntity: be, Status: s}))
-	}
-	return r
-}
-
-
-
 func (c *SequenceServiceImpl) Delete(filter *entities.Sequence) (*entities.Sequence, error) {
 	SequenceContainer := c.SequenceService.Search(filter)
 	if len(SequenceContainer) == 0 {
@@ -110,7 +90,7 @@ func (c *SequenceServiceImpl) Start(accountId entities.ID, sequenceIds []entitie
 			seq.Stopped = false
 			go func() {
 				if seq.Process != nil && seq.Process.ByContact != nil {
-					//utils.LockIfReleased(&seq.Process.Mutex)
+					locked := seq.Process.RLock()
 					for contactId, _ := range seq.Process.ByContact {
 						contactToRun := c.ContactService.FindFirst(&entities.Contact{BaseEntity: entities.BaseEntity{AccountId: accountId, Id: contactId}})
 						if contactToRun != nil {
@@ -120,7 +100,9 @@ func (c *SequenceServiceImpl) Start(accountId entities.ID, sequenceIds []entitie
 							}
 						}
 					}
-					//seq.Process.Unlock()
+					if locked {
+						seq.Process.RUnlock()
+					}
 				}
 			}()
 
@@ -143,26 +125,28 @@ func (c *SequenceServiceImpl) Delete(accountId entities.ID, sequenceIds []entiti
 	c.SequenceRepo.Delete(accountId, sequenceIds)
 }
 
-func (c *SequenceServiceImpl) CreateOrUpdate(sequence *entities.Sequence) (*entities.Sequence, TemplatesMap, error) {
+func (c *SequenceServiceImpl) CreateOrUpdate(sequence *entities.SequenceSpec) (*entities.Sequence, TemplatesMap, error) {
+	//
+	//// сохраняем как есть
+	//c.SequenceRepo.CreateOrUpdate(sequence)
+	//
+	//// сохраняем все боди у писем в шаблоны
+	//usedTemplates := TemplatesMap{}
+	//for stepIndex, step := range sequence.Model.Steps {
+	//	if step.HasTypeEmail() {
+	//		if !strings.HasPrefix(step.Body, "template") {
+	//			// сохраняем шаблон в папку
+	//			templateName := c.TemplateService.CreateOrUpdate(sequence, step.Body, fmt.Sprintf("step%v", stepIndex))
+	//			usedTemplates[templateName] = step.Body
+	//			if len(templateName) > 0 {
+	//				step.Body = "template:" + templateName
+	//			}
+	//		}
+	//	}
+	//}
+	//
+	//c.SequenceRepo.CreateOrUpdate(sequence)
+	//return sequence, usedTemplates, nil
 
-	// сохраняем как есть
-	c.SequenceRepo.CreateOrUpdate(sequence)
-
-	// сохраняем все боди у писем в шаблоны
-	sequenceTemplatesUsedTemplates := TemplatesMap{}
-	for stepIndex, step := range sequence.Model.Steps {
-		if step.HasTypeEmail() {
-			if !strings.HasPrefix(step.Body, "template") {
-				// сохраняем шаблон в папку
-				templateName := c.TemplateService.CreateOrUpdate(sequence, step.Body, fmt.Sprintf("step%v", stepIndex))
-				sequenceTemplatesUsedTemplates[templateName] = step.Body
-				if len(templateName) > 0 {
-					step.Body = "template:" + templateName
-				}
-			}
-		}
-	}
-
-	c.SequenceRepo.CreateOrUpdate(sequence)
-	return sequence, sequenceTemplatesUsedTemplates, nil
+	return nil, nil, nil
 }

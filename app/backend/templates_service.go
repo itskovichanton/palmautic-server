@@ -87,7 +87,7 @@ func (c *TemplateServiceImpl) Templates(accountId entities.ID) TemplatesMap {
 
 func (c *TemplateServiceImpl) Init() {
 	c.templates = cache.New(cache.NoExpiration, cache.NoExpiration)
-	c.templatesDir = c.Config.GetOnBaseWorkDir("manual_email_templates")
+	c.templatesDir = c.Config.GetDir("manual_email_templates")
 	c.optimize = c.Config.GetBool("templates", "optimize")
 }
 

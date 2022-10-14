@@ -13,14 +13,21 @@ type Task struct {
 	Type               string
 	Status             string
 	StartTime, DueTime time.Time
-	Sequence           *IDAndTitle
+	Sequence           *IDWithName
 	Contact            *Contact
 	Action             string
 	Body               string
 	Subject            string
 	Alertness          string
 	Invisible          bool
+	DeliveryStatus     string
 }
+
+const (
+	DeliveryStatusSent    = "delivered"
+	DeliveryStatusBounced = "bounced"
+	DeliveryStatusFailed  = "failed"
+)
 
 type TaskCommons struct {
 	Types    map[string]*TaskType
@@ -37,19 +44,19 @@ func (t Task) HasFinalStatus() bool {
 	return len(t.Status) > 0 && t.Status != TaskStatusPending && t.Status != TaskStatusStarted
 }
 
-func (t Task) AutoExecutable() bool {
+func (t *Task) AutoExecutable() bool {
 	return t.Type == TaskTypeAutoEmail.Creds.Name
 }
 
-func (t Task) HasTypeEmail() bool {
+func (t *Task) HasTypeEmail() bool {
 	return t.Type == TaskTypeManualEmail.Creds.Name || t.Type == TaskTypeAutoEmail.Creds.Name
 }
 
-func (t Task) CanExecute() bool {
+func (t *Task) CanExecute() bool {
 	return t.IsMessenger() && len(t.Contact.Phone) > 0 || t.HasTypeEmail() && len(t.Contact.Email) > 0 || t.Type == TaskTypeLinkedin.Creds.Name && len(t.Contact.Linkedin) > 0
 }
 
-func (t Task) IsMessenger() bool {
+func (t *Task) IsMessenger() bool {
 	return t.Type != TaskTypeManualEmail.Creds.Name && t.Type != TaskTypeLinkedin.Creds.Name
 }
 

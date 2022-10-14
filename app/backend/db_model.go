@@ -8,6 +8,7 @@ type Accounts map[entities.ID]*entities.User
 type Contacts map[entities.ID]*entities.Contact
 type Tasks map[entities.ID]*entities.Task
 type Sequences map[entities.ID]*entities.Sequence
+type Folders map[entities.ID]*entities.Folder
 
 type DBContent struct {
 	IDGenerator       IDGenerator
@@ -16,6 +17,7 @@ type DBContent struct {
 	TaskContainer     *TaskContainer
 	B2Bdb             *entities.B2Bdb
 	SequenceContainer *SequencesContainer
+	Folders           AccountFoldersMap
 }
 
 type SequencesContainer struct {
@@ -26,6 +28,13 @@ type SequencesContainer struct {
 type TaskContainer struct {
 	Tasks   AccountTasksMap
 	Commons *entities.TaskCommons
+}
+
+func (c *DBContent) GetFolders() AccountFoldersMap {
+	if c.Folders == nil {
+		c.Folders = AccountFoldersMap{}
+	}
+	return c.Folders
 }
 
 func (c *DBContent) GetContacts() AccountContactsMap {
@@ -77,6 +86,14 @@ func (c *DBContent) createFilter(f string) entities.IFilter {
 }
 
 type AccountContactsMap map[entities.ID]Contacts
+type AccountFoldersMap map[entities.ID]Folders
+
+func (c AccountFoldersMap) ForAccount(accountId entities.ID) Folders {
+	if c[accountId] == nil {
+		c[accountId] = Folders{}
+	}
+	return c[accountId]
+}
 
 func (c AccountContactsMap) ForAccount(accountId entities.ID) Contacts {
 	if c[accountId] == nil {

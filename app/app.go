@@ -52,7 +52,7 @@ func (c *PalmauticServerApp) tests() {
 		Status:      "started",
 		StartTime:   time.Time{},
 		DueTime:     time.Time{},
-		Sequence: &entities.IDAndTitle{
+		Sequence: &entities.IDWithName{
 			Name: "test",
 			Id:   1232,
 		},
@@ -78,7 +78,6 @@ func (c *PalmauticServerApp) tests() {
 }
 
 func (c *PalmauticServerApp) tests2() {
-
 	c.SequenceService.AddContacts(entities.BaseEntity{Id: 228298, AccountId: 1001}, []entities.ID{227631})
 
 }

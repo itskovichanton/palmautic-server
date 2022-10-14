@@ -42,6 +42,9 @@ type PalmauticHttpController struct {
 	StartSequenceAction          *frontend.StartSequenceAction
 	StopSequenceAction           *frontend.StopSequenceAction
 	DeleteSequenceAction         *frontend.DeleteSequenceAction
+	CreateOrUpdateFolderAction   *frontend.CreateOrUpdateFolderAction
+	SearchFolderAction           *frontend.SearchFolderAction
+	DeleteFolderAction           *frontend.DeleteFolderAction
 }
 
 func (c *PalmauticHttpController) Init() {
@@ -61,8 +64,15 @@ func (c *PalmauticHttpController) Init() {
 	c.EchoEngine.GET("/commons", c.GetDefaultHandler(c.prepareAction(true, c.GetCommonsAction)))
 	c.EchoEngine.GET("/notifications", c.GetDefaultHandler(c.prepareAction(true, c.GetNotificationsAction)))
 
-	// webhooks
-	c.EchoEngine.GET("/webhooks/notifyMessageOpened", c.GetDefaultHandler(c.NotifyMessageOpenedAction))
+	// static
+	c.EchoEngine.Static("/api/fs", c.Config.CoreConfig.GetDir("assets"), func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(e echo.Context) (err error) {
+			req := e.Request()
+			//res := c.Response()
+			println("Письмо открыли: " + req.URL.RawQuery)
+			return nil
+		}
+	})
 
 	// tasks
 	c.EchoEngine.GET("/tasks/stats", c.GetDefaultHandler(c.prepareAction(true, c.GetTaskStatsAction)))
@@ -90,6 +100,10 @@ func (c *PalmauticHttpController) Init() {
 	c.EchoEngine.GET("/b2b/addToContacts", c.GetDefaultHandler(c.prepareAction(true, c.AddContactFromB2BAction)))
 	c.EchoEngine.GET("/b2b/addToSequence", c.GetDefaultHandler(c.prepareAction(true, c.AddContactsToSequenceAction)))
 
+	// folders
+	c.EchoEngine.POST("/folders/createOrUpdate", c.GetDefaultHandler(c.prepareAction(true, c.readFolder(), c.CreateOrUpdateFolderAction)))
+	c.EchoEngine.POST("/folders/search", c.GetDefaultHandler(c.prepareAction(true, c.readFolder(), c.SearchFolderAction)))
+	c.EchoEngine.POST("/folders/delete", c.GetDefaultHandler(c.prepareAction(true, c.DeleteFolderAction)))
 }
 
 func (c *PalmauticHttpController) prepareAction(requiresAuth bool, actions ...pipeline.IAction) pipeline.IAction {
@@ -106,6 +120,10 @@ func (c *PalmauticHttpController) getGetUserActionIfSessionPresent(requiresAuth 
 		return c.GetUserAction
 	}
 	return c.NopAction
+}
+
+func (c *PalmauticHttpController) readFolder() pipeline.IAction {
+	return &readEntityAction{model: &entities.Folder{}}
 }
 
 func (c *PalmauticHttpController) readContact() pipeline.IAction {

@@ -39,14 +39,16 @@ func (c *SequenceRunnerServiceImpl) Init() {
 		if sequence.Stopped || sequence.Process == nil || sequence.Process.ByContact == nil {
 			continue
 		}
-		sequence.Process.Lock()
+		locked := sequence.Process.RLock()
 		for contactId, _ := range sequence.Process.ByContact {
 			contact := c.ContactService.FindFirst(&entities.Contact{BaseEntity: entities.BaseEntity{Id: contactId, AccountId: sequence.AccountId}})
 			if contact != nil && c.Run(sequence, contact, true) {
 				time.Sleep(2 * time.Second)
 			}
 		}
-		sequence.Process.Unlock()
+		if locked {
+			sequence.Process.RUnlock()
+		}
 	}
 }
 
@@ -74,9 +76,14 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 
 	if contactProcess == nil || len(contactProcess.Tasks) == 0 {
 
-		sequence.Process.Lock()
+		locked := sequence.Process.Lock()
+		if sequence.Process.ByContact == nil {
+			sequence.Process.ByContact = map[entities.ID]*entities.SequenceInstance{}
+		}
 		sequence.Process.ByContact[contact.Id] = &entities.SequenceInstance{}
-		sequence.Process.Unlock()
+		if locked {
+			sequence.Process.Unlock()
+		}
 
 		c.buildProcess(sequence, contact, ld, lg)
 		contactProcess = sequence.Process.ByContact[contact.Id]

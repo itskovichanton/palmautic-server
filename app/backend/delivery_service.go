@@ -24,7 +24,9 @@ func (c *MsgDeliveryEmailServiceImpl) SendEmail(t *entities.Task) {
 	go func() {
 		err := c.sendEmailFromTask(t)
 		if err != nil {
-			// пока ничего не делаем
+			t.DeliveryStatus = entities.DeliveryStatusFailed
+		} else {
+			t.DeliveryStatus = entities.DeliveryStatusSent
 		}
 	}()
 }
@@ -36,7 +38,7 @@ func (c *MsgDeliveryEmailServiceImpl) sendEmailFromTask(t *entities.Task) error 
 	return c.EmailService.SendPreprocessed(
 		&core.Params{
 			From:    "a.itskovich@molbulak.com", // c.AccountService.Accounts()[t.AccountId].Username,
-			To:      []string{"itskovichae@gmail.com", "nikolaydemidovez@gmail.com" /*, "evstigneeva.design@gmail.com", "a.itskovich@molbulak.ru", "tony5oprano@yandex.ru", "nikolaydemidovez@gmail.com" /*t.Contact.Email,*/},
+			To:      []string{"itskovichae@gmail.com" /*, "evstigneeva.design@gmail.com", "a.itskovich@molbulak.ru", "tony5oprano@yandex.ru", "nikolaydemidovez@gmail.com" /*t.Contact.Email,*/},
 			Subject: c.TemplateService.Format(t.Subject, t.AccountId, args),
 		}, func(srv *email.Email, m *email.Message) {
 			m.BodyHTML = c.prepareEmailHtml(c.TemplateService.Format(t.Body, t.AccountId, args), t)
@@ -49,12 +51,10 @@ func (c *MsgDeliveryEmailServiceImpl) sendEmailFromTask(t *entities.Task) error 
 }
 
 func (c *MsgDeliveryEmailServiceImpl) prepareEmailHtml(html string, task *entities.Task) string {
-	return strings.ReplaceAll(html, "</body>", fmt.Sprintf(notifyMeEmailOpenedScript, task.Id, task.Sequence.Id, task.AccountId)+`</body>`)
+	if !strings.Contains(html, "<body>") {
+		html = "<body>" + html + "</body>"
+	}
+	return strings.ReplaceAll(html, "</body>", fmt.Sprintf(notifyMeEmailOpenedUrlPattern, task.Id, task.Sequence.Id, task.AccountId)+`</body>`)
 }
 
-const notifyMeEmailOpenedScript = `
-<script type="text/javascript">
-	const http = new XMLHttpRequest()
-	http.open("GET", "https://dev-platform.palmautic.ru/api/webhooks/notifyMessageOpened?taskId=%v&sequence=%v&accountId=%v")
- 	http.send()
-</script>`
+const notifyMeEmailOpenedUrlPattern = `<img src="https://dev-platform.palmautic.ru/api/api/fs/logo.png?taskId=%v&sequence=%v&accountId=%v">`

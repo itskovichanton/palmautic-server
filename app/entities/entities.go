@@ -20,8 +20,8 @@ type BaseEntity struct {
 	AccountId   ID `json:"accountId"`
 }
 
-func (c *BaseEntity) ToIDAndName(name string) *IDAndTitle {
-	return &IDAndTitle{
+func (c *BaseEntity) ToIDAndName(name string) *IDWithName {
+	return &IDWithName{
 		Name: name,
 		Id:   c.Id,
 	}
@@ -65,7 +65,7 @@ type NameAndTitle struct {
 	Name, Title string
 }
 
-type IDAndTitle struct {
+type IDWithName struct {
 	Name string
 	Id   ID
 }

@@ -29,7 +29,7 @@ type CreateOrUpdateSequenceAction struct {
 
 func (c *CreateOrUpdateSequenceAction) Run(arg interface{}) (interface{}, error) {
 	p := arg.(*RetrievedEntityParams)
-	sequence := p.Entity.(*entities.Sequence)
+	sequence := p.Entity.(*entities.SequenceSpec)
 	updatedSeq, templates, err := c.SequenceService.CreateOrUpdate(sequence)
 	if err != nil {
 		return updatedSeq, err

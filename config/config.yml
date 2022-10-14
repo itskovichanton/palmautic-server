@@ -27,7 +27,7 @@ server:
   grpcPort: 3001
   port: 3002
   enableCORS: true
-  ffenableThrottleMode: true
+  enableThrottleMode: true
   http:
     ssl:
       network: tcp4
