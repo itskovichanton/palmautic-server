@@ -24,9 +24,9 @@ func (c *MsgDeliveryEmailServiceImpl) SendEmail(t *entities.Task) {
 	go func() {
 		err := c.sendEmailFromTask(t)
 		if err != nil {
-			t.DeliveryStatus = entities.DeliveryStatusFailed
+			t.SendingFailed = true
 		} else {
-			t.DeliveryStatus = entities.DeliveryStatusSent
+			t.Sent = true
 		}
 	}()
 }

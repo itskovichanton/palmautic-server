@@ -29,6 +29,7 @@ type NotificationServiceImpl struct {
 func (c *NotificationServiceImpl) Init() {
 	c.notifications = Notifications{}
 
+	c.EventBus.SubscribeAsync(EmailBouncedEventTopic, c.OnTaskInMailBounced, true)
 	c.EventBus.SubscribeAsync(EmailResponseReceivedEventTopic, c.OnTaskInMailResponseReceived, true)
 	c.EventBus.SubscribeAsync(SequenceFinishedEventTopic, c.OnSequenceFinished, true)
 }
@@ -38,6 +39,14 @@ func (c *NotificationServiceImpl) OnSequenceFinished(a *SequenceFinishedEventArg
 		Subject:   "Последовательность финишировала",
 		Message:   fmt.Sprintf(`"%v" финишировала для контакта %v`, a.Sequence.Name, a.Contact.Name),
 		Alertness: "green",
+	})
+}
+
+func (c *NotificationServiceImpl) OnTaskInMailBounced(a *TaskInMailResponseReceivedEventArgs) {
+	c.Add(a.Task.AccountId, &Notification{
+		Subject:   "Bounced:",
+		Message:   a.InMail.ContentParts[0].Content,
+		Alertness: entities.TaskAlertnessRed,
 	})
 }
 

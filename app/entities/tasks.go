@@ -8,26 +8,19 @@ import (
 type Task struct {
 	BaseEntity
 
-	Name               string
-	Description        string
-	Type               string
-	Status             string
-	StartTime, DueTime time.Time
-	Sequence           *IDWithName
-	Contact            *Contact
-	Action             string
-	Body               string
-	Subject            string
-	Alertness          string
-	Invisible          bool
-	DeliveryStatus     string
+	Name                                            string
+	Description                                     string
+	Type                                            string
+	Status                                          string
+	StartTime, DueTime                              time.Time
+	Sequence                                        *IDWithName
+	Contact                                         *Contact
+	Action                                          string
+	Body                                            string
+	Subject                                         string
+	Alertness                                       string
+	Invisible, Opened, Sent, Bounced, SendingFailed bool
 }
-
-const (
-	DeliveryStatusSent    = "delivered"
-	DeliveryStatusBounced = "bounced"
-	DeliveryStatusFailed  = "failed"
-)
 
 type TaskCommons struct {
 	Types    map[string]*TaskType

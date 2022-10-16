@@ -49,8 +49,8 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 
 	order := &FindEmailOrder{
 		MaxCount: 1,
-		Subject:  "",
-		From:     "itskovichae@gmail.com", //contact.Email,
+		Subject:  c.getSubjectNames(sequence, contact),
+		From:     []string{"itskovichae@gmail.com", "daemon"}, //contact.Email,
 	}
 
 	for {
@@ -65,9 +65,14 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 		emailSearchResults, _ := c.JavaToolClient.FindEmail(&FindEmailParams{Access: account.InMailSettings, Order: order})
 		if emailSearchResults != nil {
 			for _, emailSearchResult := range emailSearchResults {
-				logger.Result(ld, fmt.Sprintf("Получен ответ от %v: %v", contact.Name, utils.ToJson(emailSearchResult)))
-				logger.Print(lg, ld)
-				c.EventBus.Publish(InMailReceivedEventTopic(sequence.Id, contact.Id), emailSearchResult)
+				if emailSearchResult.DetectBounce() {
+					logger.Result(ld, fmt.Sprintf("Получен БАУНС от %v: %v", contact.Name, utils.ToJson(emailSearchResult)))
+					c.EventBus.Publish(InMailBouncedEventTopic(sequence.Id, contact.Id), emailSearchResult)
+				} else {
+					logger.Result(ld, fmt.Sprintf("Получен ответ от %v: %v", contact.Name, utils.ToJson(emailSearchResult)))
+					logger.Print(lg, ld)
+					c.EventBus.Publish(InMailReceivedEventTopic(sequence.Id, contact.Id), emailSearchResult)
+				}
 				break
 			}
 		}
@@ -75,4 +80,19 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 		time.Sleep(30 * time.Second)
 	}
 
+}
+
+func (c *EmailScannerServiceImpl) getSubjectNames(sequence *entities.Sequence, contact *entities.Contact) []string {
+	var r []string
+	locked := sequence.Process.RLock()
+	process := sequence.Process.ByContact[contact.Id]
+	for _, task := range process.Tasks {
+		if task.HasTypeEmail() {
+			r = append(r, task.Subject)
+		}
+	}
+	if locked {
+		sequence.Process.RUnlock()
+	}
+	return r
 }

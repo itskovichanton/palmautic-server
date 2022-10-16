@@ -9,6 +9,7 @@ import (
 	"github.com/itskovichanton/echo-http"
 	"net/http"
 	"salespalm/server/app/entities"
+	"strings"
 )
 
 type IJavaToolClient interface {
@@ -24,13 +25,28 @@ type JavaToolClientImpl struct {
 }
 
 type FindEmailOrder struct {
-	Subject, From string
+	Subject, From []string
 	MaxCount      int
 }
 
 type FindEmailResult struct {
-	Subject, Email string
-	ContentParts   []*ContentPart
+	Subject, From string
+	ContentParts  []*ContentPart
+}
+
+func (r FindEmailResult) DetectBounce() bool {
+
+	if strings.Contains(strings.ToUpper(r.From), "DAEMON") {
+		return true
+	}
+
+	for _, p := range r.ContentParts {
+		if strings.Contains(p.Content, "не найден") || strings.Contains(p.Content, "не доставлено") {
+			return true
+		}
+	}
+
+	return false
 }
 
 type ContentPart struct {

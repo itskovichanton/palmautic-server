@@ -2,12 +2,15 @@ package http_server
 
 import (
 	"encoding/json"
+	"github.com/asaskevich/EventBus"
+	"github.com/itskovichanton/core/pkg/core/validation"
 	"github.com/itskovichanton/echo-http"
 	"github.com/itskovichanton/goava/pkg/goava/utils"
 	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
 	"io"
 	"reflect"
+	"salespalm/server/app/backend"
 	"salespalm/server/app/entities"
 	"salespalm/server/app/frontend"
 )
@@ -45,6 +48,7 @@ type PalmauticHttpController struct {
 	CreateOrUpdateFolderAction   *frontend.CreateOrUpdateFolderAction
 	SearchFolderAction           *frontend.SearchFolderAction
 	DeleteFolderAction           *frontend.DeleteFolderAction
+	EventBus                     EventBus.Bus
 }
 
 func (c *PalmauticHttpController) Init() {
@@ -68,8 +72,13 @@ func (c *PalmauticHttpController) Init() {
 	c.EchoEngine.Static("/api/fs", c.Config.CoreConfig.GetDir("assets"), func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(e echo.Context) (err error) {
 			req := e.Request()
-			//res := c.Response()
-			println("Письмо открыли: " + req.URL.RawQuery)
+			q := req.URL.Query()
+			accountId, _ := validation.CheckInt("accountId", q.Get("accountId"))
+			sequenceId, _ := validation.CheckInt("sequenceId", q.Get("sequenceId"))
+			taskId, _ := validation.CheckInt("taskId", q.Get("taskId"))
+			if accountId != 0 && sequenceId != 0 && taskId != 0 {
+				c.EventBus.Publish(backend.EmailOpenedEventTopic, entities.ID(accountId), entities.ID(sequenceId), entities.ID(taskId))
+			}
 			return nil
 		}
 	})

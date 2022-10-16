@@ -15,10 +15,12 @@ type ITaskService interface {
 	Stats(accountId entities.ID) *entities.TaskStats
 	Commons(accountId entities.ID) *entities.TaskCommons
 	Clear(accountId entities.ID)
-	Skip(task *entities.Task) (*entities.Task, error)
+	Skip(filter *entities.Task) (*entities.Task, error)
 	Execute(task *entities.Task) (*entities.Task, error)
 	RefreshTask(task *entities.Task)
-	MarkReplied(task *entities.Task) (*entities.Task, error)
+	MarkReplied(filter *entities.Task) (*entities.Task, error)
+	MarkBounced(filter *entities.Task) (*entities.Task, error)
+	MarkOpened(filter *entities.Task) (*entities.Task, error)
 }
 
 type TaskSearchResult struct {
@@ -35,6 +37,12 @@ type TaskServiceImpl struct {
 	TaskExecutorService ITaskExecutorService
 	SequenceRepo        ISequenceRepo
 	EventBus            EventBus.Bus
+}
+
+func (c *TaskServiceImpl) Init() {
+	c.EventBus.SubscribeAsync(EmailOpenedEventTopic, func(accountId, sequenceId, taskId entities.ID) {
+		c.MarkOpened(&entities.Task{BaseEntity: entities.BaseEntity{AccountId: accountId, Id: taskId}, Sequence: &entities.IDWithName{Id: sequenceId}})
+	}, true)
 }
 
 func (c *TaskServiceImpl) Commons(accountId entities.ID) *entities.TaskCommons {
@@ -92,6 +100,47 @@ func (c *TaskServiceImpl) Delete(filter *entities.Task) (*entities.Task, error) 
 	return deleted, nil
 }
 
+func (c *TaskServiceImpl) MarkBounced(task *entities.Task) (*entities.Task, error) {
+
+	if task.ReadyForSearch() {
+
+		foundTasks := c.TaskRepo.Search(task, nil).Items
+
+		if len(foundTasks) == 0 {
+			return nil, errs.NewBaseErrorWithReason("Задача не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
+		}
+
+		storedTask := foundTasks[0]
+		storedTask.Bounced = true
+
+		// Оповещаем шину
+		c.EventBus.Publish(TaskUpdatedEventTopic(storedTask.Id), storedTask)
+
+		return storedTask, nil
+	}
+
+	return nil, errs.NewBaseErrorWithReason("Невозможно найти задачу по переданным параметрам", frmclient.ReasonServerRespondedWithErrorNotFound)
+}
+
+func (c *TaskServiceImpl) MarkOpened(task *entities.Task) (*entities.Task, error) {
+
+	if task.ReadyForSearch() {
+
+		foundTasks := c.TaskRepo.Search(task, nil).Items
+
+		if len(foundTasks) == 0 {
+			return nil, errs.NewBaseErrorWithReason("Задача не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
+		}
+
+		storedTask := foundTasks[0]
+		storedTask.Opened = true
+
+		return storedTask, nil
+	}
+
+	return nil, errs.NewBaseErrorWithReason("Невозможно найти задачу по переданным параметрам", frmclient.ReasonServerRespondedWithErrorNotFound)
+}
+
 func (c *TaskServiceImpl) MarkReplied(task *entities.Task) (*entities.Task, error) {
 
 	if task.ReadyForSearch() {
@@ -114,11 +163,11 @@ func (c *TaskServiceImpl) MarkReplied(task *entities.Task) (*entities.Task, erro
 	return nil, errs.NewBaseErrorWithReason("Невозможно найти задачу по переданным параметрам", frmclient.ReasonServerRespondedWithErrorNotFound)
 }
 
-func (c *TaskServiceImpl) Skip(task *entities.Task) (*entities.Task, error) {
+func (c *TaskServiceImpl) Skip(filter *entities.Task) (*entities.Task, error) {
 
-	if task.ReadyForSearch() {
+	if filter.ReadyForSearch() {
 
-		foundTasks := c.TaskRepo.Search(task, nil)
+		foundTasks := c.TaskRepo.Search(filter, nil)
 
 		if len(foundTasks.Items) == 0 {
 			return nil, errs.NewBaseErrorWithReason("Задача не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)

@@ -13,9 +13,15 @@ func InMailReceivedEventTopic(sequenceId, contactId entities.ID) string {
 	return fmt.Sprintf("inmail-received:seq-%v:cont-%v", sequenceId, contactId)
 }
 
+func InMailBouncedEventTopic(sequenceId, contactId entities.ID) string {
+	return fmt.Sprintf("inmail-bounced:seq-%v:cont-%v", sequenceId, contactId)
+}
+
 func StopInMailScanEventTopic(sequenceId, contactId entities.ID) string {
 	return fmt.Sprintf("inmail-stop-scan:seq-%v:cont-%v", sequenceId, contactId)
 }
 
 const EmailResponseReceivedEventTopic = "inmail-received"
 const SequenceFinishedEventTopic = "sequence-finished"
+const EmailBouncedEventTopic = "email-bounced"
+const EmailOpenedEventTopic = "email-opened"
