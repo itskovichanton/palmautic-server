@@ -3,6 +3,7 @@ package backend
 import (
 	"github.com/jinzhu/copier"
 	"salespalm/server/app/entities"
+	"strings"
 	"time"
 )
 
@@ -10,6 +11,8 @@ type IChatRepo interface {
 	Chats(accountId entities.ID) []*entities.Chat
 	CreateOrUpdate(contact *entities.Contact, m *entities.ChatMsg) *entities.Chat
 	Folders(accountId entities.ID) []*entities.Folder
+	Search(filter *entities.ChatMsg) []*entities.ChatMsg
+	ClearChat(filter *entities.Chat)
 }
 
 type ChatRepoImpl struct {
@@ -18,6 +21,32 @@ type ChatRepoImpl struct {
 	DBService IDBService
 }
 
+func (c *ChatRepoImpl) ClearChat(filter *entities.Chat) {
+	c.DBService.DBContent().GetChats().Chats.ForAccount(filter.Contact.AccountId).Clear(filter.Id())
+}
+
+func (c *ChatRepoImpl) Search(filter *entities.ChatMsg) []*entities.ChatMsg {
+
+	filter.Body = strings.ToUpper(filter.Body)
+	var r []*entities.ChatMsg
+	chats := c.DBService.DBContent().GetChats().Chats.ForAccount(filter.AccountId)
+	if chats != nil {
+		chat := chats[filter.ChatId]
+		if chat != nil {
+			if len(filter.Body) == 0 {
+				return chat.Msgs
+			} else {
+				for _, m := range chat.Msgs {
+					if strings.Contains(strings.ToUpper(m.Body), filter.Body) {
+						r = append(r, m)
+					}
+				}
+			}
+		}
+	}
+
+	return r
+}
 func (c *ChatRepoImpl) Folders(accountId entities.ID) []*entities.Folder {
 	return []*entities.Folder{{
 		BaseEntity: entities.BaseEntity{Id: 900000},

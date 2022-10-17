@@ -15,10 +15,11 @@ func (c *Chat) Id() ID {
 type ChatMsg struct {
 	BaseEntity
 
-	Body   string
-	Time   time.Time
-	ChatId ID
-	My     bool
+	Body    string
+	Time    time.Time
+	ChatId  ID
+	My      bool
+	Contact *Contact
 }
 
 type Attachment struct {

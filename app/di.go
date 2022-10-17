@@ -25,7 +25,11 @@ func (c *DI) InitDI() {
 	c.DI.InitDI(container)
 
 	container.Provide(c.NewApp)
+	container.Provide(c.NewSearchChatMsgsAction)
+	container.Provide(c.NewClearChatAction)
 	container.Provide(c.NewFolderRepo)
+	container.Provide(c.NewAccountService)
+	container.Provide(c.NewSendChatMsgAction)
 	container.Provide(c.NewCreateOrUpdateFolderAction)
 	container.Provide(c.NewDeleteFolderAction)
 	container.Provide(c.NewSearchFolderAction)
@@ -90,15 +94,23 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewChatRepo)
 }
 
-func (c *DI) NewChatService(EventBus EventBus.Bus, EmailScannerService backend.IEmailScannerService, chatRepo backend.IChatRepo, ContactService backend.IContactService) backend.IChatService {
+func (c *DI) NewChatService(userService backend.IAccountService, EmailService core.IEmailService, EventBus EventBus.Bus, EmailScannerService backend.IEmailScannerService, chatRepo backend.IChatRepo, ContactService backend.IContactService) backend.IChatService {
 	r := &backend.ChatServiceImpl{
-		EventBus:            EventBus,
-		EmailScannerService: EmailScannerService,
 		ChatRepo:            chatRepo,
 		ContactService:      ContactService,
+		AccountService:      userService,
+		EventBus:            EventBus,
+		EmailScannerService: EmailScannerService,
+		EmailService:        EmailService,
 	}
 	r.Init()
 	return r
+}
+
+func (c *DI) NewAccountService(userService backend.IUserService) backend.IAccountService {
+	return &backend.AccountServiceImpl{
+		UserService: userService,
+	}
 }
 
 func (c *DI) NewEmailScannerService(JavaToolClient backend.IJavaToolClient, EventBus EventBus.Bus, AccountService backend.IUserService, LoggerService logger.ILoggerService) backend.IEmailScannerService {
@@ -248,9 +260,12 @@ func (c *DI) NewTemplateCompilerService() backend.ITemplateCompilerService {
 	return r
 }
 
-func (c *DI) NewHttpController(CreateOrUpdateFolderAction *frontend.CreateOrUpdateFolderAction, SearchFolderAction *frontend.SearchFolderAction, DeleteFolderAction *frontend.DeleteFolderAction, DeleteSequenceAction *frontend.DeleteSequenceAction, StartSequenceAction *frontend.StartSequenceAction, StopSequenceAction *frontend.StopSequenceAction, NotifyMessageOpenedAction *frontend.NotifyMessageOpenedAction, GetNotificationsAction *frontend.GetNotificationsAction, SearchSequenceAction *frontend.SearchSequenceAction, MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactsToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
+func (c *DI) NewHttpController(ClearChatAction *frontend.ClearChatAction, SearchChatMsgsAction *frontend.SearchChatMsgsAction, SendChatMsgAction *frontend.SendChatMsgAction, CreateOrUpdateFolderAction *frontend.CreateOrUpdateFolderAction, SearchFolderAction *frontend.SearchFolderAction, DeleteFolderAction *frontend.DeleteFolderAction, DeleteSequenceAction *frontend.DeleteSequenceAction, StartSequenceAction *frontend.StartSequenceAction, StopSequenceAction *frontend.StopSequenceAction, NotifyMessageOpenedAction *frontend.NotifyMessageOpenedAction, GetNotificationsAction *frontend.GetNotificationsAction, SearchSequenceAction *frontend.SearchSequenceAction, MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactsToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
 	r := &http_server.PalmauticHttpController{
 		HttpControllerImpl:           *httpController,
+		ClearChatAction:              ClearChatAction,
+		SendChatMsgAction:            SendChatMsgAction,
+		SearchChatMsgsAction:         SearchChatMsgsAction,
 		CreateOrUpdateFolderAction:   CreateOrUpdateFolderAction,
 		DeleteFolderAction:           DeleteFolderAction,
 		SearchFolderAction:           SearchFolderAction,
@@ -283,6 +298,24 @@ func (c *DI) NewHttpController(CreateOrUpdateFolderAction *frontend.CreateOrUpda
 	}
 	r.Init()
 	return r
+}
+
+func (c *DI) NewClearChatAction(ChatService backend.IChatService) *frontend.ClearChatAction {
+	return &frontend.ClearChatAction{
+		ChatService: ChatService,
+	}
+}
+
+func (c *DI) NewSearchChatMsgsAction(ChatService backend.IChatService) *frontend.SearchChatMsgsAction {
+	return &frontend.SearchChatMsgsAction{
+		ChatService: ChatService,
+	}
+}
+
+func (c *DI) NewSendChatMsgAction(ChatService backend.IChatService) *frontend.SendChatMsgAction {
+	return &frontend.SendChatMsgAction{
+		ChatService: ChatService,
+	}
 }
 
 func (c *DI) NewCreateOrUpdateFolderAction(folderService backend.IFolderService) *frontend.CreateOrUpdateFolderAction {

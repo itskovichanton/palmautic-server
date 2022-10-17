@@ -3,6 +3,7 @@ package backend
 import (
 	"fmt"
 	"github.com/asaskevich/EventBus"
+	strip "github.com/grokify/html-strip-tags-go"
 	"salespalm/server/app/entities"
 	"sync"
 )
@@ -18,7 +19,7 @@ type Notification struct {
 }
 
 const (
-	NotificationType = "chat_msg"
+	NotificationTypeChatMsg = "chat_msg"
 )
 
 type Notifications map[entities.ID][]*Notification
@@ -92,9 +93,10 @@ func (c *NotificationServiceImpl) Add(accountId entities.ID, a *Notification) {
 }
 
 func (c *NotificationServiceImpl) OnNewChatMsg(chat *entities.Chat) {
-	c.Add(chat.Id(), &Notification{
+	c.Add(chat.Contact.AccountId, &Notification{
+		Type:      NotificationTypeChatMsg,
 		Subject:   fmt.Sprintf("Сообщение от %v", chat.Contact.Name),
-		Message:   chat.Msgs[0].Body,
+		Message:   strip.StripTags(chat.Msgs[0].Body),
 		Alertness: "blue",
 		Object:    chat,
 	})

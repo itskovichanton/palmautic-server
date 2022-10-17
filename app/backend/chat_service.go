@@ -2,16 +2,18 @@ package backend
 
 import (
 	"github.com/asaskevich/EventBus"
+	"github.com/itskovichanton/core/pkg/core"
 	"github.com/jinzhu/copier"
 	"salespalm/server/app/entities"
 )
 
 type IChatService interface {
-	//Search(filter *entities.Folder) []*entities.Folder
-	//Delete(accountId entities.ID, ids []entities.ID)
-	CreateOrUpdate(contactCreds entities.BaseEntity, m *entities.ChatMsg) *entities.Chat
+	CreateOrUpdate(contact *entities.Contact, m *entities.ChatMsg) *entities.Chat
 	Chats(accountId entities.ID) []*entities.Chat
 	Commons(accountId entities.ID) *ChatCommons
+	ProcessNewMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg)
+	Search(filter *entities.ChatMsg) []*entities.ChatMsg
+	ClearChat(filter *entities.Chat)
 }
 
 type ChatCommons struct {
@@ -24,9 +26,10 @@ type ChatServiceImpl struct {
 
 	ChatRepo            IChatRepo
 	ContactService      IContactService
-	AccountService      IUserService
+	AccountService      IAccountService
 	EventBus            EventBus.Bus
 	EmailScannerService IEmailScannerService
+	EmailService        core.IEmailService
 }
 
 func (c *ChatServiceImpl) Init() {
@@ -39,10 +42,18 @@ func (c *ChatServiceImpl) Init() {
 	//}
 }
 
+func (c *ChatServiceImpl) ClearChat(filter *entities.Chat) {
+	c.ChatRepo.ClearChat(filter)
+}
+
+func (c *ChatServiceImpl) Search(filter *entities.ChatMsg) []*entities.ChatMsg {
+	return c.ChatRepo.Search(filter)
+}
+
 func (c *ChatServiceImpl) OnInMailReceived(contact *entities.Contact, inMail *FindEmailResult) {
 	c.ProcessNewMsg(contact.BaseEntity, &entities.ChatMsg{
 		BaseEntity: entities.BaseEntity{AccountId: contact.AccountId},
-		Body:       inMail.PlainContent(),
+		Body:       inMail.ContentParts[0].Content,
 		ChatId:     contact.Id,
 	})
 }
@@ -56,13 +67,31 @@ func (c *ChatServiceImpl) Commons(accountId entities.ID) *ChatCommons {
 
 func (c *ChatServiceImpl) ProcessNewMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg) {
 
-	msgChat := c.CreateOrUpdate(contactCreds, m)
+	contact := c.ContactService.FindFirst(&entities.Contact{BaseEntity: contactCreds})
+	if contact == nil {
+		return
+	}
+
+	if m.My {
+		//err := c.EmailService.Send(&core.Params{
+		//	From:                c.myContact(contactCreds.AccountId).Email,
+		//	To:                  []string{contact.Email},
+		//	Subject:             "Предложение от Palmautic",
+		//	Body:                m.Body,
+		//	AttachmentFileNames: nil,
+		//})
+		//if err != nil {
+		//	return
+		//}
+	}
+
+	msgChat := c.CreateOrUpdate(contact, m)
 	if msgChat == nil {
 		return
 	}
 
 	if m.My {
-		c.CreateOrUpdate(contactCreds, &entities.ChatMsg{
+		c.CreateOrUpdate(contact, &entities.ChatMsg{
 			BaseEntity: entities.BaseEntity{AccountId: contactCreds.AccountId},
 			Body:       "Echo: " + m.Body,
 			ChatId:     msgChat.Id(),
@@ -70,16 +99,21 @@ func (c *ChatServiceImpl) ProcessNewMsg(contactCreds entities.BaseEntity, m *ent
 	}
 }
 
-func (c *ChatServiceImpl) CreateOrUpdate(contactCreds entities.BaseEntity, m *entities.ChatMsg) *entities.Chat {
-	contact := c.ContactService.FindFirst(&entities.Contact{BaseEntity: contactCreds})
-	if contact == nil {
-		return nil
+func (c *ChatServiceImpl) CreateOrUpdate(contact *entities.Contact, m *entities.ChatMsg) *entities.Chat {
+
+	if m.My {
+		m.Contact = c.AccountService.GetAccount(contact.AccountId)
+	} else {
+		m.Contact = contact
 	}
+	m.Contact = &entities.Contact{Name: m.Contact.Name, BaseEntity: m.Contact.BaseEntity}
+
 	chat := c.ChatRepo.CreateOrUpdate(contact, m)
 	chatResult := &entities.Chat{}
 	copier.Copy(&chatResult, &chat)
 	chatResult.Msgs = []*entities.ChatMsg{m}
-	c.EventBus.Publish(NewChatMsgEventTopic, chat)
+	c.EventBus.Publish(NewChatMsgEventTopic, chatResult)
+
 	return chat
 }
 

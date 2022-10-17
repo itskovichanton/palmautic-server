@@ -49,6 +49,9 @@ type PalmauticHttpController struct {
 	SearchFolderAction           *frontend.SearchFolderAction
 	DeleteFolderAction           *frontend.DeleteFolderAction
 	EventBus                     EventBus.Bus
+	SendChatMsgAction            *frontend.SendChatMsgAction
+	SearchChatMsgsAction         *frontend.SearchChatMsgsAction
+	ClearChatAction              *frontend.ClearChatAction
 }
 
 func (c *PalmauticHttpController) Init() {
@@ -113,6 +116,11 @@ func (c *PalmauticHttpController) Init() {
 	c.EchoEngine.POST("/folders/createOrUpdate", c.GetDefaultHandler(c.prepareAction(true, c.readFolder(), c.CreateOrUpdateFolderAction)))
 	c.EchoEngine.POST("/folders/search", c.GetDefaultHandler(c.prepareAction(true, c.readFolder(), c.SearchFolderAction)))
 	c.EchoEngine.POST("/folders/delete", c.GetDefaultHandler(c.prepareAction(true, c.DeleteFolderAction)))
+
+	// chats
+	c.EchoEngine.POST("/chats/sendMsg", c.GetDefaultHandler(c.prepareAction(true, c.readChatMsg(), c.SendChatMsgAction)))
+	c.EchoEngine.POST("/chats/search", c.GetDefaultHandler(c.prepareAction(true, c.readChatMsg(), c.SearchChatMsgsAction)))
+	c.EchoEngine.POST("/chats/clear", c.GetDefaultHandler(c.prepareAction(true, c.readContact(), c.ClearChatAction)))
 }
 
 func (c *PalmauticHttpController) prepareAction(requiresAuth bool, actions ...pipeline.IAction) pipeline.IAction {
@@ -133,6 +141,10 @@ func (c *PalmauticHttpController) getGetUserActionIfSessionPresent(requiresAuth 
 
 func (c *PalmauticHttpController) readFolder() pipeline.IAction {
 	return &readEntityAction{model: &entities.Folder{}}
+}
+
+func (c *PalmauticHttpController) readChatMsg() pipeline.IAction {
+	return &readEntityAction{model: &entities.ChatMsg{}}
 }
 
 func (c *PalmauticHttpController) readContact() pipeline.IAction {

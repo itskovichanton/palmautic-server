@@ -11,6 +11,13 @@ type Sequences map[entities.ID]*entities.Sequence
 type Folders map[entities.ID]*entities.Folder
 type Chats map[entities.ID]*entities.Chat
 
+func (c Chats) Clear(chatId entities.ID) {
+	chat := c[chatId]
+	if chat != nil {
+		chat.Msgs = []*entities.ChatMsg{}
+	}
+}
+
 type DBContent struct {
 	IDGenerator       IDGenerator
 	Accounts          Accounts
