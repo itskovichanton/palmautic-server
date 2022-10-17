@@ -9,6 +9,7 @@ type Contacts map[entities.ID]*entities.Contact
 type Tasks map[entities.ID]*entities.Task
 type Sequences map[entities.ID]*entities.Sequence
 type Folders map[entities.ID]*entities.Folder
+type Chats map[entities.ID]*entities.Chat
 
 type DBContent struct {
 	IDGenerator       IDGenerator
@@ -18,6 +19,12 @@ type DBContent struct {
 	B2Bdb             *entities.B2Bdb
 	SequenceContainer *SequencesContainer
 	Folders           AccountFoldersMap
+	ChatsContainer    *ChatsContainer
+}
+
+type ChatsContainer struct {
+	Chats   AccountChatsMap
+	Folders AccountFoldersMap
 }
 
 type SequencesContainer struct {
@@ -28,6 +35,13 @@ type SequencesContainer struct {
 type TaskContainer struct {
 	Tasks   AccountTasksMap
 	Commons *entities.TaskCommons
+}
+
+func (c *DBContent) GetChats() *ChatsContainer {
+	if c.ChatsContainer == nil {
+		c.ChatsContainer = &ChatsContainer{Chats: AccountChatsMap{}}
+	}
+	return c.ChatsContainer
 }
 
 func (c *DBContent) GetFolders() AccountFoldersMap {
@@ -87,6 +101,7 @@ func (c *DBContent) createFilter(f string) entities.IFilter {
 
 type AccountContactsMap map[entities.ID]Contacts
 type AccountFoldersMap map[entities.ID]Folders
+type AccountChatsMap map[entities.ID]Chats
 
 func (c AccountFoldersMap) ForAccount(accountId entities.ID) Folders {
 	if c[accountId] == nil {
@@ -130,6 +145,13 @@ type AccountSequencesMap map[entities.ID]Sequences
 func (c AccountSequencesMap) ForAccount(accountId entities.ID) Sequences {
 	if c[accountId] == nil {
 		c[accountId] = Sequences{}
+	}
+	return c[accountId]
+}
+
+func (c AccountChatsMap) ForAccount(accountId entities.ID) Chats {
+	if c[accountId] == nil {
+		c[accountId] = Chats{}
 	}
 	return c[accountId]
 }

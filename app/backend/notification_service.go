@@ -13,8 +13,13 @@ type INotificationService interface {
 }
 
 type Notification struct {
-	Subject, Message, Alertness string
+	Subject, Message, Alertness, Type string
+	Object                            interface{}
 }
+
+const (
+	NotificationType = "chat_msg"
+)
 
 type Notifications map[entities.ID][]*Notification
 
@@ -32,6 +37,7 @@ func (c *NotificationServiceImpl) Init() {
 	c.EventBus.SubscribeAsync(EmailBouncedEventTopic, c.OnTaskInMailBounced, true)
 	c.EventBus.SubscribeAsync(EmailResponseReceivedEventTopic, c.OnTaskInMailResponseReceived, true)
 	c.EventBus.SubscribeAsync(SequenceFinishedEventTopic, c.OnSequenceFinished, true)
+	c.EventBus.SubscribeAsync(NewChatMsgEventTopic, c.OnNewChatMsg, true)
 }
 
 func (c *NotificationServiceImpl) OnSequenceFinished(a *SequenceFinishedEventArgs) {
@@ -83,4 +89,13 @@ func (c *NotificationServiceImpl) Add(accountId entities.ID, a *Notification) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.notifications[accountId] = append(c.notifications[accountId], a)
+}
+
+func (c *NotificationServiceImpl) OnNewChatMsg(chat *entities.Chat) {
+	c.Add(chat.Id(), &Notification{
+		Subject:   fmt.Sprintf("Сообщение от %v", chat.Contact.Name),
+		Message:   chat.Msgs[0].Body,
+		Alertness: "blue",
+		Object:    chat,
+	})
 }

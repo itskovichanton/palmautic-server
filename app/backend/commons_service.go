@@ -14,6 +14,7 @@ type Commons struct {
 	Templates *TemplateCommons
 	Account   *entities.User
 	Folders   []*entities.Folder
+	Chats     *ChatCommons
 }
 
 type CommonsServiceImpl struct {
@@ -24,6 +25,7 @@ type CommonsServiceImpl struct {
 	TemplateService ITemplateService
 	AccountService  IUserService
 	FolderService   IFolderService
+	ChatService     IChatService
 }
 
 func (c *CommonsServiceImpl) Commons(accountId entities.ID) *Commons {
@@ -33,5 +35,6 @@ func (c *CommonsServiceImpl) Commons(accountId entities.ID) *Commons {
 		Templates: c.TemplateService.Commons(accountId),
 		Account:   c.AccountService.Accounts()[accountId],
 		Folders:   c.FolderService.Search(&entities.Folder{BaseEntity: entities.BaseEntity{AccountId: accountId}}),
+		Chats:     c.ChatService.Commons(accountId),
 	}
 }

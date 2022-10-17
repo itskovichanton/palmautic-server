@@ -86,6 +86,19 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewSequenceRunnerService)
 	container.Provide(c.NewEventBus)
 	container.Provide(c.NewEmailScannerService)
+	container.Provide(c.NewChatService)
+	container.Provide(c.NewChatRepo)
+}
+
+func (c *DI) NewChatService(EventBus EventBus.Bus, EmailScannerService backend.IEmailScannerService, chatRepo backend.IChatRepo, ContactService backend.IContactService) backend.IChatService {
+	r := &backend.ChatServiceImpl{
+		EventBus:            EventBus,
+		EmailScannerService: EmailScannerService,
+		ChatRepo:            chatRepo,
+		ContactService:      ContactService,
+	}
+	r.Init()
+	return r
 }
 
 func (c *DI) NewEmailScannerService(JavaToolClient backend.IJavaToolClient, EventBus EventBus.Bus, AccountService backend.IUserService, LoggerService logger.ILoggerService) backend.IEmailScannerService {
@@ -185,6 +198,12 @@ func (c *DI) NewTemplateService(TemplateCompilerService backend.ITemplateCompile
 
 func (c *DI) NewIDGenerator() backend.IDGenerator {
 	return &backend.IDGeneratorImpl{}
+}
+
+func (c *DI) NewChatRepo(dbService backend.IDBService) backend.IChatRepo {
+	return &backend.ChatRepoImpl{
+		DBService: dbService,
+	}
 }
 
 func (c *DI) NewFolderRepo(dbService backend.IDBService) backend.IFolderRepo {
@@ -330,7 +349,7 @@ func (c *DI) NewAddToSequenceFromB2BAction(B2BService backend.IB2BService) *fron
 	}
 }
 
-func (c *DI) NewApp(NotificationService backend.INotificationService, EmailTaskExecutorService backend.IEmailTaskExecutorService, EmailScannerService backend.IEmailScannerService, AutoTaskProcessorService backend.IAutoTaskProcessorService, SequenceService backend.ISequenceService, TaskExecutorService backend.ITaskExecutorService, httpController *http_server.PalmauticHttpController, contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
+func (c *DI) NewApp(ChatService backend.IChatService, NotificationService backend.INotificationService, EmailTaskExecutorService backend.IEmailTaskExecutorService, EmailScannerService backend.IEmailScannerService, AutoTaskProcessorService backend.IAutoTaskProcessorService, SequenceService backend.ISequenceService, TaskExecutorService backend.ITaskExecutorService, httpController *http_server.PalmauticHttpController, contactService backend.IContactService, authService users.IAuthService, userRepo backend.IUserRepo, emailService core.IEmailService, config *core.Config, loggerService logger.ILoggerService, errorHandler core.IErrorHandler) app.IApp {
 	return &PalmauticServerApp{
 		HttpController:           httpController,
 		Config:                   config,
@@ -346,6 +365,7 @@ func (c *DI) NewApp(NotificationService backend.INotificationService, EmailTaskE
 		SequenceService:          SequenceService,
 		EmailScannerService:      EmailScannerService,
 		EmailTaskExecutorService: EmailTaskExecutorService,
+		ChatService:              ChatService,
 	}
 }
 
@@ -421,13 +441,14 @@ func (c *DI) NewSearchContactAction(contactService backend.IContactService) *fro
 	}
 }
 
-func (c *DI) NewCommonsService(FolderService backend.IFolderService, AccountService backend.IUserService, TemplateService backend.ITemplateService, taskService backend.ITaskService, sequenceService backend.ISequenceService) backend.ICommonsService {
+func (c *DI) NewCommonsService(ChatService backend.IChatService, FolderService backend.IFolderService, AccountService backend.IUserService, TemplateService backend.ITemplateService, taskService backend.ITaskService, sequenceService backend.ISequenceService) backend.ICommonsService {
 	return &backend.CommonsServiceImpl{
 		TaskService:     taskService,
 		SequenceService: sequenceService,
 		TemplateService: TemplateService,
 		AccountService:  AccountService,
 		FolderService:   FolderService,
+		ChatService:     ChatService,
 	}
 }
 

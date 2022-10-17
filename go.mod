@@ -3,8 +3,8 @@ module salespalm/server
 go 1.19
 
 require (
-	github.com/SaveTheRbtz/generic-sync-map-go v0.0.0-20220414055132-a37292614db8
 	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef
+	github.com/grokify/html-strip-tags-go v0.0.1
 	github.com/itskovichanton/core v1.0.4
 	github.com/itskovichanton/echo-http v1.0.2
 	github.com/itskovichanton/goava v1.0.6

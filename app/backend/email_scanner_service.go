@@ -32,7 +32,7 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 	logger.DisableSetChopOffFields(ld)
 	logger.Action(ld, "Подключаюсь")
 	logger.Args(ld, fmt.Sprintf("seq=%v cont=%v", sequence.Id, contact.Id))
-	account := c.AccountService.Accounts()[sequence.AccountId]
+	account := c.AccountService.Accounts()[contact.AccountId]
 	if account == nil {
 		logger.Result(ld, "Настройки почты не установлены. СТОП.")
 		logger.Print(lg, ld)
@@ -72,6 +72,7 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 					logger.Result(ld, fmt.Sprintf("Получен ответ от %v: %v", contact.Name, utils.ToJson(emailSearchResult)))
 					logger.Print(lg, ld)
 					c.EventBus.Publish(InMailReceivedEventTopic(sequence.Id, contact.Id), emailSearchResult)
+					c.EventBus.Publish(BaseInMailReceivedEventTopic, contact, emailSearchResult)
 				}
 				break
 			}

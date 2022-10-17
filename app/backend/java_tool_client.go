@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	strip "github.com/grokify/html-strip-tags-go"
 	"github.com/itskovichanton/core/pkg/core"
 	"github.com/itskovichanton/core/pkg/core/frmclient"
 	"github.com/itskovichanton/echo-http"
@@ -47,6 +48,13 @@ func (r FindEmailResult) DetectBounce() bool {
 	}
 
 	return false
+}
+
+func (r FindEmailResult) PlainContent() string {
+	if len(r.ContentParts) == 0 {
+		return ""
+	}
+	return strip.StripTags(r.ContentParts[0].Content)
 }
 
 type ContentPart struct {

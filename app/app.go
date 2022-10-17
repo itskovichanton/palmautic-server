@@ -9,7 +9,6 @@ import (
 	"salespalm/server/app/backend"
 	"salespalm/server/app/entities"
 	"salespalm/server/app/frontend/http_server"
-	"time"
 )
 
 type PalmauticServerApp struct {
@@ -31,43 +30,44 @@ type PalmauticServerApp struct {
 	EmailScannerService      backend.IEmailScannerService
 	EmailTaskExecutorService backend.IEmailTaskExecutorService
 	NotificationService      backend.INotificationService
+	ChatService              backend.IChatService
 }
 
 func (c *PalmauticServerApp) Run() error {
 	c.registerUsers()
-	//c.tests2()
+	//c.tests()
 	return c.HttpController.Start()
 }
 
 func (c *PalmauticServerApp) tests() {
 
-	c.EmailTaskExecutorService.Execute(&entities.Task{
-		BaseEntity: entities.BaseEntity{
-			Id:        2,
-			AccountId: 1001,
-		},
-		Name:        "11",
-		Description: "22",
-		Type:        entities.TaskTypeManualEmail.Creds.Name,
-		Status:      "started",
-		StartTime:   time.Time{},
-		DueTime:     time.Time{},
-		Sequence: &entities.IDWithName{
-			Name: "test",
-			Id:   1232,
-		},
-		Contact: &entities.Contact{
-			Phone:    "",
-			Name:     "",
-			Email:    "",
-			Company:  "",
-			Linkedin: "",
-		},
-		Action:    "send_email",
-		Body:      "<body>Hello, Anton!</body>",
-		Subject:   "Deliver me!",
-		Alertness: "",
-	})
+	//c.EmailTaskExecutorService.Execute(&entities.Task{
+	//	BaseEntity: entities.BaseEntity{
+	//		Id:        2,
+	//		AccountId: 1001,
+	//	},
+	//	Name:        "11",
+	//	Description: "22",
+	//	Type:        entities.TaskTypeManualEmail.Creds.Name,
+	//	Status:      "started",
+	//	StartTime:   time.Time{},
+	//	DueTime:     time.Time{},
+	//	Sequence: &entities.IDWithName{
+	//		Name: "test",
+	//		Id:   1232,
+	//	},
+	//	Contact: &entities.Contact{
+	//		Phone:    "",
+	//		Name:     "",
+	//		Email:    "",
+	//		Company:  "",
+	//		Linkedin: "",
+	//	},
+	//	Action:    "send_email",
+	//	Body:      "<body>Hello, Anton!</body>",
+	//	Subject:   "Deliver me!",
+	//	Alertness: "",
+	//})
 	//c.UserRepo.Accounts()[1001].Contact = &entities.Contact{
 	//	Phone:    "+79296315812",
 	//	Name:     "Антон Ицкович",
