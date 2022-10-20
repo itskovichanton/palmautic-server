@@ -6,7 +6,6 @@ type User struct {
 	*entities.Account
 	InMailSettings *InMailSettings
 	Subordinates   []*User
-	Contact        *Contact
 }
 
 type InMailSettings struct {

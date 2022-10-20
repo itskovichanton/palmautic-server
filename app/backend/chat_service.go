@@ -2,9 +2,12 @@ package backend
 
 import (
 	"github.com/asaskevich/EventBus"
+	strip "github.com/grokify/html-strip-tags-go"
 	"github.com/itskovichanton/core/pkg/core"
+	"github.com/itskovichanton/goava/pkg/goava/utils"
 	"github.com/jinzhu/copier"
 	"salespalm/server/app/entities"
+	"strings"
 )
 
 type IChatService interface {
@@ -108,6 +111,8 @@ func (c *ChatServiceImpl) CreateOrUpdate(contact *entities.Contact, m *entities.
 	}
 	m.Contact = &entities.Contact{Name: m.Contact.Name, BaseEntity: m.Contact.BaseEntity}
 
+	prepareMsg(m)
+
 	chat := c.ChatRepo.CreateOrUpdate(contact, m)
 	chatResult := &entities.Chat{}
 	copier.Copy(&chatResult, &chat)
@@ -119,4 +124,14 @@ func (c *ChatServiceImpl) CreateOrUpdate(contact *entities.Contact, m *entities.
 
 func (c *ChatServiceImpl) Chats(accountId entities.ID) []*entities.Chat {
 	return c.ChatRepo.Chats(accountId)
+}
+
+func prepareMsg(m *entities.ChatMsg) {
+	s := m.Body
+	s = strip.StripTags(s)
+	s = strings.ReplaceAll(s, "&nbsp;", " ")
+	s = strings.ReplaceAll(s, "�", "")
+	s = strings.TrimSpace(strings.ReplaceAll(s, "  ", ""))
+	s = utils.ChopOffString(s, 300)
+	m.PlainBodyShort = s
 }

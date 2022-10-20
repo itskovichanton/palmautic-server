@@ -27,20 +27,19 @@ func (c *ChatRepoImpl) ClearChat(filter *entities.Chat) {
 
 func (c *ChatRepoImpl) Search(filter *entities.ChatMsg) []*entities.ChatMsg {
 
-	filter.Body = strings.ToUpper(filter.Body)
+	q := strings.ToUpper(filter.Body)
+
 	var r []*entities.ChatMsg
 	chats := c.DBService.DBContent().GetChats().Chats.ForAccount(filter.AccountId)
 	if chats != nil {
-		chat := chats[filter.ChatId]
-		if chat != nil {
-			if len(filter.Body) == 0 {
-				return chat.Msgs
-			} else {
-				for _, m := range chat.Msgs {
-					if strings.Contains(strings.ToUpper(m.Body), filter.Body) {
-						r = append(r, m)
-					}
-				}
+		if filter.ChatId != 0 {
+			chat := chats[filter.ChatId]
+			if chat != nil {
+				return c.searchInChat(chat, q)
+			}
+		} else {
+			for _, chat := range chats {
+				r = append(r, c.searchInChat(chat, q)...)
 			}
 		}
 	}
@@ -101,6 +100,25 @@ func (c *ChatRepoImpl) Chats(accountId entities.ID) []*entities.Chat {
 				resChat.Msgs = []*entities.ChatMsg{resChat.Msgs[len(resChat.Msgs)-1]}
 				r = append(r, resChat)
 			}
+		}
+	}
+	return r
+}
+
+func (c *ChatRepoImpl) searchInChat(chat *entities.Chat, q string) []*entities.ChatMsg {
+	if len(q) == 0 {
+		return chat.Msgs
+	}
+	var r []*entities.ChatMsg
+	for _, m := range chat.Msgs {
+		if len(m.PlainBodyShort) == 0 {
+			prepareMsg(m)
+		}
+		if m.Contact == nil {
+			continue
+		}
+		if strings.Contains(strings.ToUpper(m.PlainBodyShort), q) || strings.Contains(strings.ToUpper(m.Contact.Name), q) {
+			r = append(r, m)
 		}
 	}
 	return r
