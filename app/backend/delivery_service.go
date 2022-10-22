@@ -15,8 +15,8 @@ type IMsgDeliveryEmailService interface {
 type MsgDeliveryEmailServiceImpl struct {
 	IMsgDeliveryEmailService
 
-	EmailService    core.IEmailService
-	AccountService  IUserService
+	EmailService    IEmailService
+	AccountService  IAccountService
 	TemplateService ITemplateService
 }
 
@@ -35,19 +35,16 @@ func (c *MsgDeliveryEmailServiceImpl) sendEmailFromTask(t *entities.Task) error 
 	args := map[string]interface{}{
 		"Contact": t.Contact,
 	}
-	return c.EmailService.SendPreprocessed(
-		&core.Params{
-			From:    "a.itskovich@molbulak.com", // c.AccountService.Accounts()[t.AccountId].Username,
-			To:      []string{"itskovichae@gmail.com" /*, "evstigneeva.design@gmail.com", "a.itskovich@molbulak.ru", "tony5oprano@yandex.ru", "nikolaydemidovez@gmail.com" /*t.Contact.Email,*/},
-			Subject: c.TemplateService.Format(t.Subject, t.AccountId, args),
-		}, func(srv *email.Email, m *email.Message) {
-			m.BodyHTML = c.prepareEmailHtml(c.TemplateService.Format(t.Body, t.AccountId, args), t)
-			m.ID = fmt.Sprintf("acc%v-task%v", t.AccountId, t.Id) // ищи по этому хедеру ответ
-			srv.Header = map[string]string{
-				"Content-Type": "text/html; charset=UTF-8",
-			}
-		},
-	)
+	return c.EmailService.Send(t.AccountId, &core.Params{
+		To:      []string{"itskovichae@gmail.com" /*, "evstigneeva.design@gmail.com", "a.itskovich@molbulak.ru", "tony5oprano@yandex.ru", "nikolaydemidovez@gmail.com" /*t.Contact.Email,*/},
+		Subject: c.TemplateService.Format(t.Subject, t.AccountId, args),
+	}, func(srv *email.Email, m *email.Message) {
+		m.BodyHTML = c.prepareEmailHtml(c.TemplateService.Format(t.Body, t.AccountId, args), t)
+		m.ID = fmt.Sprintf("acc%v-task%v", t.AccountId, t.Id) // ищи по этому хедеру ответ
+		srv.Header = map[string]string{
+			"Content-Type": "text/html; charset=UTF-8",
+		}
+	})
 }
 
 func (c *MsgDeliveryEmailServiceImpl) prepareEmailHtml(html string, task *entities.Task) string {

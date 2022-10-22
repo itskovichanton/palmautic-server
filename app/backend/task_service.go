@@ -33,7 +33,7 @@ type TaskServiceImpl struct {
 
 	TaskRepo            ITaskRepo
 	TemplateService     ITemplateService
-	AccountService      IUserService
+	AccountService      IAccountService
 	TaskExecutorService ITaskExecutorService
 	SequenceRepo        ISequenceRepo
 	EventBus            EventBus.Bus

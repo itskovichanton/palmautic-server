@@ -52,9 +52,17 @@ type PalmauticHttpController struct {
 	SendChatMsgAction            *frontend.SendChatMsgAction
 	SearchChatMsgsAction         *frontend.SearchChatMsgsAction
 	ClearChatAction              *frontend.ClearChatAction
+	RegisterAccountAction        *frontend.RegisterAccountAction
+	FindAccountAction            *frontend.FindAccountAction
+	SetAccountSettingsAction     *frontend.SetAccountSettingsAction
 }
 
 func (c *PalmauticHttpController) Init() {
+
+	// accounts
+	c.EchoEngine.GET("/accounts/register", c.GetDefaultHandler(c.prepareAction(false, c.RegisterAccountAction)))
+	c.EchoEngine.GET("/accounts/login", c.GetDefaultHandler(c.prepareAction(false, c.GetUserAction, c.FindAccountAction)))
+	c.EchoEngine.POST("/accounts/setEmailSettings", c.GetDefaultHandler(c.prepareAction(true, c.SetAccountSettingsAction)))
 
 	// sequences
 	c.EchoEngine.POST("/sequences/createOrUpdate", c.GetDefaultHandler(c.prepareAction(true, c.readSequence(), c.CreateOrUpdateSequenceAction)))
@@ -93,9 +101,6 @@ func (c *PalmauticHttpController) Init() {
 	c.EchoEngine.POST("/tasks/markReplied", c.GetDefaultHandler(c.prepareAction(true, c.readTask(), c.MarkRepliedTaskAction)))
 	c.EchoEngine.POST("/tasks/execute", c.GetDefaultHandler(c.prepareAction(true, c.readTask(), c.ExecuteTaskAction)))
 	c.EchoEngine.GET("/tasks/clear", c.GetDefaultHandler(c.prepareAction(true, c.ClearTasksAction)))
-
-	// accounts
-	c.EchoEngine.GET("/accounts/login", c.GetDefaultHandler(c.prepareAction(true, c.GetSessionAction)))
 
 	// contacts
 	c.EchoEngine.POST("/contacts/createOrUpdate", c.GetDefaultHandler(c.prepareAction(true, c.readContact(), c.CreateOrUpdateContactAction)))

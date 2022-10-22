@@ -12,7 +12,7 @@ type EmailTaskExecutorServiceImpl struct {
 	IEmailTaskExecutorService
 
 	MsgDeliveryEmailService IMsgDeliveryEmailService
-	AccountService          IUserService
+	AccountService          IAccountService
 }
 
 func (c *EmailTaskExecutorServiceImpl) Execute(t *entities.Task) *TaskExecResult {

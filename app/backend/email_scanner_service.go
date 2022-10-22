@@ -16,7 +16,7 @@ type IEmailScannerService interface {
 type EmailScannerServiceImpl struct {
 	IEmailScannerService
 
-	AccountService IUserService
+	AccountService IAccountService
 	LoggerService  logger.ILoggerService
 	EventBus       EventBus.Bus
 	JavaToolClient IJavaToolClient

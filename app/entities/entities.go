@@ -70,6 +70,11 @@ type IDWithName struct {
 	Id   ID
 }
 
+type StrIDWithName struct {
+	Name string
+	Id   string
+}
+
 type B2Bdb struct {
 	Tables []*B2BTable
 }

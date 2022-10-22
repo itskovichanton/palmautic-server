@@ -113,7 +113,10 @@ func (c *InMemoryDemoDBServiceImpl) optimize() {
 			}
 		}
 		for _, task := range c.data.TaskContainer.Tasks[accountId] {
-			task.Contact = c.data.Contacts[accountId][task.Contact.Id]
+			contacts := c.data.Contacts[accountId]
+			if contacts != nil && task.Contact != nil {
+				task.Contact = contacts[task.Contact.Id]
+			}
 		}
 	}
 }

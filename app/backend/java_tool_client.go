@@ -15,6 +15,7 @@ import (
 
 type IJavaToolClient interface {
 	FindEmail(params *FindEmailParams) ([]*FindEmailResult, error)
+	CheckAccess(access *EmailAccess) error
 }
 
 type JavaToolClientImpl struct {
@@ -23,6 +24,11 @@ type JavaToolClientImpl struct {
 	HttpClient *http.Client
 	Config     *core.Config
 	url        string
+}
+
+type EmailAccess struct {
+	Login, Password, Server string
+	Port                    int
 }
 
 type FindEmailOrder struct {
@@ -90,4 +96,25 @@ func (c *JavaToolClientImpl) FindEmail(params *FindEmailParams) ([]*FindEmailRes
 	var r []*FindEmailResult
 	_, err = frmclient.ExecuteWidthFrmAPI(resp, &r)
 	return r, err
+}
+
+func (c *JavaToolClientImpl) CheckAccess(access *EmailAccess) error {
+	b := new(bytes.Buffer)
+	err := json.NewEncoder(b).Encode(access)
+	println(string(b.Bytes()))
+	if err != nil {
+		return err
+	}
+	request, err := http.NewRequest("POST", fmt.Sprintf("%v/%v", c.url, "mail/check"), b)
+	request.Header.Set("Content-Type", echo.MIMEApplicationJSON)
+	if err != nil {
+		return err
+	}
+	resp, err := c.HttpClient.Do(request)
+	if err != nil {
+		return err
+	}
+
+	_, err = frmclient.ExecuteWidthFrmAPI(resp, nil)
+	return err
 }

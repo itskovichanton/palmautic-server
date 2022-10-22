@@ -69,9 +69,9 @@ func (c *SearchSequenceAction) Run(arg interface{}) (interface{}, error) {
 		Offset: cp.GetParamInt("offset", 0),
 		Count:  cp.GetParamInt("count", 0),
 	})
-	for index, p := range r.Items {
+	for index, item := range r.Items {
 		resP := entities.Sequence{}
-		copier.Copy(&resP, &p)
+		copier.Copy(&resP, &item)
 		resP.Process = nil
 		resP.Model = nil
 		r.Items[index] = &resP

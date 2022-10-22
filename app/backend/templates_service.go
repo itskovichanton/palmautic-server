@@ -29,7 +29,7 @@ type TemplateServiceImpl struct {
 	ITemplateService
 
 	Config                  *core.Config
-	AccountService          IUserService
+	AccountService          IAccountService
 	templates               *cache.Cache
 	TemplateCompilerService ITemplateCompilerService
 	templatesDir            string
@@ -102,15 +102,13 @@ func (c *TemplateServiceImpl) Format(template string, accountId entities.ID, arg
 }
 
 func (c *TemplateServiceImpl) calcTemplateForAccountDir(entity entities.IBaseEntity) string {
-	r := c.calcTemplatesDir(entity.GetAccountId())
-	os.MkdirAll(r, 0755)
-	return r
+	return c.calcTemplatesDir(entity.GetAccountId())
 }
 
 func (c *TemplateServiceImpl) fillTemplatesMap(accountId entities.ID, templatesMap TemplatesMap) {
 	filepath.Walk(c.calcTemplatesDir(accountId), func(path string, f fs.FileInfo, err error) error {
 
-		if f.IsDir() || strings.Contains(f.Name(), "disabled)") {
+		if f == nil || f.IsDir() || strings.Contains(f.Name(), "disabled)") {
 			return nil
 		}
 
@@ -122,7 +120,9 @@ func (c *TemplateServiceImpl) fillTemplatesMap(accountId entities.ID, templatesM
 }
 
 func (c *TemplateServiceImpl) calcTemplatesDir(accountId entities.ID) string {
-	return filepath.Join(c.templatesDir, fmt.Sprintf("%v", accountId))
+	r := filepath.Join(c.templatesDir, fmt.Sprintf("%v", accountId))
+	os.MkdirAll(r, 0755)
+	return r
 }
 
 func (c *TemplateServiceImpl) prepareArgs(accountId entities.ID, args map[string]interface{}) interface{} {

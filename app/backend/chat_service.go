@@ -3,7 +3,6 @@ package backend
 import (
 	"github.com/asaskevich/EventBus"
 	strip "github.com/grokify/html-strip-tags-go"
-	"github.com/itskovichanton/core/pkg/core"
 	"github.com/itskovichanton/goava/pkg/goava/utils"
 	"github.com/jinzhu/copier"
 	"salespalm/server/app/entities"
@@ -32,7 +31,7 @@ type ChatServiceImpl struct {
 	AccountService      IAccountService
 	EventBus            EventBus.Bus
 	EmailScannerService IEmailScannerService
-	EmailService        core.IEmailService
+	EmailService        IEmailService
 }
 
 func (c *ChatServiceImpl) Init() {
@@ -105,7 +104,7 @@ func (c *ChatServiceImpl) ProcessNewMsg(contactCreds entities.BaseEntity, m *ent
 func (c *ChatServiceImpl) CreateOrUpdate(contact *entities.Contact, m *entities.ChatMsg) *entities.Chat {
 
 	if m.My {
-		m.Contact = c.AccountService.GetAccount(contact.AccountId)
+		m.Contact = c.AccountService.AsContact(contact.AccountId)
 	} else {
 		m.Contact = contact
 	}

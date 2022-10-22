@@ -26,6 +26,10 @@ func (c *DI) InitDI() {
 
 	container.Provide(c.NewApp)
 	container.Provide(c.NewSearchChatMsgsAction)
+	container.Provide(c.NewEmailService)
+	container.Provide(c.NewAccountSettingsService)
+	container.Provide(c.NewFindAccountAction)
+	container.Provide(c.NewSetAccountSettingsAction)
 	container.Provide(c.NewClearChatAction)
 	container.Provide(c.NewFolderRepo)
 	container.Provide(c.NewAccountService)
@@ -64,6 +68,7 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewIDGenerator)
 	container.Provide(c.NewCreateOrUpdateContactAction)
 	container.Provide(c.NewContactService)
+	container.Provide(c.NewRegisterAccountAction)
 	container.Provide(c.NewTaskService)
 	container.Provide(c.NewGetCommonsAction)
 	container.Provide(c.NewCommonsService)
@@ -80,7 +85,6 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewSequenceService)
 	container.Provide(c.NewSequenceRepo)
 	container.Provide(c.NewCreateOrUpdateSequenceAction)
-	container.Provide(c.NewUserService)
 	container.Provide(c.NewTemplateService)
 	container.Provide(c.NewClearTasksAction)
 	container.Provide(c.NewManualEmailTaskExecutorService)
@@ -94,7 +98,7 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewChatRepo)
 }
 
-func (c *DI) NewChatService(userService backend.IAccountService, EmailService core.IEmailService, EventBus EventBus.Bus, EmailScannerService backend.IEmailScannerService, chatRepo backend.IChatRepo, ContactService backend.IContactService) backend.IChatService {
+func (c *DI) NewChatService(userService backend.IAccountService, EmailService backend.IEmailService, EventBus EventBus.Bus, EmailScannerService backend.IEmailScannerService, chatRepo backend.IChatRepo, ContactService backend.IContactService) backend.IChatService {
 	r := &backend.ChatServiceImpl{
 		ChatRepo:            chatRepo,
 		ContactService:      ContactService,
@@ -107,13 +111,16 @@ func (c *DI) NewChatService(userService backend.IAccountService, EmailService co
 	return r
 }
 
-func (c *DI) NewAccountService(userService backend.IUserService) backend.IAccountService {
-	return &backend.AccountServiceImpl{
-		UserService: userService,
+func (c *DI) NewAccountService(UserRepo backend.IUserRepo, AuthService users.IAuthService) backend.IAccountService {
+	r := &backend.AccountServiceImpl{
+		UserRepo:    UserRepo,
+		AuthService: AuthService,
 	}
+	r.Init()
+	return r
 }
 
-func (c *DI) NewEmailScannerService(JavaToolClient backend.IJavaToolClient, EventBus EventBus.Bus, AccountService backend.IUserService, LoggerService logger.ILoggerService) backend.IEmailScannerService {
+func (c *DI) NewEmailScannerService(JavaToolClient backend.IJavaToolClient, EventBus EventBus.Bus, AccountService backend.IAccountService, LoggerService logger.ILoggerService) backend.IEmailScannerService {
 	r := &backend.EmailScannerServiceImpl{
 		AccountService: AccountService,
 		LoggerService:  LoggerService,
@@ -170,7 +177,14 @@ func (c *DI) NewTaskExecutorService(manualEmailTaskExecutorService backend.IEmai
 	}
 }
 
-func (c *DI) NewMsgDeliveryEmailService(templateService backend.ITemplateService, emailService core.IEmailService, AccountService backend.IUserService) backend.IMsgDeliveryEmailService {
+func (c *DI) NewEmailService(emailService core.IEmailService, AccountService backend.IAccountService) backend.IEmailService {
+	return &backend.EmailServiceImpl{
+		EmailService:   emailService,
+		AccountService: AccountService,
+	}
+}
+
+func (c *DI) NewMsgDeliveryEmailService(templateService backend.ITemplateService, emailService backend.IEmailService, AccountService backend.IAccountService) backend.IMsgDeliveryEmailService {
 	return &backend.MsgDeliveryEmailServiceImpl{
 		EmailService:    emailService,
 		AccountService:  AccountService,
@@ -178,7 +192,7 @@ func (c *DI) NewMsgDeliveryEmailService(templateService backend.ITemplateService
 	}
 }
 
-func (c *DI) NewManualEmailTaskExecutorService(msgDeliveryEmailService backend.IMsgDeliveryEmailService, AccountService backend.IUserService) backend.IEmailTaskExecutorService {
+func (c *DI) NewManualEmailTaskExecutorService(msgDeliveryEmailService backend.IMsgDeliveryEmailService, AccountService backend.IAccountService) backend.IEmailTaskExecutorService {
 	return &backend.EmailTaskExecutorServiceImpl{
 		MsgDeliveryEmailService: msgDeliveryEmailService,
 		AccountService:          AccountService,
@@ -198,7 +212,7 @@ func (c *DI) NewDBService(idGenerator backend.IDGenerator, config *core.Config) 
 	return r, nil
 }
 
-func (c *DI) NewTemplateService(TemplateCompilerService backend.ITemplateCompilerService, accountService backend.IUserService, config *core.Config) backend.ITemplateService {
+func (c *DI) NewTemplateService(TemplateCompilerService backend.ITemplateCompilerService, accountService backend.IAccountService, config *core.Config) backend.ITemplateService {
 	r := &backend.TemplateServiceImpl{
 		TemplateCompilerService: TemplateCompilerService,
 		Config:                  config,
@@ -260,9 +274,12 @@ func (c *DI) NewTemplateCompilerService() backend.ITemplateCompilerService {
 	return r
 }
 
-func (c *DI) NewHttpController(ClearChatAction *frontend.ClearChatAction, SearchChatMsgsAction *frontend.SearchChatMsgsAction, SendChatMsgAction *frontend.SendChatMsgAction, CreateOrUpdateFolderAction *frontend.CreateOrUpdateFolderAction, SearchFolderAction *frontend.SearchFolderAction, DeleteFolderAction *frontend.DeleteFolderAction, DeleteSequenceAction *frontend.DeleteSequenceAction, StartSequenceAction *frontend.StartSequenceAction, StopSequenceAction *frontend.StopSequenceAction, NotifyMessageOpenedAction *frontend.NotifyMessageOpenedAction, GetNotificationsAction *frontend.GetNotificationsAction, SearchSequenceAction *frontend.SearchSequenceAction, MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactsToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
+func (c *DI) NewHttpController(SetAccountSettingsAction *frontend.SetAccountSettingsAction, FindAccountAction *frontend.FindAccountAction, RegisterAccountAction *frontend.RegisterAccountAction, ClearChatAction *frontend.ClearChatAction, SearchChatMsgsAction *frontend.SearchChatMsgsAction, SendChatMsgAction *frontend.SendChatMsgAction, CreateOrUpdateFolderAction *frontend.CreateOrUpdateFolderAction, SearchFolderAction *frontend.SearchFolderAction, DeleteFolderAction *frontend.DeleteFolderAction, DeleteSequenceAction *frontend.DeleteSequenceAction, StartSequenceAction *frontend.StartSequenceAction, StopSequenceAction *frontend.StopSequenceAction, NotifyMessageOpenedAction *frontend.NotifyMessageOpenedAction, GetNotificationsAction *frontend.GetNotificationsAction, SearchSequenceAction *frontend.SearchSequenceAction, MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactsToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
 	r := &http_server.PalmauticHttpController{
+		SetAccountSettingsAction:     SetAccountSettingsAction,
 		HttpControllerImpl:           *httpController,
+		FindAccountAction:            FindAccountAction,
+		RegisterAccountAction:        RegisterAccountAction,
 		ClearChatAction:              ClearChatAction,
 		SendChatMsgAction:            SendChatMsgAction,
 		SearchChatMsgsAction:         SearchChatMsgsAction,
@@ -298,6 +315,24 @@ func (c *DI) NewHttpController(ClearChatAction *frontend.ClearChatAction, Search
 	}
 	r.Init()
 	return r
+}
+
+func (c *DI) NewRegisterAccountAction(AccountService backend.IAccountService) *frontend.RegisterAccountAction {
+	return &frontend.RegisterAccountAction{
+		AccountService: AccountService,
+	}
+}
+
+func (c *DI) NewSetAccountSettingsAction(AccountSettingsService backend.IAccountSettingsService) *frontend.SetAccountSettingsAction {
+	return &frontend.SetAccountSettingsAction{
+		AccountSettingsService: AccountSettingsService,
+	}
+}
+
+func (c *DI) NewFindAccountAction(UserService backend.IAccountService) *frontend.FindAccountAction {
+	return &frontend.FindAccountAction{
+		UserService: UserService,
+	}
 }
 
 func (c *DI) NewClearChatAction(ChatService backend.IChatService) *frontend.ClearChatAction {
@@ -474,14 +509,24 @@ func (c *DI) NewSearchContactAction(contactService backend.IContactService) *fro
 	}
 }
 
-func (c *DI) NewCommonsService(ChatService backend.IChatService, FolderService backend.IFolderService, AccountService backend.IUserService, TemplateService backend.ITemplateService, taskService backend.ITaskService, sequenceService backend.ISequenceService) backend.ICommonsService {
+func (c *DI) NewAccountSettingsService(JavaToolClient backend.IJavaToolClient, UserService backend.IAccountService) backend.IAccountSettingsService {
+	r := &backend.AccountSettingsServiceImpl{
+		JavaToolClient: JavaToolClient,
+		UserService:    UserService,
+	}
+	r.Init()
+	return r
+}
+
+func (c *DI) NewCommonsService(AccountSettingsService backend.IAccountSettingsService, ChatService backend.IChatService, FolderService backend.IFolderService, AccountService backend.IAccountService, TemplateService backend.ITemplateService, taskService backend.ITaskService, sequenceService backend.ISequenceService) backend.ICommonsService {
 	return &backend.CommonsServiceImpl{
-		TaskService:     taskService,
-		SequenceService: sequenceService,
-		TemplateService: TemplateService,
-		AccountService:  AccountService,
-		FolderService:   FolderService,
-		ChatService:     ChatService,
+		TaskService:            taskService,
+		AccountSettingsService: AccountSettingsService,
+		SequenceService:        sequenceService,
+		TemplateService:        TemplateService,
+		AccountService:         AccountService,
+		FolderService:          FolderService,
+		ChatService:            ChatService,
 	}
 }
 
@@ -513,13 +558,7 @@ func (c *DI) NewClearTemplatesAction(TemplateService backend.ITemplateService) *
 	}
 }
 
-func (c *DI) NewUserService(userRepo backend.IUserRepo) backend.IUserService {
-	return &backend.UserServiceImpl{
-		UserRepo: userRepo,
-	}
-}
-
-func (c *DI) NewTaskService(EventBus EventBus.Bus, SequenceRepo backend.ISequenceRepo, TaskExecutorService backend.ITaskExecutorService, taskRepo backend.ITaskRepo, TemplateService backend.ITemplateService, UserService backend.IUserService) backend.ITaskService {
+func (c *DI) NewTaskService(EventBus EventBus.Bus, SequenceRepo backend.ISequenceRepo, TaskExecutorService backend.ITaskExecutorService, taskRepo backend.ITaskRepo, TemplateService backend.ITemplateService, UserService backend.IAccountService) backend.ITaskService {
 	return &backend.TaskServiceImpl{
 		TaskRepo:            taskRepo,
 		TemplateService:     TemplateService,
@@ -538,7 +577,7 @@ func (c *DI) NewSequenceRepo(dbService backend.IDBService) backend.ISequenceRepo
 	return r
 }
 
-func (c *DI) NewTaskRepo(idinmetor backend.IDGenerator, dbService backend.IDBService) backend.ITaskRepo {
+func (c *DI) NewTaskRepo(dbService backend.IDBService) backend.ITaskRepo {
 	return &backend.TaskRepoImpl{
 		DBService: dbService,
 	}

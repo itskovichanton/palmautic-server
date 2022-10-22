@@ -9,32 +9,35 @@ type ICommonsService interface {
 }
 
 type Commons struct {
-	Tasks     *entities.TaskCommons
-	Sequences *entities.SequenceCommons
-	Templates *TemplateCommons
-	Account   *entities.User
-	Folders   []*entities.Folder
-	Chats     *ChatCommons
+	Tasks           *entities.TaskCommons
+	Sequences       *entities.SequenceCommons
+	Templates       *TemplateCommons
+	Account         *entities.User
+	Folders         []*entities.Folder
+	Chats           *ChatCommons
+	AccountSettings *AccountSettingsCommons
 }
 
 type CommonsServiceImpl struct {
 	ICommonsService
 
-	TaskService     ITaskService
-	SequenceService ISequenceService
-	TemplateService ITemplateService
-	AccountService  IUserService
-	FolderService   IFolderService
-	ChatService     IChatService
+	TaskService            ITaskService
+	SequenceService        ISequenceService
+	TemplateService        ITemplateService
+	AccountService         IAccountService
+	AccountSettingsService IAccountSettingsService
+	FolderService          IFolderService
+	ChatService            IChatService
 }
 
 func (c *CommonsServiceImpl) Commons(accountId entities.ID) *Commons {
 	return &Commons{
-		Tasks:     c.TaskService.Commons(accountId),
-		Sequences: c.SequenceService.Commons(accountId),
-		Templates: c.TemplateService.Commons(accountId),
-		Account:   c.AccountService.Accounts()[accountId],
-		Folders:   c.FolderService.Search(&entities.Folder{BaseEntity: entities.BaseEntity{AccountId: accountId}}),
-		Chats:     c.ChatService.Commons(accountId),
+		Tasks:           c.TaskService.Commons(accountId),
+		Sequences:       c.SequenceService.Commons(accountId),
+		Templates:       c.TemplateService.Commons(accountId),
+		Account:         c.AccountService.Accounts()[accountId],
+		Folders:         c.FolderService.Search(&entities.Folder{BaseEntity: entities.BaseEntity{AccountId: accountId}}),
+		Chats:           c.ChatService.Commons(accountId),
+		AccountSettings: c.AccountSettingsService.Commons(),
 	}
 }

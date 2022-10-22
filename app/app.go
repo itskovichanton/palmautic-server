@@ -87,12 +87,12 @@ func (c *PalmauticServerApp) registerUsers() {
 	//shlomo := c.UserRepo.Accounts()[1002]
 	//anton.Subordinates = []*entities.User{shlomo}
 	//anton.InMailSettings = &entities.InMailSettings{
-	//	Server:   "mail.molbulak.com",
+	//	SmtpHost:   "mail.molbulak.com",
 	//	Login:    "a.itskovich@molbulak.com",
 	//	Password: "92y62uH9",
-	//	Port:     993,
+	//	SmtpPort:     993,
 	//}
-	for _, a := range c.UserRepo.Accounts() {
-		c.AuthService.Register(a.Account)
-	}
+	//for _, a := range c.UserRepo.Accounts() {
+	//	c.AuthService.Register(a.Account)
+	//}
 }
