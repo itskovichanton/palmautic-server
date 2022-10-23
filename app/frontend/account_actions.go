@@ -28,10 +28,21 @@ type FindAccountAction struct {
 
 func (c *FindAccountAction) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*entities2.CallParams)
-	r := c.UserService.Accounts()[entities.ID(cp.Caller.Session.Account.ID)]
+	r := c.UserService.FindById(entities.ID(cp.Caller.Session.Account.ID))
 	var err error
 	if r == nil {
 		err = errs.NewBaseErrorWithReason("Пользователь не найден", users.ReasonAuthorizationFailedUserNotExist)
 	}
 	return r, err
+}
+
+type GetTariffsAction struct {
+	pipeline.BaseActionImpl
+
+	AccountingService backend.IAccountingService
+}
+
+func (c *GetTariffsAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*entities2.CallParams)
+	return c.AccountingService.Tariffs(entities.ID(cp.Caller.Session.Account.ID)), nil
 }

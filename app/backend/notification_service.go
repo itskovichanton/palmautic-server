@@ -19,7 +19,8 @@ type Notification struct {
 }
 
 const (
-	NotificationTypeChatMsg = "chat_msg"
+	NotificationTypeChatMsg        = "chat_msg"
+	NotificationTypeAccountUpdated = "account_updated"
 )
 
 type Notifications map[entities.ID][]*Notification
@@ -39,6 +40,7 @@ func (c *NotificationServiceImpl) Init() {
 	c.EventBus.SubscribeAsync(EmailResponseReceivedEventTopic, c.OnTaskInMailResponseReceived, true)
 	c.EventBus.SubscribeAsync(SequenceFinishedEventTopic, c.OnSequenceFinished, true)
 	c.EventBus.SubscribeAsync(NewChatMsgEventTopic, c.OnNewChatMsg, true)
+	c.EventBus.SubscribeAsync(TariffUpdatedEventTopic, c.OnTariffUpdated, true)
 }
 
 func (c *NotificationServiceImpl) OnSequenceFinished(a *SequenceFinishedEventArgs) {
@@ -99,5 +101,16 @@ func (c *NotificationServiceImpl) OnNewChatMsg(chat *entities.Chat) {
 		Message:   strip.StripTags(chat.Msgs[0].Body),
 		Alertness: "blue",
 		Object:    chat,
+	})
+}
+
+func (c *NotificationServiceImpl) OnTariffUpdated(account *entities.User) {
+	a := account.Tariff.FeatureAbilities
+	c.Add(entities.ID(account.ID), &Notification{
+		Type:      NotificationTypeAccountUpdated,
+		Subject:   fmt.Sprintf("Установлен тариф %v", account.Tariff.Creds.Name),
+		Message:   fmt.Sprintf("Ваши возможности:\nМакс. количество Email в сутки: %v\nМакс. количество последовательностей: %v\nМакс. кол-во поисков Email в месяц: %v", a.MaxEmailsPerDay, a.MaxSequences, a.MaxB2BSearches),
+		Alertness: "green",
+		Object:    account,
 	})
 }

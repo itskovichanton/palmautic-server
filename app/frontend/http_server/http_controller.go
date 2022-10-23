@@ -18,12 +18,14 @@ import (
 type PalmauticHttpController struct {
 	pipeline.HttpControllerImpl
 
+	GetAccountStatsAction        *frontend.GetAccountStatsAction
 	CreateOrUpdateContactAction  *frontend.CreateOrUpdateContactAction
 	CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction
 	AddContactsToSequenceAction  *frontend.AddContactsToSequenceAction
 	SearchContactAction          *frontend.SearchContactAction
 	DeleteContactAction          *frontend.DeleteContactAction
 	ClearTemplatesAction         *frontend.ClearTemplatesAction
+	GetTariffsAction             *frontend.GetTariffsAction
 	UploadContactsAction         *frontend.UploadContactsAction
 	UploadB2BDataAction          *frontend.UploadB2BDataAction
 	GetB2BInfoAction             *frontend.GetB2BInfoAction
@@ -55,6 +57,7 @@ type PalmauticHttpController struct {
 	RegisterAccountAction        *frontend.RegisterAccountAction
 	FindAccountAction            *frontend.FindAccountAction
 	SetAccountSettingsAction     *frontend.SetAccountSettingsAction
+	WebhooksProcessorService     backend.IWebhooksProcessorService
 }
 
 func (c *PalmauticHttpController) Init() {
@@ -63,6 +66,12 @@ func (c *PalmauticHttpController) Init() {
 	c.EchoEngine.GET("/accounts/register", c.GetDefaultHandler(c.prepareAction(false, c.RegisterAccountAction)))
 	c.EchoEngine.GET("/accounts/login", c.GetDefaultHandler(c.prepareAction(false, c.GetUserAction, c.FindAccountAction)))
 	c.EchoEngine.POST("/accounts/setEmailSettings", c.GetDefaultHandler(c.prepareAction(true, c.SetAccountSettingsAction)))
+
+	// accounting
+	c.EchoEngine.GET("/accounting/tariffs", c.GetDefaultHandler(c.prepareAction(true, c.GetTariffsAction)))
+
+	// stats
+	c.EchoEngine.GET("/stats", c.GetDefaultHandler(c.prepareAction(true, c.GetAccountStatsAction)))
 
 	// sequences
 	c.EchoEngine.POST("/sequences/createOrUpdate", c.GetDefaultHandler(c.prepareAction(true, c.readSequence(), c.CreateOrUpdateSequenceAction)))
@@ -88,7 +97,7 @@ func (c *PalmauticHttpController) Init() {
 			sequenceId, _ := validation.CheckInt("sequenceId", q.Get("sequenceId"))
 			taskId, _ := validation.CheckInt("taskId", q.Get("taskId"))
 			if accountId != 0 && sequenceId != 0 && taskId != 0 {
-				c.EventBus.Publish(backend.EmailOpenedEventTopic, entities.ID(accountId), entities.ID(sequenceId), entities.ID(taskId))
+				c.WebhooksProcessorService.OnEmailOpened(entities.ID(accountId), entities.ID(sequenceId), entities.ID(taskId))
 			}
 			return nil
 		}

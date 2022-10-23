@@ -12,6 +12,7 @@ type IUserRepo interface {
 	FindByUserName(username string) *entities.User
 	BindToDirectorByUserName(user *entities.User, name string) bool
 	FindByEmail(email string) *entities.User
+	FindById(id entities.ID) *entities.User
 }
 
 type UserRepoImpl struct {
@@ -37,6 +38,15 @@ func (c *UserRepoImpl) BindToDirectorByUserName(user *entities.User, directorUse
 func (c *UserRepoImpl) FindByEmail(email string) *entities.User {
 	for _, account := range c.Accounts() {
 		if account.InMailSettings != nil && strings.EqualFold(account.InMailSettings.Login, email) {
+			return account
+		}
+	}
+	return nil
+}
+
+func (c *UserRepoImpl) FindById(id entities.ID) *entities.User {
+	for _, account := range c.Accounts() {
+		if entities.ID(account.ID) == id {
 			return account
 		}
 	}

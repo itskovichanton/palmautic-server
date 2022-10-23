@@ -25,9 +25,15 @@ func (c *DI) InitDI() {
 	c.DI.InitDI(container)
 
 	container.Provide(c.NewApp)
+	container.Provide(c.NewGetTariffsAction)
+	container.Provide(c.NewWebhooksProcessorService)
+	container.Provide(c.NewStatsService)
+	container.Provide(c.NewGetStatsAction)
 	container.Provide(c.NewSearchChatMsgsAction)
+	container.Provide(c.NewStatsRepo)
 	container.Provide(c.NewEmailService)
 	container.Provide(c.NewAccountSettingsService)
+	container.Provide(c.NewUniquesRepo)
 	container.Provide(c.NewFindAccountAction)
 	container.Provide(c.NewSetAccountSettingsAction)
 	container.Provide(c.NewClearChatAction)
@@ -96,6 +102,24 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewEmailScannerService)
 	container.Provide(c.NewChatService)
 	container.Provide(c.NewChatRepo)
+	container.Provide(c.NewAccountingService)
+	container.Provide(c.NewTariffRepo)
+}
+
+func (c *DI) NewTariffRepo() backend.ITariffRepo {
+	r := &backend.TariffRepoImpl{}
+	r.Init()
+	return r
+}
+
+func (c *DI) NewAccountingService(UserRepo backend.IUserRepo, TariffRepo backend.ITariffRepo, EventBus EventBus.Bus) backend.IAccountingService {
+	r := &backend.AccountingServiceImpl{
+		EventBus:   EventBus,
+		UserRepo:   UserRepo,
+		TariffRepo: TariffRepo,
+	}
+	r.Init()
+	return r
 }
 
 func (c *DI) NewChatService(userService backend.IAccountService, EmailService backend.IEmailService, EventBus EventBus.Bus, EmailScannerService backend.IEmailScannerService, chatRepo backend.IChatRepo, ContactService backend.IContactService) backend.IChatService {
@@ -111,10 +135,28 @@ func (c *DI) NewChatService(userService backend.IAccountService, EmailService ba
 	return r
 }
 
-func (c *DI) NewAccountService(UserRepo backend.IUserRepo, AuthService users.IAuthService) backend.IAccountService {
+func (c *DI) NewStatsRepo(dbService backend.IDBService) backend.IStatsRepo {
+	return &backend.StatsRepoImpl{
+		DBService: dbService,
+	}
+}
+
+func (c *DI) NewStatsService(AccountService backend.IAccountService, StatsRepo backend.IStatsRepo, EventBus EventBus.Bus, SequenceService backend.ISequenceService) backend.IStatsService {
+	r := &backend.StatsServiceImpl{
+		StatsRepo:       StatsRepo,
+		EventBus:        EventBus,
+		SequenceService: SequenceService,
+		AccountService:  AccountService,
+	}
+	r.Init()
+	return r
+}
+
+func (c *DI) NewAccountService(AccountingService backend.IAccountingService, UserRepo backend.IUserRepo, AuthService users.IAuthService) backend.IAccountService {
 	r := &backend.AccountServiceImpl{
-		UserRepo:    UserRepo,
-		AuthService: AuthService,
+		UserRepo:          UserRepo,
+		AuthService:       AuthService,
+		AccountingService: AccountingService,
 	}
 	r.Init()
 	return r
@@ -184,11 +226,19 @@ func (c *DI) NewEmailService(emailService core.IEmailService, AccountService bac
 	}
 }
 
-func (c *DI) NewMsgDeliveryEmailService(templateService backend.ITemplateService, emailService backend.IEmailService, AccountService backend.IAccountService) backend.IMsgDeliveryEmailService {
+func (c *DI) NewMsgDeliveryEmailService(EventBus EventBus.Bus, templateService backend.ITemplateService, emailService backend.IEmailService, AccountService backend.IAccountService) backend.IMsgDeliveryEmailService {
 	return &backend.MsgDeliveryEmailServiceImpl{
 		EmailService:    emailService,
 		AccountService:  AccountService,
 		TemplateService: templateService,
+		EventBus:        EventBus,
+	}
+}
+
+func (c *DI) NewWebhooksProcessorService(EventBus EventBus.Bus, UniquesRepo backend.IUniquesRepo) backend.IWebhooksProcessorService {
+	return &backend.WebhooksProcessorServiceImpl{
+		UniquesRepo: UniquesRepo,
+		EventBus:    EventBus,
 	}
 }
 
@@ -230,6 +280,14 @@ func (c *DI) NewChatRepo(dbService backend.IDBService) backend.IChatRepo {
 	return &backend.ChatRepoImpl{
 		DBService: dbService,
 	}
+}
+
+func (c *DI) NewUniquesRepo(dbService backend.IDBService) backend.IUniquesRepo {
+	r := &backend.UniquesRepoImpl{
+		DBService: dbService,
+	}
+	r.Init()
+	return r
 }
 
 func (c *DI) NewFolderRepo(dbService backend.IDBService) backend.IFolderRepo {
@@ -274,52 +332,68 @@ func (c *DI) NewTemplateCompilerService() backend.ITemplateCompilerService {
 	return r
 }
 
-func (c *DI) NewHttpController(SetAccountSettingsAction *frontend.SetAccountSettingsAction, FindAccountAction *frontend.FindAccountAction, RegisterAccountAction *frontend.RegisterAccountAction, ClearChatAction *frontend.ClearChatAction, SearchChatMsgsAction *frontend.SearchChatMsgsAction, SendChatMsgAction *frontend.SendChatMsgAction, CreateOrUpdateFolderAction *frontend.CreateOrUpdateFolderAction, SearchFolderAction *frontend.SearchFolderAction, DeleteFolderAction *frontend.DeleteFolderAction, DeleteSequenceAction *frontend.DeleteSequenceAction, StartSequenceAction *frontend.StartSequenceAction, StopSequenceAction *frontend.StopSequenceAction, NotifyMessageOpenedAction *frontend.NotifyMessageOpenedAction, GetNotificationsAction *frontend.GetNotificationsAction, SearchSequenceAction *frontend.SearchSequenceAction, MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactsToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
+func (c *DI) NewHttpController(GetTariffsAction *frontend.GetTariffsAction, WebhooksProcessorService backend.IWebhooksProcessorService, GetAccountStatsAction *frontend.GetAccountStatsAction, SetAccountSettingsAction *frontend.SetAccountSettingsAction, FindAccountAction *frontend.FindAccountAction, RegisterAccountAction *frontend.RegisterAccountAction, ClearChatAction *frontend.ClearChatAction, SearchChatMsgsAction *frontend.SearchChatMsgsAction, SendChatMsgAction *frontend.SendChatMsgAction, CreateOrUpdateFolderAction *frontend.CreateOrUpdateFolderAction, SearchFolderAction *frontend.SearchFolderAction, DeleteFolderAction *frontend.DeleteFolderAction, DeleteSequenceAction *frontend.DeleteSequenceAction, StartSequenceAction *frontend.StartSequenceAction, StopSequenceAction *frontend.StopSequenceAction, NotifyMessageOpenedAction *frontend.NotifyMessageOpenedAction, GetNotificationsAction *frontend.GetNotificationsAction, SearchSequenceAction *frontend.SearchSequenceAction, MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactsToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
 	r := &http_server.PalmauticHttpController{
-		SetAccountSettingsAction:     SetAccountSettingsAction,
 		HttpControllerImpl:           *httpController,
-		FindAccountAction:            FindAccountAction,
-		RegisterAccountAction:        RegisterAccountAction,
-		ClearChatAction:              ClearChatAction,
-		SendChatMsgAction:            SendChatMsgAction,
-		SearchChatMsgsAction:         SearchChatMsgsAction,
-		CreateOrUpdateFolderAction:   CreateOrUpdateFolderAction,
-		DeleteFolderAction:           DeleteFolderAction,
-		SearchFolderAction:           SearchFolderAction,
-		StopSequenceAction:           StopSequenceAction,
-		DeleteSequenceAction:         DeleteSequenceAction,
-		StartSequenceAction:          StartSequenceAction,
-		NotifyMessageOpenedAction:    NotifyMessageOpenedAction,
-		GetNotificationsAction:       GetNotificationsAction,
-		SearchSequenceAction:         SearchSequenceAction,
-		MarkRepliedTaskAction:        MarkRepliedTaskAction,
-		ClearTemplatesAction:         ClearTemplatesAction,
+		GetTariffsAction:             GetTariffsAction,
+		GetAccountStatsAction:        GetAccountStatsAction,
 		CreateOrUpdateContactAction:  createOrUpdateContactAction,
-		DeleteContactAction:          deleteContactAction,
-		SearchContactAction:          searchContactAction,
-		UploadContactsAction:         uploadContactsAction,
+		CreateOrUpdateSequenceAction: CreateOrUpdateSequenceAction,
 		AddContactsToSequenceAction:  AddContactToSequenceAction,
+		SearchContactAction:          searchContactAction,
+		DeleteContactAction:          deleteContactAction,
+		ClearTemplatesAction:         ClearTemplatesAction,
+		UploadContactsAction:         uploadContactsAction,
 		UploadB2BDataAction:          uploadB2BDataAction,
 		GetB2BInfoAction:             getB2BInfoAction,
 		ClearB2BTableAction:          clearB2BTableAction,
 		SearchB2BAction:              searchB2BAction,
 		UploadFromFileB2BDataAction:  uploadFromFileB2BDataAction,
+		GetNotificationsAction:       GetNotificationsAction,
 		AddContactFromB2BAction:      AddContactFromB2BAction,
 		GetCommonsAction:             GetCommonsAction,
 		GetTaskStatsAction:           GetTaskStatsAction,
-		ClearTasksAction:             ClearTasksAction,
 		SearchTaskAction:             SearchTaskAction,
-		CreateOrUpdateSequenceAction: CreateOrUpdateSequenceAction,
+		ClearTasksAction:             ClearTasksAction,
 		SkipTaskAction:               SkipTaskAction,
 		ExecuteTaskAction:            ExecuteTaskAction,
+		MarkRepliedTaskAction:        MarkRepliedTaskAction,
+		SearchSequenceAction:         SearchSequenceAction,
+		NotifyMessageOpenedAction:    NotifyMessageOpenedAction,
+		AddToSequenceFromB2BAction:   nil,
+		StartSequenceAction:          StartSequenceAction,
+		StopSequenceAction:           StopSequenceAction,
+		DeleteSequenceAction:         DeleteSequenceAction,
+		CreateOrUpdateFolderAction:   CreateOrUpdateFolderAction,
+		SearchFolderAction:           SearchFolderAction,
+		DeleteFolderAction:           DeleteFolderAction,
+		SendChatMsgAction:            SendChatMsgAction,
+		SearchChatMsgsAction:         SearchChatMsgsAction,
+		ClearChatAction:              ClearChatAction,
+		RegisterAccountAction:        RegisterAccountAction,
+		FindAccountAction:            FindAccountAction,
+		SetAccountSettingsAction:     SetAccountSettingsAction,
+		WebhooksProcessorService:     WebhooksProcessorService,
 	}
 	r.Init()
 	return r
 }
 
+func (c *DI) NewGetTariffsAction(AccountingService backend.IAccountingService) *frontend.GetTariffsAction {
+	return &frontend.GetTariffsAction{
+		AccountingService: AccountingService,
+	}
+}
+
 func (c *DI) NewRegisterAccountAction(AccountService backend.IAccountService) *frontend.RegisterAccountAction {
 	return &frontend.RegisterAccountAction{
 		AccountService: AccountService,
+	}
+}
+
+func (c *DI) NewGetStatsAction(StatsService backend.IStatsService) *frontend.GetAccountStatsAction {
+	return &frontend.GetAccountStatsAction{
+		StatsService: StatsService,
 	}
 }
 
@@ -518,7 +592,7 @@ func (c *DI) NewAccountSettingsService(JavaToolClient backend.IJavaToolClient, U
 	return r
 }
 
-func (c *DI) NewCommonsService(AccountSettingsService backend.IAccountSettingsService, ChatService backend.IChatService, FolderService backend.IFolderService, AccountService backend.IAccountService, TemplateService backend.ITemplateService, taskService backend.ITaskService, sequenceService backend.ISequenceService) backend.ICommonsService {
+func (c *DI) NewCommonsService(TariffRepo backend.ITariffRepo, AccountSettingsService backend.IAccountSettingsService, ChatService backend.IChatService, FolderService backend.IFolderService, AccountService backend.IAccountService, TemplateService backend.ITemplateService, taskService backend.ITaskService, sequenceService backend.ISequenceService) backend.ICommonsService {
 	return &backend.CommonsServiceImpl{
 		TaskService:            taskService,
 		AccountSettingsService: AccountSettingsService,
@@ -527,6 +601,7 @@ func (c *DI) NewCommonsService(AccountSettingsService backend.IAccountSettingsSe
 		AccountService:         AccountService,
 		FolderService:          FolderService,
 		ChatService:            ChatService,
+		TariffRepo:             TariffRepo,
 	}
 }
 

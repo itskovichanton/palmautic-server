@@ -2,6 +2,7 @@ package backend
 
 import (
 	"fmt"
+	"github.com/asaskevich/EventBus"
 	"github.com/itskovichanton/core/pkg/core"
 	"github.com/itskovichanton/core/pkg/core/email"
 	"salespalm/server/app/entities"
@@ -18,6 +19,7 @@ type MsgDeliveryEmailServiceImpl struct {
 	EmailService    IEmailService
 	AccountService  IAccountService
 	TemplateService ITemplateService
+	EventBus        EventBus.Bus
 }
 
 func (c *MsgDeliveryEmailServiceImpl) SendEmail(t *entities.Task) {
@@ -27,6 +29,7 @@ func (c *MsgDeliveryEmailServiceImpl) SendEmail(t *entities.Task) {
 			t.SendingFailed = true
 		} else {
 			t.Sent = true
+			c.EventBus.Publish(EmailSentEventTopic, t)
 		}
 	}()
 }

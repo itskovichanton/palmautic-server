@@ -88,21 +88,22 @@ func (s *Sequence) CalcProgress() float32 {
 	if s.Process == nil || s.Process.ByContact == nil || len(s.Process.ByContact) == 0 {
 		return r
 	}
-	locked := s.Process.RLock()
+	locked := s.Process.Lock()
 	for _, seqInstance := range s.Process.ByContact {
 		r += seqInstance.CalcProgress()
 	}
 	if locked {
-		s.Process.RUnlock()
+		s.Process.Unlock()
 	}
 	return r / float32(len(s.Process.ByContact))
 }
 
 func (s *Sequence) Refresh() {
-	s.EmailBouncedCount = s.CountTasksByFilter(func(t *Task) bool { return t.Bounced })
-	s.EmailSendingCount = s.CountTasksByFilter(func(t *Task) bool { return t.Sent })
-	s.EmailOpenedCount = s.CountTasksByFilter(func(t *Task) bool { return t.Opened })
+	//s.EmailBouncedCount = s.CountTasksByFilter(func(t *Task) bool { return t.Bounced })
+	//s.EmailSendingCount = s.CountTasksByFilter(func(t *Task) bool { return t.Sent })
+	//s.EmailOpenedCount = s.CountTasksByFilter(func(t *Task) bool { return t.Opened })
 	s.BounceRate = 0
+	s.OpenRate = 0
 	if s.EmailSendingCount != 0 {
 		s.BounceRate = float32(s.EmailBouncedCount) / float32(s.EmailSendingCount)
 		s.OpenRate = float32(s.EmailOpenedCount) / float32(s.EmailSendingCount)

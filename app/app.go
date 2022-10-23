@@ -35,7 +35,7 @@ type PalmauticServerApp struct {
 
 func (c *PalmauticServerApp) Run() error {
 	c.registerUsers()
-	//c.tests()
+	c.tests()
 	return c.HttpController.Start()
 }
 

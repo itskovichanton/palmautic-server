@@ -1,0 +1,94 @@
+package backend
+
+import (
+	"github.com/asaskevich/EventBus"
+	"github.com/jinzhu/copier"
+	"salespalm/server/app/entities"
+)
+
+type IStatsService interface {
+	Search(accountId entities.ID) *FullStats
+}
+
+type StatsServiceImpl struct {
+	IStatsService
+
+	StatsRepo       IStatsRepo
+	EventBus        EventBus.Bus
+	SequenceService ISequenceService
+	AccountService  IAccountService
+}
+
+func (c *StatsServiceImpl) Init() {
+	c.EventBus.SubscribeAsync(TaskUpdatedGlobalEventTopic, c.onTaskUpdated, true)
+	c.EventBus.SubscribeAsync(EmailOpenedEventTopic, c.OnEmailOpened, true)
+	c.EventBus.SubscribeAsync(EmailSentEventTopic, c.OnEmailSent, true)
+	c.EventBus.SubscribeAsync(EmailBouncedEventTopic, c.OnTaskInMailBounced, true)
+}
+
+func (c *StatsServiceImpl) OnTaskInMailBounced(a *TaskInMailResponseReceivedEventArgs) {
+	a.Sequence.EmailBouncedCount++
+}
+
+func (c *StatsServiceImpl) OnEmailSent(task *entities.Task) {
+	sequence := c.SequenceService.FindFirst(&entities.Sequence{BaseEntity: entities.BaseEntity{AccountId: task.AccountId, Id: task.Sequence.Id}})
+	if sequence != nil {
+		sequence.EmailSendingCount++
+	}
+}
+
+func (c *StatsServiceImpl) OnEmailOpened(accountId, sequenceId, taskId entities.ID) {
+	sequence := c.SequenceService.FindFirst(&entities.Sequence{BaseEntity: entities.BaseEntity{AccountId: accountId, Id: sequenceId}})
+	if sequence != nil {
+		sequence.EmailOpenedCount++
+	}
+}
+
+func (c *StatsServiceImpl) onTaskUpdated(updatedTask *entities.Task) {
+	stats := c.StatsRepo.Search(updatedTask.AccountId)
+	stats.GetSequenceStats(updatedTask.Sequence.Id).Inc(updatedTask.Status, updatedTask.Type, 1)
+}
+
+type FullStats struct {
+	ByAccount map[entities.ID]*AccountStats
+}
+
+type AccountStats struct {
+	AccountName string
+	Sequences   []*entities.Sequence
+	ByTasks     *entities.Stats
+}
+
+func (c *StatsServiceImpl) Search(accountId entities.ID) *FullStats {
+
+	r := &FullStats{ByAccount: map[entities.ID]*AccountStats{}}
+	me := c.AccountService.Accounts()[accountId]
+	accountIds := []entities.ID{accountId}
+	for _, subord := range me.Subordinates {
+		accountIds = append(accountIds, entities.ID(subord.ID))
+	}
+
+	for _, accId := range accountIds {
+		sequences := c.SequenceService.Search(&entities.Sequence{BaseEntity: entities.BaseEntity{AccountId: accId}}, nil).Items
+		c.removeInternals(sequences)
+		stats := &AccountStats{
+			AccountName: c.AccountService.Accounts()[accId].FullName,
+			ByTasks:     c.StatsRepo.Search(accId),
+			Sequences:   sequences,
+		}
+		stats.ByTasks.Sequences.CalcTotal()
+		r.ByAccount[accId] = stats
+	}
+
+	return r
+}
+
+func (c *StatsServiceImpl) removeInternals(sequences []*entities.Sequence) {
+	for index, item := range sequences {
+		resP := entities.Sequence{}
+		copier.Copy(&resP, &item)
+		resP.Process = nil
+		resP.Model = nil
+		sequences[index] = &resP
+	}
+}

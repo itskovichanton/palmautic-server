@@ -10,6 +10,8 @@ type Tasks map[entities.ID]*entities.Task
 type Sequences map[entities.ID]*entities.Sequence
 type Folders map[entities.ID]*entities.Folder
 type Chats map[entities.ID]*entities.Chat
+type Statistics map[entities.ID]*entities.Stats
+type Dic map[string]interface{}
 
 func (c Chats) Clear(chatId entities.ID) {
 	chat := c[chatId]
@@ -27,6 +29,12 @@ type DBContent struct {
 	SequenceContainer *SequencesContainer
 	Folders           AccountFoldersMap
 	ChatsContainer    *ChatsContainer
+	StatsContainer    *StatsContainer
+	Uniques           Dic
+}
+
+type StatsContainer struct {
+	Stats AccountStatsMap
 }
 
 type ChatsContainer struct {
@@ -42,6 +50,13 @@ type SequencesContainer struct {
 type TaskContainer struct {
 	Tasks   AccountTasksMap
 	Commons *entities.TaskCommons
+}
+
+func (c *DBContent) GetStats() *StatsContainer {
+	if c.StatsContainer == nil {
+		c.StatsContainer = &StatsContainer{Stats: AccountStatsMap{}}
+	}
+	return c.StatsContainer
 }
 
 func (c *DBContent) GetChats() *ChatsContainer {
@@ -83,7 +98,7 @@ func (c *DBContent) GetTaskContainer() *TaskContainer {
 				Statuses: []string{entities.TaskStatusStarted, entities.TaskStatusCompleted, entities.TaskStatusSkipped, entities.TaskStatusExpired},
 			},
 		}
-		types := []*entities.TaskType{entities.TaskTypeManualEmail, entities.TaskTypeCall, entities.TaskTypeWhatsapp, entities.TaskTypeTelegram, entities.TaskTypeLinkedin}
+		types := []*entities.TaskType{entities.TaskTypeAutoEmail, entities.TaskTypeManualEmail, entities.TaskTypeCall, entities.TaskTypeWhatsapp, entities.TaskTypeTelegram, entities.TaskTypeLinkedin}
 		c.TaskContainer.Commons.Types = map[string]*entities.TaskType{}
 		for index, t := range types {
 			t.Order = index
@@ -109,10 +124,18 @@ func (c *DBContent) createFilter(f string) entities.IFilter {
 type AccountContactsMap map[entities.ID]Contacts
 type AccountFoldersMap map[entities.ID]Folders
 type AccountChatsMap map[entities.ID]Chats
+type AccountStatsMap map[entities.ID]*entities.Stats
 
 func (c AccountFoldersMap) ForAccount(accountId entities.ID) Folders {
 	if c[accountId] == nil {
 		c[accountId] = Folders{}
+	}
+	return c[accountId]
+}
+
+func (c AccountStatsMap) ForAccount(accountId entities.ID) *entities.Stats {
+	if c[accountId] == nil {
+		c[accountId] = &entities.Stats{Sequences: entities.SequenceStats{BySequence: map[entities.ID]*entities.SequenceStatsCounter{}}}
 	}
 	return c[accountId]
 }

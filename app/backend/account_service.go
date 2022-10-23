@@ -11,14 +11,15 @@ type IAccountService interface {
 	Register(account *entities2.Account, directorUserName string) (*entities.User, error)
 	FindByEmail(email string) *entities.User
 	Accounts() Accounts
+	FindById(id entities.ID) *entities.User
 }
 
 type AccountServiceImpl struct {
 	IAccountService
 
-	UserRepo               IUserRepo
-	AuthService            users.IAuthService
-	AccountSettingsService IAccountSettingsService
+	UserRepo          IUserRepo
+	AuthService       users.IAuthService
+	AccountingService IAccountingService
 }
 
 func (c *AccountServiceImpl) Init() {
@@ -26,6 +27,14 @@ func (c *AccountServiceImpl) Init() {
 	for _, account := range c.UserRepo.Accounts() {
 		c.AuthService.Register(account.Account)
 	}
+}
+
+func (c *AccountServiceImpl) FindById(id entities.ID) *entities.User {
+	r := c.UserRepo.FindById(id)
+	if r != nil {
+		c.AccountingService.AssignTariff(id, TariffIDBasic)
+	}
+	return r
 }
 
 func (c *AccountServiceImpl) Accounts() Accounts {
@@ -45,7 +54,8 @@ func (c *AccountServiceImpl) Register(account *entities2.Account, directorUserNa
 		Account:      session.Account,
 		Subordinates: nil, // оставляем пустыми, позже можно будет указать подчиненных
 	}
-	c.UserRepo.CreateOrUpdate(newUser) // добавляем юзера в бд
+	c.UserRepo.CreateOrUpdate(newUser)                                       // добавляем юзера в бд
+	c.AccountingService.AssignTariff(entities.ID(newUser.ID), TariffIDBasic) // устанавалием новому юзеру тариф Basic
 
 	// привязываем его к директору
 	if len(directorUserName) > 0 {
@@ -62,10 +72,9 @@ func (c *AccountServiceImpl) AsContact(accountId entities.ID) *entities.Contact 
 	}
 	return &entities.Contact{
 		BaseEntity: entities.BaseEntity{Id: entities.ID(r.ID), AccountId: accountId},
-		Phone:      "+79296315812",
+		Phone:      r.Phone,
 		Name:       r.FullName,
 		Email:      r.Username,
-		Company:    "Palmautic LLC",
-		//Linkedin: "",
+		Company:    r.Company,
 	}
 }

@@ -33,7 +33,7 @@ func (c *SequenceServiceImpl) GetByIndex(accountId entities.ID, index int) *enti
 
 func (c *SequenceServiceImpl) Commons(accountId entities.ID) *entities.SequenceCommons {
 	r := c.SequenceRepo.Commons()
-	//r.Stats = c.Stats(accountId)
+	//r.Statistics = c.Statistics(accountId)
 	return r
 }
 
@@ -70,7 +70,7 @@ func (c *SequenceServiceImpl) AddContacts(sequenceCreds entities.BaseEntity, con
 
 /*
 func (c *SequenceServiceImpl) Delete(filter *entities.Sequence) (*entities.Sequence, error) {
-	SequenceContainer := c.SequenceService.Search(filter)
+	SequenceContainer := c.SequenceService.All(filter)
 	if len(SequenceContainer) == 0 {
 		return nil, errs.NewBaseErrorWithReason("Задача не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
 	}

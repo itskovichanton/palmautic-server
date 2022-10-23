@@ -88,7 +88,7 @@ func (c *TaskServiceImpl) Clear(accountId entities.ID) {
 }
 
 func (c *TaskServiceImpl) Delete(filter *entities.Task) (*entities.Task, error) {
-	//tasks := c.TaskRepo.Search(filter, nil).Items
+	//tasks := c.TaskRepo.All(filter, nil).Items
 	//if len(tasks) == 0 {
 	//	return nil, errs.NewBaseErrorWithReason("Задача не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
 	//}
@@ -115,6 +115,7 @@ func (c *TaskServiceImpl) MarkBounced(task *entities.Task) (*entities.Task, erro
 
 		// Оповещаем шину
 		c.EventBus.Publish(TaskUpdatedEventTopic(storedTask.Id), storedTask)
+		c.EventBus.Publish(TaskUpdatedGlobalEventTopic, storedTask)
 
 		return storedTask, nil
 	}
@@ -156,6 +157,7 @@ func (c *TaskServiceImpl) MarkReplied(task *entities.Task) (*entities.Task, erro
 
 		// Оповещаем шину
 		c.EventBus.Publish(TaskUpdatedEventTopic(storedTask.Id), storedTask)
+		c.EventBus.Publish(TaskUpdatedGlobalEventTopic, storedTask)
 
 		return storedTask, nil
 	}
@@ -187,6 +189,7 @@ func (c *TaskServiceImpl) Skip(filter *entities.Task) (*entities.Task, error) {
 
 		// Оповещаем шину
 		c.EventBus.Publish(TaskUpdatedEventTopic(storedTask.Id), storedTask)
+		c.EventBus.Publish(TaskUpdatedGlobalEventTopic, storedTask)
 
 		return storedTask, nil
 	}
@@ -223,6 +226,7 @@ func (c *TaskServiceImpl) Execute(task *entities.Task) (*entities.Task, error) {
 
 		// Оповещаем шину
 		c.EventBus.Publish(TaskUpdatedEventTopic(storedTask.Id), storedTask)
+		c.EventBus.Publish(TaskUpdatedGlobalEventTopic, storedTask)
 
 		return storedTask, nil
 	}
