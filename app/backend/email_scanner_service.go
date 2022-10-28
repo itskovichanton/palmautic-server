@@ -6,11 +6,13 @@ import (
 	"github.com/itskovichanton/core/pkg/core/logger"
 	"github.com/itskovichanton/goava/pkg/goava/utils"
 	"salespalm/server/app/entities"
+	"sync"
 	"time"
 )
 
 type IEmailScannerService interface {
 	Run(sequence *entities.Sequence, contact *entities.Contact)
+	RunOnContact(contact *entities.Contact)
 }
 
 type EmailScannerServiceImpl struct {
@@ -20,12 +22,31 @@ type EmailScannerServiceImpl struct {
 	LoggerService  logger.ILoggerService
 	EventBus       EventBus.Bus
 	JavaToolClient IJavaToolClient
+	running        map[entities.ID]bool
+	lock           sync.Mutex
 }
 
 func (c *EmailScannerServiceImpl) Init() {
+	c.running = map[entities.ID]bool{}
+}
+
+func (c *EmailScannerServiceImpl) IsRunning(contactId entities.ID) bool {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.running[contactId]
+}
+
+func (c *EmailScannerServiceImpl) RunOnContact(contact *entities.Contact) {
+	c.Run(&entities.Sequence{BaseEntity: entities.BaseEntity{Id: -contact.Id, AccountId: contact.AccountId},
+		Process: &entities.SequenceProcess{ByContact: map[entities.ID]*entities.SequenceInstance{}}},
+		contact)
 }
 
 func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *entities.Contact) {
+
+	if c.IsRunning(contact.Id) {
+		return
+	}
 
 	lg := c.LoggerService.GetFileLogger(fmt.Sprintf("inmail-scanner-%v", sequence.Id), "", 0)
 	ld := logger.NewLD()
@@ -41,6 +62,7 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 	stopRequested := false
 	c.EventBus.SubscribeAsync(StopInMailScanEventTopic(sequence.Id, contact.Id), func() { stopRequested = true }, true)
 	defer func() {
+		c.markRunning(contact.Id, false)
 		logger.Action(ld, "СТОП")
 		c.EventBus.UnsubscribeAll(StopInMailScanEventTopic(sequence.Id, contact.Id))
 		logger.Result(ld, "Выход")
@@ -53,6 +75,8 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 		From:     []string{"itskovichae@gmail.com", "daemon"}, //contact.Email,
 	}
 
+	c.markRunning(contact.Id, true)
+
 	for {
 
 		if stopRequested {
@@ -60,9 +84,11 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 		}
 
 		logger.Action(ld, "Ищу письма")
-		logger.Print(lg, ld)
+		//logger.Print(lg, ld)
 
-		emailSearchResults, _ := c.JavaToolClient.FindEmail(&FindEmailParams{Access: account.InMailSettings, Order: order})
+		s := account.InMailSettings
+		emailSearchResults, _ := c.JavaToolClient.FindEmail(&FindEmailParams{Access: &EmailAccess{Login: s.Login, Password: s.Password, Server: s.ImapHost, Port: s.ImapPort}, Order: order})
+
 		if emailSearchResults != nil {
 			for _, emailSearchResult := range emailSearchResults {
 				if emailSearchResult.DetectBounce() {
@@ -84,16 +110,24 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 }
 
 func (c *EmailScannerServiceImpl) getSubjectNames(sequence *entities.Sequence, contact *entities.Contact) []string {
-	var r []string
-	locked := sequence.Process.RLock()
+	r := []string{}
+	locked := sequence.Process.Lock()
 	process := sequence.Process.ByContact[contact.Id]
-	for _, task := range process.Tasks {
-		if task.HasTypeEmail() {
-			r = append(r, task.Subject)
+	if process != nil {
+		for _, task := range process.Tasks {
+			if task.HasTypeEmail() {
+				r = append(r, task.Subject)
+			}
 		}
 	}
 	if locked {
-		sequence.Process.RUnlock()
+		sequence.Process.Unlock()
 	}
 	return r
+}
+
+func (c *EmailScannerServiceImpl) markRunning(contactId entities.ID, running bool) {
+	c.lock.Lock()
+	c.running[contactId] = running
+	c.lock.Unlock()
 }

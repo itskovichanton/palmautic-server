@@ -3,11 +3,11 @@ package backend
 import (
 	"fmt"
 	"github.com/asaskevich/EventBus"
-	"salespalm/server/app/entities"
+	"net/url"
 )
 
 type IWebhooksProcessorService interface {
-	OnEmailOpened(accountId, sequenceId, taskId entities.ID)
+	OnEmailOpened(q url.Values)
 }
 
 type WebhooksProcessorServiceImpl struct {
@@ -17,14 +17,12 @@ type WebhooksProcessorServiceImpl struct {
 	EventBus    EventBus.Bus
 }
 
-func (c *WebhooksProcessorServiceImpl) OnEmailOpened(accountId, sequenceId, taskId entities.ID) {
-	key := fmt.Sprintf("event-email-opened-acc%v-seq%v-task%v", accountId, sequenceId, taskId)
+func (c *WebhooksProcessorServiceImpl) OnEmailOpened(q url.Values) {
+	key := fmt.Sprintf("event-email-opened-%v", q.Encode())
 	wasExist := c.UniquesRepo.Put(key, true)
 	eventBusTopic := EmailOpenedEventTopic
 	if wasExist {
 		eventBusTopic = EmailReopenedEventTopic
 	}
-	if wasExist {
-		c.EventBus.Publish(eventBusTopic, accountId, sequenceId, taskId)
-	}
+	c.EventBus.Publish(eventBusTopic, q)
 }

@@ -4,8 +4,10 @@ import (
 	"github.com/asaskevich/EventBus"
 	"github.com/itskovichanton/core/pkg/core"
 	"github.com/itskovichanton/core/pkg/core/app"
+	"github.com/itskovichanton/core/pkg/core/cmdservice"
 	"github.com/itskovichanton/core/pkg/core/logger"
 	"github.com/itskovichanton/server/pkg/server/di"
+	"github.com/itskovichanton/server/pkg/server/filestorage"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
 	"github.com/itskovichanton/server/pkg/server/users"
 	"go.uber.org/dig"
@@ -190,7 +192,7 @@ func (c *DI) NewSequenceRunnerService(NotificationService backend.INotificationS
 	return r
 }
 
-func (c *DI) NewJavaToolClient(httpClient *http.Client, config *core.Config) backend.IJavaToolClient {
+func (c *DI) NewJavaToolClient(CmdService cmdservice.ICmdService, httpClient *http.Client, config *core.Config) backend.IJavaToolClient {
 	r := &backend.JavaToolClientImpl{
 		HttpClient: httpClient,
 		Config:     config,
@@ -276,9 +278,10 @@ func (c *DI) NewIDGenerator() backend.IDGenerator {
 	return &backend.IDGeneratorImpl{}
 }
 
-func (c *DI) NewChatRepo(dbService backend.IDBService) backend.IChatRepo {
+func (c *DI) NewChatRepo(dbService backend.IDBService, FileStorageService filestorage.IFileStorageService) backend.IChatRepo {
 	return &backend.ChatRepoImpl{
-		DBService: dbService,
+		FileStorageService: FileStorageService,
+		DBService:          dbService,
 	}
 }
 
@@ -634,7 +637,7 @@ func (c *DI) NewClearTemplatesAction(TemplateService backend.ITemplateService) *
 }
 
 func (c *DI) NewTaskService(EventBus EventBus.Bus, SequenceRepo backend.ISequenceRepo, TaskExecutorService backend.ITaskExecutorService, taskRepo backend.ITaskRepo, TemplateService backend.ITemplateService, UserService backend.IAccountService) backend.ITaskService {
-	return &backend.TaskServiceImpl{
+	r := &backend.TaskServiceImpl{
 		TaskRepo:            taskRepo,
 		TemplateService:     TemplateService,
 		AccountService:      UserService,
@@ -642,6 +645,8 @@ func (c *DI) NewTaskService(EventBus EventBus.Bus, SequenceRepo backend.ISequenc
 		SequenceRepo:        SequenceRepo,
 		EventBus:            EventBus,
 	}
+	r.Init()
+	return r
 }
 
 func (c *DI) NewSequenceRepo(dbService backend.IDBService) backend.ISequenceRepo {

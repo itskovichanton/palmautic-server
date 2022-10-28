@@ -9,7 +9,6 @@ import (
 	"github.com/itskovichanton/core/pkg/core/frmclient"
 	"github.com/itskovichanton/echo-http"
 	"net/http"
-	"salespalm/server/app/entities"
 	"strings"
 )
 
@@ -68,7 +67,7 @@ type ContentPart struct {
 }
 
 type FindEmailParams struct {
-	Access *entities.InMailSettings
+	Access *EmailAccess
 	Order  *FindEmailOrder
 }
 

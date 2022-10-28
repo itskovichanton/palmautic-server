@@ -16,7 +16,7 @@ type CSVContactIteratorImpl struct {
 
 func NewContactCSVIterator(reader io.Reader) *CSVContactIteratorImpl {
 	r := csv.NewReader(reader)
-	r.Comma = ';'
+	r.Comma = ','
 	return &CSVContactIteratorImpl{reader: r}
 }
 
@@ -26,10 +26,11 @@ func (c *CSVContactIteratorImpl) Next() (*entities.Contact, error) {
 		return nil, nil
 	}
 	return &entities.Contact{
-		Phone:    data[2],
+		Job:      data[1],
+		Phone:    data[5],
 		Name:     data[0],
-		Email:    data[1],
-		Company:  data[3],
+		Email:    data[3],
+		Company:  data[2],
 		Linkedin: data[4],
 	}, nil
 }

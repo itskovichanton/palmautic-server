@@ -3,6 +3,7 @@ package backend
 import (
 	"github.com/asaskevich/EventBus"
 	"github.com/jinzhu/copier"
+	"net/url"
 	"salespalm/server/app/entities"
 )
 
@@ -37,10 +38,19 @@ func (c *StatsServiceImpl) OnEmailSent(task *entities.Task) {
 	}
 }
 
-func (c *StatsServiceImpl) OnEmailOpened(accountId, sequenceId, taskId entities.ID) {
-	sequence := c.SequenceService.FindFirst(&entities.Sequence{BaseEntity: entities.BaseEntity{AccountId: accountId, Id: sequenceId}})
-	if sequence != nil {
-		sequence.EmailOpenedCount++
+func (c *StatsServiceImpl) OnEmailOpened(q url.Values) {
+
+	if GetEmailOpenedEvent(q) != EmailOpenedEventFromTask {
+		return
+	}
+
+	accountId := GetEmailOpenedEventAccountId(q)
+	sequenceId := GetEmailOpenedEventSequenceId(q)
+	if sequenceId != 0 && accountId != 0 {
+		sequence := c.SequenceService.FindFirst(&entities.Sequence{BaseEntity: entities.BaseEntity{AccountId: accountId, Id: entities.ID(sequenceId)}})
+		if sequence != nil {
+			sequence.EmailOpenedCount++
+		}
 	}
 }
 

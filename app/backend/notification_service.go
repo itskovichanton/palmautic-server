@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/asaskevich/EventBus"
 	strip "github.com/grokify/html-strip-tags-go"
+	"net/url"
 	"salespalm/server/app/entities"
 	"sync"
 )
@@ -19,8 +20,10 @@ type Notification struct {
 }
 
 const (
-	NotificationTypeChatMsg        = "chat_msg"
-	NotificationTypeAccountUpdated = "account_updated"
+	NotificationTypeChatMsg             = "chat_msg"
+	NotificationTypeAccountUpdated      = "account_updated"
+	NotificationTypeFeatureUnaccessable = "feature_unaccessable"
+	NotificationTypeChtMsgUpdated       = "chat_msg_updated"
 )
 
 type Notifications map[entities.ID][]*Notification
@@ -41,6 +44,60 @@ func (c *NotificationServiceImpl) Init() {
 	c.EventBus.SubscribeAsync(SequenceFinishedEventTopic, c.OnSequenceFinished, true)
 	c.EventBus.SubscribeAsync(NewChatMsgEventTopic, c.OnNewChatMsg, true)
 	c.EventBus.SubscribeAsync(TariffUpdatedEventTopic, c.OnTariffUpdated, true)
+	c.EventBus.SubscribeAsync(FeatureUnaccessableByTariff, c.OnFeatureUnaccessableByTariffReceived, true)
+	c.EventBus.SubscribeAsync(EmailOpenedEventTopic, c.OnEmailOpened, true)
+	c.EventBus.SubscribeAsync(IncomingChatMsgEventTopic, c.OnIncomingChatMsgReceived, true)
+
+}
+
+func (c *NotificationServiceImpl) OnIncomingChatMsgReceived(msgChat *entities.Chat) {
+	c.Add(msgChat.Contact.AccountId, &Notification{
+		Subject:   fmt.Sprintf("Сообщение от %v", msgChat.Contact.Name),
+		Message:   msgChat.Msgs[0].PlainBodyShort,
+		Alertness: "blue",
+	})
+}
+
+func (c *NotificationServiceImpl) OnEmailOpened(q url.Values) {
+	accountId := GetEmailOpenedEventAccountId(q)
+	c.Add(accountId, &Notification{
+		Subject:   "Ваше сообщение открыли",
+		Type:      NotificationTypeChtMsgUpdated,
+		Message:   fmt.Sprintf("%v прочитал(а) ваше сообщение", GetEmailOpenedContactName(q)),
+		Alertness: "green",
+		Object: &entities.ChatMsg{
+			BaseEntity: entities.BaseEntity{
+				Id:        GetEmailOpenedEventChatMsgId(q),
+				AccountId: accountId,
+			},
+			ChatId: GetEmailOpenedEventChatId(q),
+			Contact: &entities.Contact{
+				BaseEntity: entities.BaseEntity{
+					Id:        GetEmailOpenedContactId(q),
+					AccountId: accountId,
+				},
+				Name: GetEmailOpenedContactName(q),
+			},
+			Opened: true,
+		},
+	})
+}
+
+func (c *NotificationServiceImpl) OnFeatureUnaccessableByTariffReceived(a *entities.User, featureName string) {
+	c.Add(entities.ID(a.ID), &Notification{
+		Type:      NotificationTypeFeatureUnaccessable,
+		Subject:   featureSubject(featureName),
+		Message:   "Обновите свой тариф, или дождитесь когда возможности вашего тарифа восстановятся",
+		Alertness: "red",
+	})
+}
+
+func featureSubject(featureName string) string {
+	switch featureName {
+	case FeatureNameEmail:
+		return "Отправка Email не доступна"
+	}
+	return "Функция не доступна"
 }
 
 func (c *NotificationServiceImpl) OnSequenceFinished(a *SequenceFinishedEventArgs) {
@@ -70,6 +127,7 @@ func (c *NotificationServiceImpl) OnTaskInMailResponseReceived(a *TaskInMailResp
 type SequenceFinishedEventArgs struct {
 	Sequence *entities.Sequence
 	Contact  *entities.Contact
+	Tasks    []*entities.Task
 }
 
 type TaskInMailResponseReceivedEventArgs struct {

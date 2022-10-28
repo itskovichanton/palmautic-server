@@ -69,7 +69,7 @@ func (c *InMemoryDemoDBServiceImpl) Load() error {
 	}
 	err = json.Unmarshal(dataBytes, &c.data)
 	c.optimize()
-	return err
+	return nil
 }
 
 func (c *InMemoryDemoDBServiceImpl) preprocess(dataBytes []byte) error {

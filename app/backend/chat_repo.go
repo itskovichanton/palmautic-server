@@ -1,7 +1,11 @@
 package backend
 
 import (
+	"encoding/base64"
+	"github.com/itskovichanton/goava/pkg/goava/utils"
+	"github.com/itskovichanton/server/pkg/server/filestorage"
 	"github.com/jinzhu/copier"
+	"github.com/spf13/cast"
 	"salespalm/server/app/entities"
 	"strings"
 	"time"
@@ -9,23 +13,30 @@ import (
 
 type IChatRepo interface {
 	Chats(accountId entities.ID) []*entities.Chat
-	CreateOrUpdate(contact *entities.Contact, m *entities.ChatMsg) *entities.Chat
+	CreateOrUpdate(contact *entities.Contact, m *entities.ChatMsg) (*entities.Chat, bool)
 	Folders(accountId entities.ID) []*entities.Folder
-	Search(filter *entities.ChatMsg) []*entities.ChatMsg
+	SearchMsgs(filter *entities.ChatMsg) []*entities.ChatMsg
 	ClearChat(filter *entities.Chat)
+	SearchFirst(filter entities.BaseEntity) *entities.Chat
 }
 
 type ChatRepoImpl struct {
 	IChatRepo
 
-	DBService IDBService
+	DBService          IDBService
+	FileStorageService filestorage.IFileStorageService
+}
+
+func (c *ChatRepoImpl) SearchFirst(filter entities.BaseEntity) *entities.Chat {
+	chats := c.DBService.DBContent().GetChats().Chats.ForAccount(filter.AccountId)
+	return chats[filter.Id]
 }
 
 func (c *ChatRepoImpl) ClearChat(filter *entities.Chat) {
 	c.DBService.DBContent().GetChats().Chats.ForAccount(filter.Contact.AccountId).Clear(filter.Id())
 }
 
-func (c *ChatRepoImpl) Search(filter *entities.ChatMsg) []*entities.ChatMsg {
+func (c *ChatRepoImpl) SearchMsgs(filter *entities.ChatMsg) []*entities.ChatMsg {
 
 	q := strings.ToUpper(filter.Body)
 
@@ -35,6 +46,13 @@ func (c *ChatRepoImpl) Search(filter *entities.ChatMsg) []*entities.ChatMsg {
 		if filter.ChatId != 0 {
 			chat := chats[filter.ChatId]
 			if chat != nil {
+				if filter.Id != 0 {
+					found := chat.FindMsgById(filter.Id)
+					if found == nil {
+						return r
+					}
+					return []*entities.ChatMsg{found}
+				}
 				return c.searchInChat(chat, q)
 			}
 		} else {
@@ -59,16 +77,21 @@ func (c *ChatRepoImpl) Folders(accountId entities.ID) []*entities.Folder {
 	}}
 }
 
-func (c *ChatRepoImpl) CreateOrUpdate(contact *entities.Contact, m *entities.ChatMsg) *entities.Chat {
+func (c *ChatRepoImpl) CreateOrUpdate(contact *entities.Contact, m *entities.ChatMsg) (*entities.Chat, bool) {
 
+	created := false
 	c.DBService.DBContent().IDGenerator.AssignId(m)
 	m.Time = time.Now()
+	m.ChatId = contact.Id
+	m.AccountId = contact.AccountId
+	c.saveAttachments(m)
 
 	chats := c.DBService.DBContent().GetChats().Chats.ForAccount(m.AccountId)
 	chatForMsg := chats[m.ChatId]
 	if chatForMsg == nil {
-		chatForMsg = &entities.Chat{Contact: contact}
+		chatForMsg = &entities.Chat{Contact: contact, Subject: m.Subject}
 		chats[chatForMsg.Id()] = chatForMsg
+		created = true
 	}
 
 	storedMsgIndex := -1
@@ -86,12 +109,12 @@ func (c *ChatRepoImpl) CreateOrUpdate(contact *entities.Contact, m *entities.Cha
 		chatForMsg.Msgs[storedMsgIndex] = m
 	}
 
-	return chatForMsg
+	return chatForMsg, created
 }
 
 func (c *ChatRepoImpl) Chats(accountId entities.ID) []*entities.Chat {
 	var r []*entities.Chat
-	chats := c.DBService.DBContent().ChatsContainer.Chats.ForAccount(accountId)
+	chats := c.DBService.DBContent().GetChats().Chats.ForAccount(accountId)
 	if chats != nil {
 		for _, chat := range chats {
 			resChat := &entities.Chat{}
@@ -122,4 +145,14 @@ func (c *ChatRepoImpl) searchInChat(chat *entities.Chat, q string) []*entities.C
 		}
 	}
 	return r
+}
+
+func (c *ChatRepoImpl) saveAttachments(m *entities.ChatMsg) {
+	for _, attachment := range m.Attachments {
+		fileContentData, _ := base64.StdEncoding.DecodeString(attachment.ContentBase64)
+		if fileContentData != nil {
+			fileName, _ := c.FileStorageService.PutFile(utils.MD5(cast.ToString(m.AccountId)), attachment.Name, fileContentData)
+			attachment.ContentBase64 = fileName
+		}
+	}
 }

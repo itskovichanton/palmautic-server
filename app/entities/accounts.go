@@ -13,6 +13,13 @@ type User struct {
 	Phone, Company string
 }
 
+func (u *User) Email() string {
+	if u.InMailSettings != nil {
+		return u.InMailSettings.Login
+	}
+	return u.Username
+}
+
 type InMailSettings struct {
 	SmtpHost, ImapHost string
 	Login              string
@@ -29,7 +36,7 @@ type Tariff struct {
 }
 
 func (t *Tariff) Expired() bool {
-	return t.DueTime.Sub(time.Now()) > 0
+	return t.DueTime.Sub(time.Now()) < 0
 }
 
 type FeatureAbilities struct {

@@ -1,19 +1,24 @@
 package backend
 
 import (
+	"fmt"
 	"github.com/asaskevich/EventBus"
 	strip "github.com/grokify/html-strip-tags-go"
+	"github.com/itskovichanton/core/pkg/core"
 	"github.com/itskovichanton/goava/pkg/goava/utils"
 	"github.com/jinzhu/copier"
+	"net/url"
 	"salespalm/server/app/entities"
 	"strings"
+	"time"
 )
 
 type IChatService interface {
-	CreateOrUpdate(contact *entities.Contact, m *entities.ChatMsg) *entities.Chat
+	CreateOrUpdate(contact *entities.Contact, m *entities.ChatMsg, info bool) *entities.Chat
 	Chats(accountId entities.ID) []*entities.Chat
 	Commons(accountId entities.ID) *ChatCommons
-	ProcessNewMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg)
+	AddInfoMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg) *entities.Chat
+	AddMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg, send bool) *entities.Chat
 	Search(filter *entities.ChatMsg) []*entities.ChatMsg
 	ClearChat(filter *entities.Chat)
 }
@@ -35,13 +40,47 @@ type ChatServiceImpl struct {
 }
 
 func (c *ChatServiceImpl) Init() {
-	//for accountId, _ := range c.AccountService.Accounts() {
-	//	seq := &entities.Sequence{BaseEntity: entities.BaseEntity{Id: -100, AccountId: accountId}}
-	//	for _, chat := range c.ChatRepo.Chats(accountId) {
-	//		c.EventBus.SubscribeAsync(BaseInMailReceivedEventTopic, c.OnInMailReceived, true)
-	//		c.EmailScannerService.Run(seq, chat.Contact)
-	//	}
-	//}
+
+	c.EventBus.SubscribeAsync(BaseInMailReceivedEventTopic, c.OnInMailReceived, true)
+	c.EventBus.SubscribeAsync(SequenceRepliedEventTopic, c.OnSequenceFinished, true)
+	c.EventBus.SubscribeAsync(EmailOpenedEventTopic, c.OnEmailOpened, true)
+
+	for accountId, _ := range c.AccountService.Accounts() {
+		for _, chat := range c.ChatRepo.Chats(accountId) {
+			c.startAnswerScan(chat.Contact)
+		}
+	}
+}
+
+func (c *ChatServiceImpl) OnEmailOpened(q url.Values) {
+
+	if GetEmailOpenedEvent(q) != EmailOpenedEventChatMsg {
+		return
+	}
+
+	accountId := GetEmailOpenedEventAccountId(q)
+	msgId := GetEmailOpenedEventChatMsgId(q)
+	chatId := GetEmailOpenedEventChatId(q)
+
+	if msgId != 0 && accountId != 0 && chatId != 0 {
+		openedMsgs := c.ChatRepo.SearchMsgs(&entities.ChatMsg{BaseEntity: entities.BaseEntity{Id: msgId, AccountId: accountId}, ChatId: chatId})
+		if len(openedMsgs) > 0 {
+			openedMsgs[0].Opened = true
+		}
+	}
+}
+
+func (c *ChatServiceImpl) OnSequenceFinished(sequence *entities.Sequence, sequenceTasks []*entities.Task, repliedTask *entities.Task) {
+
+	contactCreds := repliedTask.Contact.BaseEntity
+	c.AddInfoMsg(contactCreds, &entities.ChatMsg{Subject: repliedTask.Subject, Body: fmt.Sprintf(`Последовательность '%v' завершена для контакта %v. Теперь Вы можете переписываться с ним.`, sequence.Name, repliedTask.Contact.Name)})
+
+	for _, task := range sequenceTasks {
+		if task.Status == entities.TaskStatusCompleted || task.Status == entities.TaskStatusReplied {
+			c.AddMsg(contactCreds, &entities.ChatMsg{Subject: task.Subject, My: true, Body: task.Body, TaskType: task.Type, Opened: true}, false)
+			time.Sleep(200 * time.Millisecond)
+		}
+	}
 }
 
 func (c *ChatServiceImpl) ClearChat(filter *entities.Chat) {
@@ -49,15 +88,15 @@ func (c *ChatServiceImpl) ClearChat(filter *entities.Chat) {
 }
 
 func (c *ChatServiceImpl) Search(filter *entities.ChatMsg) []*entities.ChatMsg {
-	return c.ChatRepo.Search(filter)
+	return c.ChatRepo.SearchMsgs(filter)
 }
 
 func (c *ChatServiceImpl) OnInMailReceived(contact *entities.Contact, inMail *FindEmailResult) {
-	c.ProcessNewMsg(contact.BaseEntity, &entities.ChatMsg{
+	c.addMsg(contact.BaseEntity, &entities.ChatMsg{
 		BaseEntity: entities.BaseEntity{AccountId: contact.AccountId},
 		Body:       inMail.ContentParts[0].Content,
 		ChatId:     contact.Id,
-	})
+	}, false, false)
 }
 
 func (c *ChatServiceImpl) Commons(accountId entities.ID) *ChatCommons {
@@ -67,41 +106,58 @@ func (c *ChatServiceImpl) Commons(accountId entities.ID) *ChatCommons {
 	}
 }
 
-func (c *ChatServiceImpl) ProcessNewMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg) {
+func (c *ChatServiceImpl) AddInfoMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg) *entities.Chat {
+	return c.addMsg(contactCreds, m, true, false)
+}
+
+func (c *ChatServiceImpl) AddMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg, send bool) *entities.Chat {
+	return c.addMsg(contactCreds, m, false, send)
+}
+
+func (c *ChatServiceImpl) addMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg, info, send bool) *entities.Chat {
 
 	contact := c.ContactService.FindFirst(&entities.Contact{BaseEntity: contactCreds})
 	if contact == nil {
-		return
+		return nil
 	}
+	m.Contact = contact
 
-	if m.My {
-		//err := c.EmailService.Send(&core.Params{
-		//	From:                c.myContact(contactCreds.AccountId).Email,
-		//	To:                  []string{contact.Email},
-		//	Subject:             "Предложение от Palmautic",
-		//	Body:                m.Body,
-		//	AttachmentFileNames: nil,
-		//})
-		//if err != nil {
-		//	return
-		//}
-	}
-
-	msgChat := c.CreateOrUpdate(contact, m)
+	msgChat := c.CreateOrUpdate(contact, m, info)
 	if msgChat == nil {
-		return
+		return nil
 	}
 
-	if m.My {
-		c.CreateOrUpdate(contact, &entities.ChatMsg{
-			BaseEntity: entities.BaseEntity{AccountId: contactCreds.AccountId},
-			Body:       "Echo: " + m.Body,
-			ChatId:     msgChat.Id(),
-		})
+	if m.My && send && !info {
+		chat := c.ChatRepo.SearchFirst(entities.BaseEntity{Id: m.ChatId, AccountId: contactCreds.AccountId})
+		err := c.EmailService.Send(&SendEmailParams{
+			AccountId: contact.AccountId,
+			Event:     EmailOpenedEventChatMsg,
+			Params: core.Params{
+				From:                c.AccountService.FindById(contactCreds.AccountId).Email(),
+				To:                  []string{ /*contact.Email*/ "itskovichae@gmail.com"},
+				Subject:             chat.Subject,
+				Body:                m.Body,
+				AttachmentFileNames: nil},
+			AdditionalParams: map[string]interface{}{
+				"chatId":      int64(m.ChatId),
+				"msgId":       int64(m.Id),
+				"contactId":   int64(contact.Id),
+				"contactName": contact.Name,
+			},
+		}, nil)
+		if err != nil {
+			return nil
+		}
 	}
+
+	if !m.My {
+		c.EventBus.Publish(IncomingChatMsgEventTopic, msgChat)
+	}
+
+	return msgChat
 }
 
-func (c *ChatServiceImpl) CreateOrUpdate(contact *entities.Contact, m *entities.ChatMsg) *entities.Chat {
+func (c *ChatServiceImpl) CreateOrUpdate(contact *entities.Contact, m *entities.ChatMsg, info bool) *entities.Chat {
 
 	if m.My {
 		m.Contact = c.AccountService.AsContact(contact.AccountId)
@@ -112,17 +168,27 @@ func (c *ChatServiceImpl) CreateOrUpdate(contact *entities.Contact, m *entities.
 
 	prepareMsg(m)
 
-	chat := c.ChatRepo.CreateOrUpdate(contact, m)
+	if info {
+		m.Contact = nil
+	}
+	chat, _ := c.ChatRepo.CreateOrUpdate(contact, m)
 	chatResult := &entities.Chat{}
 	copier.Copy(&chatResult, &chat)
 	chatResult.Msgs = []*entities.ChatMsg{m}
 	c.EventBus.Publish(NewChatMsgEventTopic, chatResult)
+
+	// Стартуем сканер ответов для котакта с кем общаемся в чате - если запущен то не перезапустится
+	c.startAnswerScan(chat.Contact)
 
 	return chat
 }
 
 func (c *ChatServiceImpl) Chats(accountId entities.ID) []*entities.Chat {
 	return c.ChatRepo.Chats(accountId)
+}
+
+func (c *ChatServiceImpl) startAnswerScan(contact *entities.Contact) {
+	go c.EmailScannerService.RunOnContact(contact)
 }
 
 func prepareMsg(m *entities.ChatMsg) {

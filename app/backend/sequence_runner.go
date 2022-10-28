@@ -215,6 +215,8 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			//taskUpdateChan = nil
 		}()
 
+		var deletedTasksBeforeFinish []*entities.Task
+
 		for {
 
 			if sequence.Stopped {
@@ -231,7 +233,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			if currentTask == nil {
 				logger.Result(ld, fmt.Sprintf("Все задачи в финальном статусе. СТОП."))
 				logger.Print(lg, ld)
-				c.EventBus.Publish(SequenceFinishedEventTopic, &SequenceFinishedEventArgs{Sequence: sequence, Contact: contact})
+				c.EventBus.Publish(SequenceFinishedEventTopic, &SequenceFinishedEventArgs{Sequence: sequence, Contact: contact, Tasks: deletedTasksBeforeFinish})
 				return
 			}
 
@@ -354,7 +356,8 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			} else if currentTask.Status == entities.TaskStatusReplied {
 
 				// клиент ответил
-				c.deleteTasksInContactProcess(lg, contactProcess)
+				deletedTasksBeforeFinish = c.deleteTasksInContactProcess(lg, contactProcess)
+				c.EventBus.Publish(SequenceRepliedEventTopic, sequence, deletedTasksBeforeFinish, currentTask)
 				c.refreshTasks(lg, "Получен ответ на задачу. Статусы тасков актуализированы", contact, contactProcess.Tasks)
 
 			}
@@ -430,7 +433,8 @@ func (c *SequenceRunnerServiceImpl) refreshTasks(lg *log.Logger, action string, 
 	logger.Print(lg, ld)
 }
 
-func (c *SequenceRunnerServiceImpl) deleteTasksInContactProcess(lg *log.Logger, contactProcess *entities.SequenceInstance) {
+func (c *SequenceRunnerServiceImpl) deleteTasksInContactProcess(lg *log.Logger, contactProcess *entities.SequenceInstance) []*entities.Task {
+	deletedTasks := contactProcess.Tasks
 	for i := 0; i < len(contactProcess.Tasks); i++ {
 		//tasks[i].Status = entities.TaskStatusArchived
 		t := contactProcess.Tasks[i]
@@ -446,4 +450,5 @@ func (c *SequenceRunnerServiceImpl) deleteTasksInContactProcess(lg *log.Logger, 
 		}
 	}
 	contactProcess.Tasks = []*entities.Task{}
+	return deletedTasks
 }

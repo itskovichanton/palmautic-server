@@ -3,7 +3,6 @@ package http_server
 import (
 	"encoding/json"
 	"github.com/asaskevich/EventBus"
-	"github.com/itskovichanton/core/pkg/core/validation"
 	"github.com/itskovichanton/echo-http"
 	"github.com/itskovichanton/goava/pkg/goava/utils"
 	entities2 "github.com/itskovichanton/server/pkg/server/entities"
@@ -87,18 +86,16 @@ func (c *PalmauticHttpController) Init() {
 	// other
 	c.EchoEngine.GET("/commons", c.GetDefaultHandler(c.prepareAction(true, c.GetCommonsAction)))
 	c.EchoEngine.GET("/notifications", c.GetDefaultHandler(c.prepareAction(true, c.GetNotificationsAction)))
+	c.EchoEngine.GET("/getFile", c.GetHandlerByActionPresenter(&pipeline.ChainedActionImpl{
+		Actions: []pipeline.IAction{c.ValidateCallerAction, c.GetUserAction, c.GetFileAction},
+	}, c.FileResponsePresenter))
 
 	// static
 	c.EchoEngine.Static("/api/fs", c.Config.CoreConfig.GetDir("assets"), func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(e echo.Context) (err error) {
 			req := e.Request()
 			q := req.URL.Query()
-			accountId, _ := validation.CheckInt("accountId", q.Get("accountId"))
-			sequenceId, _ := validation.CheckInt("sequenceId", q.Get("sequenceId"))
-			taskId, _ := validation.CheckInt("taskId", q.Get("taskId"))
-			if accountId != 0 && sequenceId != 0 && taskId != 0 {
-				c.WebhooksProcessorService.OnEmailOpened(entities.ID(accountId), entities.ID(sequenceId), entities.ID(taskId))
-			}
+			c.WebhooksProcessorService.OnEmailOpened(q)
 			return nil
 		}
 	})
@@ -182,6 +179,7 @@ type readEntityAction struct {
 func (c *readEntityAction) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*entities2.CallParams)
 	bodyBytes, err := io.ReadAll(cp.Request.(echo.Context).Request().Body)
+	c.Log("passed:" + string(bodyBytes))
 	if err != nil {
 		return nil, err
 	}

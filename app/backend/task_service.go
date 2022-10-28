@@ -4,6 +4,7 @@ import (
 	"github.com/asaskevich/EventBus"
 	"github.com/itskovichanton/core/pkg/core/frmclient"
 	"github.com/itskovichanton/goava/pkg/goava/errs"
+	"net/url"
 	"salespalm/server/app/entities"
 	"time"
 )
@@ -40,9 +41,23 @@ type TaskServiceImpl struct {
 }
 
 func (c *TaskServiceImpl) Init() {
-	c.EventBus.SubscribeAsync(EmailOpenedEventTopic, func(accountId, sequenceId, taskId entities.ID) {
+	c.EventBus.SubscribeAsync(EmailOpenedEventTopic, c.onEmailOpened, true)
+}
+
+func (c *TaskServiceImpl) onEmailOpened(q url.Values) {
+
+	if GetEmailOpenedEvent(q) != EmailOpenedEventFromTask {
+		return
+	}
+
+	accountId := GetEmailOpenedEventAccountId(q)
+	taskId := GetEmailOpenedEventTaskId(q)
+	sequenceId := GetEmailOpenedEventSequenceId(q)
+
+	if accountId != 0 && taskId != 0 {
 		c.MarkOpened(&entities.Task{BaseEntity: entities.BaseEntity{AccountId: accountId, Id: taskId}, Sequence: &entities.IDWithName{Id: sequenceId}})
-	}, true)
+	}
+
 }
 
 func (c *TaskServiceImpl) Commons(accountId entities.ID) *entities.TaskCommons {

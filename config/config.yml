@@ -41,7 +41,7 @@ templates:
   optimize: true
 
 java-tools:
-  url: http://172.29.80.1:5007
+  url: http://82.146.41.108:5007
 
 profile: dev
 
