@@ -6,6 +6,7 @@ import (
 	"github.com/itskovichanton/core/pkg/core/email"
 	"github.com/itskovichanton/core/pkg/core/validation"
 	"github.com/itskovichanton/goava/pkg/goava/httputils"
+	"github.com/itskovichanton/server/pkg/server"
 	"net/url"
 	"salespalm/server/app/entities"
 	"strings"
@@ -34,6 +35,7 @@ type EmailServiceImpl struct {
 	EmailService         core.IEmailService
 	AccountService       IAccountService
 	FeatureAccessService IFeatureAccessService
+	Config               *server.Config
 }
 
 func GetEmailOpenedContactName(q url.Values) string {
@@ -81,6 +83,11 @@ func (c *EmailServiceImpl) SendCorporate(params *SendEmailParams, preprocessor f
 
 func (c *EmailServiceImpl) Send(params *SendEmailParams, preprocessor func(srv *email.Email, m *email.Message)) error {
 
+	err := c.FeatureAccessService.CheckFeatureAccessableEmail(params.AccountId)
+	if err != nil {
+		return err
+	}
+
 	var senderConfig *core.SenderConfig
 	senderAccount := c.AccountService.Accounts()[params.AccountId]
 
@@ -95,27 +102,32 @@ func (c *EmailServiceImpl) Send(params *SendEmailParams, preprocessor func(srv *
 	}
 
 	params.SenderConfig = senderConfig
-	return c.EmailService.SendPreprocessed(&params.Params, func(srv *email.Email, m *email.Message) {
+	err = c.EmailService.SendPreprocessed(&params.Params, func(srv *email.Email, m *email.Message) {
 		if preprocessor != nil {
 			preprocessor(srv, m)
 		}
 		if len(m.BodyHTML) == 0 {
 			m.BodyHTML = m.BodyText
 		}
-		m.BodyHTML = prepareEmailHtml(m.BodyHTML, params)
+		m.BodyHTML = c.prepareEmailHtml(m.BodyHTML, params)
 		m.BodyText = ""
 	})
 
+	if err == nil {
+		c.FeatureAccessService.NotifyFeatureUsedEmail(params.AccountId)
+	}
+
+	return err
 }
 
-func prepareEmailHtml(html string, sendEmailParams *SendEmailParams) string {
+func (c *EmailServiceImpl) prepareEmailHtml(html string, sendEmailParams *SendEmailParams) string {
 	if sendEmailParams.AdditionalParams == nil {
 		sendEmailParams.AdditionalParams = map[string]interface{}{}
 	}
 	if !strings.Contains(html, "<body>") {
 		html = "<body>" + html + "</body>"
 	}
-	notifyMeEmailOpenedUrl, _ := url.Parse("https://dev-platform.palmautic.ru/api/api/fs/logo.png")
+	notifyMeEmailOpenedUrl, _ := url.Parse(fmt.Sprintf("%v/api/fs/logo.png", c.Config.Server.GetUrl()))
 	sendEmailParams.AdditionalParams["accountId"] = int64(sendEmailParams.AccountId)
 	sendEmailParams.AdditionalParams["event"] = sendEmailParams.Event
 	q := url.Values{}

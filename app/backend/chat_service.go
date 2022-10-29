@@ -5,9 +5,11 @@ import (
 	"github.com/asaskevich/EventBus"
 	strip "github.com/grokify/html-strip-tags-go"
 	"github.com/itskovichanton/core/pkg/core"
+	"github.com/itskovichanton/core/pkg/core/email"
 	"github.com/itskovichanton/goava/pkg/goava/utils"
 	"github.com/jinzhu/copier"
 	"net/url"
+	"path/filepath"
 	"salespalm/server/app/entities"
 	"strings"
 	"time"
@@ -17,8 +19,8 @@ type IChatService interface {
 	CreateOrUpdate(contact *entities.Contact, m *entities.ChatMsg, info bool) *entities.Chat
 	Chats(accountId entities.ID) []*entities.Chat
 	Commons(accountId entities.ID) *ChatCommons
-	AddInfoMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg) *entities.Chat
-	AddMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg, send bool) *entities.Chat
+	AddInfoMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg) (*entities.Chat, error)
+	AddMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg, send bool) (*entities.Chat, error)
 	Search(filter *entities.ChatMsg) []*entities.ChatMsg
 	ClearChat(filter *entities.Chat)
 }
@@ -93,10 +95,25 @@ func (c *ChatServiceImpl) Search(filter *entities.ChatMsg) []*entities.ChatMsg {
 
 func (c *ChatServiceImpl) OnInMailReceived(contact *entities.Contact, inMail *FindEmailResult) {
 	c.addMsg(contact.BaseEntity, &entities.ChatMsg{
-		BaseEntity: entities.BaseEntity{AccountId: contact.AccountId},
-		Body:       inMail.ContentParts[0].Content,
-		ChatId:     contact.Id,
+		BaseEntity:     entities.BaseEntity{AccountId: contact.AccountId},
+		Body:           inMail.ContentParts[0].Content,
+		PlainBodyShort: inMail.PlainContent(),
+		ChatId:         contact.Id,
+		Attachments:    getAttachments(inMail),
 	}, false, false)
+}
+
+func getAttachments(mail *FindEmailResult) []*entities.Attachment {
+	var r []*entities.Attachment
+	for i := 1; i < len(mail.ContentParts); i++ {
+		p := mail.ContentParts[i]
+		r = append(r, &entities.Attachment{
+			Name:          p.FileName,
+			ContentBase64: p.Content,
+			MimeType:      p.ContentType,
+		})
+	}
+	return r
 }
 
 func (c *ChatServiceImpl) Commons(accountId entities.ID) *ChatCommons {
@@ -106,25 +123,32 @@ func (c *ChatServiceImpl) Commons(accountId entities.ID) *ChatCommons {
 	}
 }
 
-func (c *ChatServiceImpl) AddInfoMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg) *entities.Chat {
+func (c *ChatServiceImpl) AddInfoMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg) (*entities.Chat, error) {
 	return c.addMsg(contactCreds, m, true, false)
 }
 
-func (c *ChatServiceImpl) AddMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg, send bool) *entities.Chat {
+func (c *ChatServiceImpl) AddMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg, send bool) (*entities.Chat, error) {
 	return c.addMsg(contactCreds, m, false, send)
 }
 
-func (c *ChatServiceImpl) addMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg, info, send bool) *entities.Chat {
+func (c *ChatServiceImpl) addMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg, info, send bool) (*entities.Chat, error) {
+
+	defer func() {
+		// Убрать пути из прикреплений
+		for _, attachment := range m.Attachments {
+			attachment.ContentBase64 = filepath.Base(attachment.FileNameServer)
+		}
+	}()
 
 	contact := c.ContactService.FindFirst(&entities.Contact{BaseEntity: contactCreds})
 	if contact == nil {
-		return nil
+		return nil, nil
 	}
 	m.Contact = contact
 
 	msgChat := c.CreateOrUpdate(contact, m, info)
 	if msgChat == nil {
-		return nil
+		return nil, nil
 	}
 
 	if m.My && send && !info {
@@ -133,11 +157,12 @@ func (c *ChatServiceImpl) addMsg(contactCreds entities.BaseEntity, m *entities.C
 			AccountId: contact.AccountId,
 			Event:     EmailOpenedEventChatMsg,
 			Params: core.Params{
-				From:                c.AccountService.FindById(contactCreds.AccountId).Email(),
-				To:                  []string{ /*contact.Email*/ "itskovichae@gmail.com"},
-				Subject:             chat.Subject,
-				Body:                m.Body,
-				AttachmentFileNames: nil},
+				From:        c.AccountService.FindById(contactCreds.AccountId).Email(),
+				To:          []string{ /*contact.Email*/ "itskovichae@gmail.com"},
+				Subject:     chat.Subject,
+				Body:        m.Body,
+				Attachments: getAttachmentFiles(m.Attachments),
+			},
 			AdditionalParams: map[string]interface{}{
 				"chatId":      int64(m.ChatId),
 				"msgId":       int64(m.Id),
@@ -146,7 +171,7 @@ func (c *ChatServiceImpl) addMsg(contactCreds entities.BaseEntity, m *entities.C
 			},
 		}, nil)
 		if err != nil {
-			return nil
+			return nil, err
 		}
 	}
 
@@ -154,7 +179,19 @@ func (c *ChatServiceImpl) addMsg(contactCreds entities.BaseEntity, m *entities.C
 		c.EventBus.Publish(IncomingChatMsgEventTopic, msgChat)
 	}
 
-	return msgChat
+	return msgChat, nil
+}
+
+func getAttachmentFiles(attachments []*entities.Attachment) []*email.File {
+	var r []*email.File
+	for _, a := range attachments {
+		r = append(r, &email.File{
+			Name:    a.Name,
+			Type:    a.MimeType,
+			Content: a.ContentBase64,
+		})
+	}
+	return r
 }
 
 func (c *ChatServiceImpl) CreateOrUpdate(contact *entities.Contact, m *entities.ChatMsg, info bool) *entities.Chat {

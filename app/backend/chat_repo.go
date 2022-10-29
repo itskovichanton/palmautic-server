@@ -2,10 +2,10 @@ package backend
 
 import (
 	"encoding/base64"
-	"github.com/itskovichanton/goava/pkg/goava/utils"
+	"fmt"
 	"github.com/itskovichanton/server/pkg/server/filestorage"
 	"github.com/jinzhu/copier"
-	"github.com/spf13/cast"
+	"golang.org/x/exp/slices"
 	"salespalm/server/app/entities"
 	"strings"
 	"time"
@@ -148,11 +148,24 @@ func (c *ChatRepoImpl) searchInChat(chat *entities.Chat, q string) []*entities.C
 }
 
 func (c *ChatRepoImpl) saveAttachments(m *entities.ChatMsg) {
+
+	var updatedAttachments []*entities.Attachment
+
 	for _, attachment := range m.Attachments {
+		contentBase64 := attachment.ContentBase64
+		headerEndIndex := strings.Index(contentBase64, ",")
+		if headerEndIndex > -1 {
+			contentBase64 = contentBase64[headerEndIndex+1:]
+		}
 		fileContentData, _ := base64.StdEncoding.DecodeString(attachment.ContentBase64)
 		if fileContentData != nil {
-			fileName, _ := c.FileStorageService.PutFile(utils.MD5(cast.ToString(m.AccountId)), attachment.Name, fileContentData)
-			attachment.ContentBase64 = fileName
+			fileName, _ := c.FileStorageService.PutFile(fmt.Sprintf("%v", m.AccountId), attachment.Name, fileContentData)
+			attachment.FileNameServer = fileName
+			if slices.IndexFunc(updatedAttachments, func(x *entities.Attachment) bool { return x.FileNameServer == attachment.FileNameServer }) < 0 {
+				updatedAttachments = append(updatedAttachments, attachment)
+			}
 		}
 	}
+
+	m.Attachments = updatedAttachments
 }

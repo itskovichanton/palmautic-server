@@ -2,10 +2,12 @@ package app
 
 import (
 	"github.com/asaskevich/EventBus"
+	"github.com/go-co-op/gocron"
 	"github.com/itskovichanton/core/pkg/core"
 	"github.com/itskovichanton/core/pkg/core/app"
 	"github.com/itskovichanton/core/pkg/core/cmdservice"
 	"github.com/itskovichanton/core/pkg/core/logger"
+	"github.com/itskovichanton/server/pkg/server"
 	"github.com/itskovichanton/server/pkg/server/di"
 	"github.com/itskovichanton/server/pkg/server/filestorage"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
@@ -15,6 +17,7 @@ import (
 	"salespalm/server/app/backend"
 	"salespalm/server/app/frontend"
 	"salespalm/server/app/frontend/http_server"
+	"time"
 )
 
 type DI struct {
@@ -30,8 +33,10 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewGetTariffsAction)
 	container.Provide(c.NewWebhooksProcessorService)
 	container.Provide(c.NewStatsService)
+	container.Provide(c.NewFeatureAccessService)
 	container.Provide(c.NewGetStatsAction)
 	container.Provide(c.NewSearchChatMsgsAction)
+	container.Provide(c.NewEmailProcessorService)
 	container.Provide(c.NewStatsRepo)
 	container.Provide(c.NewEmailService)
 	container.Provide(c.NewAccountSettingsService)
@@ -106,6 +111,13 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewChatRepo)
 	container.Provide(c.NewAccountingService)
 	container.Provide(c.NewTariffRepo)
+	container.Provide(c.NewCronScheduler)
+}
+
+func (c *DI) NewCronScheduler() *gocron.Scheduler {
+	r := gocron.NewScheduler(time.UTC)
+	r.StartAsync()
+	return r
 }
 
 func (c *DI) NewTariffRepo() backend.ITariffRepo {
@@ -114,11 +126,13 @@ func (c *DI) NewTariffRepo() backend.ITariffRepo {
 	return r
 }
 
-func (c *DI) NewAccountingService(UserRepo backend.IUserRepo, TariffRepo backend.ITariffRepo, EventBus EventBus.Bus) backend.IAccountingService {
+func (c *DI) NewAccountingService(Config *core.Config, cronScheduler *gocron.Scheduler, UserRepo backend.IUserRepo, TariffRepo backend.ITariffRepo, EventBus EventBus.Bus) backend.IAccountingService {
 	r := &backend.AccountingServiceImpl{
-		EventBus:   EventBus,
-		UserRepo:   UserRepo,
-		TariffRepo: TariffRepo,
+		EventBus:      EventBus,
+		UserRepo:      UserRepo,
+		TariffRepo:    TariffRepo,
+		CronScheduler: cronScheduler,
+		Config:        Config,
 	}
 	r.Init()
 	return r
@@ -154,6 +168,14 @@ func (c *DI) NewStatsService(AccountService backend.IAccountService, StatsRepo b
 	return r
 }
 
+func (c *DI) NewFeatureAccessService(UserRepo backend.IUserRepo, TariffRepo backend.ITariffRepo, EventBus EventBus.Bus) backend.IFeatureAccessService {
+	return &backend.FeatureAccessServiceImpl{
+		UserRepo:   UserRepo,
+		TariffRepo: TariffRepo,
+		EventBus:   EventBus,
+	}
+}
+
 func (c *DI) NewAccountService(AccountingService backend.IAccountingService, UserRepo backend.IUserRepo, AuthService users.IAuthService) backend.IAccountService {
 	r := &backend.AccountServiceImpl{
 		UserRepo:          UserRepo,
@@ -164,15 +186,23 @@ func (c *DI) NewAccountService(AccountingService backend.IAccountingService, Use
 	return r
 }
 
-func (c *DI) NewEmailScannerService(JavaToolClient backend.IJavaToolClient, EventBus EventBus.Bus, AccountService backend.IAccountService, LoggerService logger.ILoggerService) backend.IEmailScannerService {
+func (c *DI) NewEmailScannerService(EmailProcessorService backend.IEmailProcessorService, Config *server.Config, JavaToolClient backend.IJavaToolClient, EventBus EventBus.Bus, AccountService backend.IAccountService, LoggerService logger.ILoggerService) backend.IEmailScannerService {
 	r := &backend.EmailScannerServiceImpl{
-		AccountService: AccountService,
-		LoggerService:  LoggerService,
-		EventBus:       EventBus,
-		JavaToolClient: JavaToolClient,
+		EmailProcessorService: EmailProcessorService,
+		AccountService:        AccountService,
+		LoggerService:         LoggerService,
+		EventBus:              EventBus,
+		JavaToolClient:        JavaToolClient,
+		Config:                Config,
 	}
 	r.Init()
 	return r
+}
+
+func (c *DI) NewEmailProcessorService(Config *server.Config) backend.IEmailProcessorService {
+	return &backend.EmailProcessorServiceImpl{
+		Config: Config,
+	}
 }
 
 func (c *DI) NewEventBus() EventBus.Bus {
@@ -221,10 +251,12 @@ func (c *DI) NewTaskExecutorService(manualEmailTaskExecutorService backend.IEmai
 	}
 }
 
-func (c *DI) NewEmailService(emailService core.IEmailService, AccountService backend.IAccountService) backend.IEmailService {
+func (c *DI) NewEmailService(Config *server.Config, FeatureAccessService backend.IFeatureAccessService, emailService core.IEmailService, AccountService backend.IAccountService) backend.IEmailService {
 	return &backend.EmailServiceImpl{
-		EmailService:   emailService,
-		AccountService: AccountService,
+		EmailService:         emailService,
+		AccountService:       AccountService,
+		FeatureAccessService: FeatureAccessService,
+		Config:               Config,
 	}
 }
 
@@ -608,10 +640,11 @@ func (c *DI) NewCommonsService(TariffRepo backend.ITariffRepo, AccountSettingsSe
 	}
 }
 
-func (c *DI) NewB2BService(B2BRepo backend.IB2BRepo, ContactRepo backend.IContactRepo) backend.IB2BService {
+func (c *DI) NewB2BService(FeatureAccessService backend.IFeatureAccessService, B2BRepo backend.IB2BRepo, ContactRepo backend.IContactRepo) backend.IB2BService {
 	return &backend.B2BServiceImpl{
-		B2BRepo:     B2BRepo,
-		ContactRepo: ContactRepo,
+		B2BRepo:              B2BRepo,
+		ContactRepo:          ContactRepo,
+		FeatureAccessService: FeatureAccessService,
 	}
 }
 

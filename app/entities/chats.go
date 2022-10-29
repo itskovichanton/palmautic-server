@@ -40,4 +40,5 @@ type ChatMsg struct {
 
 type Attachment struct {
 	Name, ContentBase64, MimeType string
+	FileNameServer                string
 }

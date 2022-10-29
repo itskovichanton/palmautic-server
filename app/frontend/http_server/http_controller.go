@@ -87,7 +87,7 @@ func (c *PalmauticHttpController) Init() {
 	c.EchoEngine.GET("/commons", c.GetDefaultHandler(c.prepareAction(true, c.GetCommonsAction)))
 	c.EchoEngine.GET("/notifications", c.GetDefaultHandler(c.prepareAction(true, c.GetNotificationsAction)))
 	c.EchoEngine.GET("/getFile", c.GetHandlerByActionPresenter(&pipeline.ChainedActionImpl{
-		Actions: []pipeline.IAction{c.ValidateCallerAction, c.GetUserAction, c.GetFileAction},
+		Actions: []pipeline.IAction{c.GetFileAction},
 	}, c.FileResponsePresenter))
 
 	// static

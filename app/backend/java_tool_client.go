@@ -59,11 +59,15 @@ func (r FindEmailResult) PlainContent() string {
 	if len(r.ContentParts) == 0 {
 		return ""
 	}
-	return strip.StripTags(r.ContentParts[0].Content)
+	part0 := r.ContentParts[0]
+	if len(part0.PlainContent) > 0 {
+		return part0.PlainContent
+	}
+	return strip.StripTags(part0.Content)
 }
 
 type ContentPart struct {
-	Content, ContentType string
+	Content, ContentType, FileName, PlainContent string
 }
 
 type FindEmailParams struct {
@@ -113,7 +117,6 @@ func (c *JavaToolClientImpl) CheckAccess(access *EmailAccess) error {
 	if err != nil {
 		return err
 	}
-
 	_, err = frmclient.ExecuteWidthFrmAPI(resp, nil)
 	return err
 }

@@ -6,7 +6,38 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"sync"
+	"time"
 )
+
+func NewTimesMap() *TimesMap {
+	return &TimesMap{
+		items: map[string]time.Time{},
+	}
+}
+
+type TimesMap struct {
+	items map[string]time.Time
+	lock  sync.Mutex
+}
+
+func (c *TimesMap) Put(key string) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.items[key] = time.Now()
+}
+
+func (c *TimesMap) Get(key string) time.Time {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.items[key]
+}
+
+func (c *TimesMap) Elapsed(key string) time.Duration {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return time.Now().Sub(c.items[key])
+}
 
 func RemoveHtmlIndents(s string) string {
 	return s

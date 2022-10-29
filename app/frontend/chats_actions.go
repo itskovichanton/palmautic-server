@@ -16,8 +16,8 @@ func (c *SendChatMsgAction) Run(arg interface{}) (interface{}, error) {
 	p := arg.(*RetrievedEntityParams)
 	msg := p.Entity.(*entities.ChatMsg)
 	msg.My = true
-	c.ChatService.AddMsg(entities.BaseEntity{Id: msg.ChatId, AccountId: msg.AccountId}, msg, true)
-	return msg, nil
+	_, err := c.ChatService.AddMsg(entities.BaseEntity{Id: msg.ChatId, AccountId: msg.AccountId}, msg, true)
+	return msg, err
 }
 
 type SearchChatMsgsAction struct {

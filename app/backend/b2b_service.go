@@ -9,7 +9,7 @@ import (
 )
 
 type IB2BService interface {
-	Search(table string, filters map[string]interface{}, settings *SearchSettings) *SearchResult
+	Search(accountId entities.ID, table string, filters map[string]interface{}, settings *SearchSettings) (*SearchResult, error)
 	Upload(table string, iterators []IMapIterator, settings *UploadSettings) (int, error)
 	Table(table string) *entities.B2BTable
 	ClearTable(table string)
@@ -33,9 +33,10 @@ type UploadSettings struct {
 type B2BServiceImpl struct {
 	IContactService
 
-	B2BRepo         IB2BRepo
-	ContactRepo     IContactRepo
-	SequenceService ISequenceService
+	B2BRepo              IB2BRepo
+	ContactRepo          IContactRepo
+	SequenceService      ISequenceService
+	FeatureAccessService IFeatureAccessService
 }
 
 func (c *B2BServiceImpl) AddToSequence(accountId entities.ID, ids []entities.ID, sequenceId entities.ID) ([]entities.ID, error) {
@@ -106,8 +107,14 @@ func (c *B2BServiceImpl) UploadFromDir(table string, dirName string) (int, error
 	return uploadedTotal, nil
 }
 
-func (c *B2BServiceImpl) Search(table string, filters map[string]interface{}, settings *SearchSettings) *SearchResult {
-	return c.B2BRepo.Search(table, filters, settings)
+func (c *B2BServiceImpl) Search(accountId entities.ID, table string, filters map[string]interface{}, settings *SearchSettings) (*SearchResult, error) {
+	err := c.FeatureAccessService.CheckFeatureAccessableEmail(accountId)
+	if err != nil {
+		return nil, err
+	}
+	r := c.B2BRepo.Search(table, filters, settings)
+	c.FeatureAccessService.NotifyFeatureUsedB2BSearch(accountId)
+	return r, nil
 }
 
 func (c *B2BServiceImpl) ClearTable(table string) {

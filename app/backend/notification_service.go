@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"github.com/asaskevich/EventBus"
 	strip "github.com/grokify/html-strip-tags-go"
+	"golang.org/x/exp/slices"
 	"net/url"
 	"salespalm/server/app/entities"
 	"sync"
+	"time"
 )
 
 type INotificationService interface {
 	Get(accountId entities.ID, clearAfter bool) []*Notification
-	Add(accountId entities.ID, a *Notification)
+	Add(accountId entities.ID, a *Notification, settings *NotificationAddingSettings) bool
 }
 
 type Notification struct {
@@ -28,16 +30,24 @@ const (
 
 type Notifications map[entities.ID][]*Notification
 
+type NotificationAddingSettings struct {
+	TimeFromLastAdding time.Duration
+	Unique             bool
+}
+
 type NotificationServiceImpl struct {
 	INotificationService
 
-	notifications Notifications
-	EventBus      EventBus.Bus
-	lock          sync.Mutex
+	notifications         Notifications
+	EventBus              EventBus.Bus
+	lock                  sync.Mutex
+	lastNotificationTimes map[entities.ID]*entities.TimesMap
 }
 
 func (c *NotificationServiceImpl) Init() {
+
 	c.notifications = Notifications{}
+	c.lastNotificationTimes = map[entities.ID]*entities.TimesMap{}
 
 	c.EventBus.SubscribeAsync(EmailBouncedEventTopic, c.OnTaskInMailBounced, true)
 	c.EventBus.SubscribeAsync(EmailResponseReceivedEventTopic, c.OnTaskInMailResponseReceived, true)
@@ -55,7 +65,7 @@ func (c *NotificationServiceImpl) OnIncomingChatMsgReceived(msgChat *entities.Ch
 		Subject:   fmt.Sprintf("Сообщение от %v", msgChat.Contact.Name),
 		Message:   msgChat.Msgs[0].PlainBodyShort,
 		Alertness: "blue",
-	})
+	}, nil)
 }
 
 func (c *NotificationServiceImpl) OnEmailOpened(q url.Values) {
@@ -80,7 +90,7 @@ func (c *NotificationServiceImpl) OnEmailOpened(q url.Values) {
 			},
 			Opened: true,
 		},
-	})
+	}, nil)
 }
 
 func (c *NotificationServiceImpl) OnFeatureUnaccessableByTariffReceived(a *entities.User, featureName string) {
@@ -89,6 +99,9 @@ func (c *NotificationServiceImpl) OnFeatureUnaccessableByTariffReceived(a *entit
 		Subject:   featureSubject(featureName),
 		Message:   "Обновите свой тариф, или дождитесь когда возможности вашего тарифа восстановятся",
 		Alertness: "red",
+	}, &NotificationAddingSettings{
+		TimeFromLastAdding: 10 * time.Minute,
+		Unique:             true,
 	})
 }
 
@@ -96,6 +109,8 @@ func featureSubject(featureName string) string {
 	switch featureName {
 	case FeatureNameEmail:
 		return "Отправка Email не доступна"
+	case FeatureNameB2BSearch:
+		return "Поиск B2B не доступен"
 	}
 	return "Функция не доступна"
 }
@@ -105,7 +120,7 @@ func (c *NotificationServiceImpl) OnSequenceFinished(a *SequenceFinishedEventArg
 		Subject:   "Последовательность финишировала",
 		Message:   fmt.Sprintf(`"%v" финишировала для контакта %v`, a.Sequence.Name, a.Contact.Name),
 		Alertness: "green",
-	})
+	}, nil)
 }
 
 func (c *NotificationServiceImpl) OnTaskInMailBounced(a *TaskInMailResponseReceivedEventArgs) {
@@ -113,7 +128,7 @@ func (c *NotificationServiceImpl) OnTaskInMailBounced(a *TaskInMailResponseRecei
 		Subject:   "Bounced:",
 		Message:   a.InMail.ContentParts[0].Content,
 		Alertness: entities.TaskAlertnessRed,
-	})
+	}, nil)
 }
 
 func (c *NotificationServiceImpl) OnTaskInMailResponseReceived(a *TaskInMailResponseReceivedEventArgs) {
@@ -121,7 +136,7 @@ func (c *NotificationServiceImpl) OnTaskInMailResponseReceived(a *TaskInMailResp
 		Subject:   a.Contact.Name + ":",
 		Message:   a.InMail.ContentParts[len(a.InMail.ContentParts)-1].Content,
 		Alertness: entities.TaskAlertnessBlue,
-	})
+	}, nil)
 }
 
 type SequenceFinishedEventArgs struct {
@@ -146,10 +161,26 @@ func (c *NotificationServiceImpl) Get(accountId entities.ID, clearAfter bool) []
 	return c.notifications[accountId]
 }
 
-func (c *NotificationServiceImpl) Add(accountId entities.ID, a *Notification) {
+func (c *NotificationServiceImpl) Add(accountId entities.ID, a *Notification, settings *NotificationAddingSettings) bool {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	lastAddingTimes := c.lastNotificationTimes[accountId]
+	if lastAddingTimes == nil {
+		lastAddingTimes = entities.NewTimesMap()
+		c.lastNotificationTimes[accountId] = lastAddingTimes
+	}
+	if settings != nil {
+		notificationIndex := slices.IndexFunc(c.notifications[accountId], func(n *Notification) bool { return n.Type == a.Type })
+		if settings.Unique && notificationIndex >= 0 {
+			return false
+		}
+		if settings.TimeFromLastAdding > 0 && lastAddingTimes != nil && lastAddingTimes.Elapsed(a.Type) < settings.TimeFromLastAdding {
+			return false
+		}
+	}
 	c.notifications[accountId] = append(c.notifications[accountId], a)
+	lastAddingTimes.Put(a.Type)
+	return true
 }
 
 func (c *NotificationServiceImpl) OnNewChatMsg(chat *entities.Chat) {
@@ -159,7 +190,7 @@ func (c *NotificationServiceImpl) OnNewChatMsg(chat *entities.Chat) {
 		Message:   strip.StripTags(chat.Msgs[0].Body),
 		Alertness: "blue",
 		Object:    chat,
-	})
+	}, nil)
 }
 
 func (c *NotificationServiceImpl) OnTariffUpdated(account *entities.User) {
@@ -170,5 +201,5 @@ func (c *NotificationServiceImpl) OnTariffUpdated(account *entities.User) {
 		Message:   fmt.Sprintf("Ваши возможности:\nМакс. количество Email в сутки: %v\nМакс. количество последовательностей: %v\nМакс. кол-во поисков Email в месяц: %v", a.MaxEmailsPerDay, a.MaxSequences, a.MaxB2BSearches),
 		Alertness: "green",
 		Object:    account,
-	})
+	}, nil)
 }

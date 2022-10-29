@@ -5,6 +5,7 @@ import (
 	"github.com/asaskevich/EventBus"
 	"github.com/itskovichanton/core/pkg/core/logger"
 	"github.com/itskovichanton/goava/pkg/goava/utils"
+	"github.com/itskovichanton/server/pkg/server"
 	"salespalm/server/app/entities"
 	"sync"
 	"time"
@@ -18,16 +19,24 @@ type IEmailScannerService interface {
 type EmailScannerServiceImpl struct {
 	IEmailScannerService
 
-	AccountService IAccountService
-	LoggerService  logger.ILoggerService
-	EventBus       EventBus.Bus
-	JavaToolClient IJavaToolClient
-	running        map[entities.ID]bool
-	lock           sync.Mutex
+	AccountService        IAccountService
+	EmailProcessorService IEmailProcessorService
+	LoggerService         logger.ILoggerService
+	EventBus              EventBus.Bus
+	JavaToolClient        IJavaToolClient
+	running               map[entities.ID]bool
+	lock                  sync.Mutex
+	scannerSleepTime      time.Duration
+	Config                *server.Config
 }
 
 func (c *EmailScannerServiceImpl) Init() {
 	c.running = map[entities.ID]bool{}
+	sleepSec := c.Config.CoreConfig.GetInt("emailscanner", "sleepsec")
+	if sleepSec == 0 {
+		sleepSec = 60
+	}
+	c.scannerSleepTime = time.Duration(sleepSec) * time.Second
 }
 
 func (c *EmailScannerServiceImpl) IsRunning(contactId entities.ID) bool {
@@ -95,6 +104,7 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 					logger.Result(ld, fmt.Sprintf("Получен БАУНС от %v: %v", contact.Name, utils.ToJson(emailSearchResult)))
 					c.EventBus.Publish(InMailBouncedEventTopic(sequence.Id, contact.Id), emailSearchResult)
 				} else {
+					c.EmailProcessorService.Process(emailSearchResult, contact.AccountId)
 					logger.Result(ld, fmt.Sprintf("Получен ответ от %v: %v", contact.Name, utils.ToJson(emailSearchResult)))
 					logger.Print(lg, ld)
 					c.EventBus.Publish(InMailReceivedEventTopic(sequence.Id, contact.Id), emailSearchResult)
@@ -104,7 +114,7 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 			}
 		}
 
-		time.Sleep(30 * time.Second)
+		time.Sleep(c.scannerSleepTime)
 	}
 
 }
