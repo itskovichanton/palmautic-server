@@ -33,8 +33,8 @@ func (c *TariffRepoImpl) Init() {
 	c.tariffs = []*entities.Tariff{
 		{Price: 2000, Creds: entities.IDWithName{Name: "Basic", Id: TariffIDBasic2}, Due: 14 * time.Hour * 24, FeatureAbilities: &entities.FeatureAbilities{MaxSequences: 2, MaxEmailsPerDay: 200, B2B: false}},
 		{Price: 0, Creds: entities.IDWithName{Name: "Basic", Id: TariffIDBasic}, Due: 14 * time.Hour * 24, FeatureAbilities: &entities.FeatureAbilities{MaxSequences: 2, MaxEmailsPerDay: 200, B2B: false}},
-		{Price: 6600, Creds: entities.IDWithName{Name: "Professional", Id: TariffIDProfessional}, Due: 30 * time.Hour * 24, FeatureAbilities: &entities.FeatureAbilities{MaxSequences: 999, MaxEmailsPerDay: 10000, B2B: true}},
-		{Price: -1, Creds: entities.IDWithName{Name: "Enterprise", Id: TariffIDEnterprise}, Due: 365 * time.Hour * 24, FeatureAbilities: &entities.FeatureAbilities{MaxSequences: 999, MaxEmailsPerDay: 10000000, B2B: true}},
+		{Price: 6600, Creds: entities.IDWithName{Name: "Professional", Id: TariffIDProfessional}, Due: 30 * time.Hour * 24, FeatureAbilities: &entities.FeatureAbilities{MaxSequences: 999, MaxEmailsPerDay: 10000, B2B: true, MaxB2BSearches: 10}},
+		{Price: -1, Creds: entities.IDWithName{Name: "Enterprise", Id: TariffIDEnterprise}, Due: 365 * time.Hour * 24, FeatureAbilities: &entities.FeatureAbilities{MaxSequences: 999, MaxEmailsPerDay: 10000000, B2B: true, MaxB2BSearches: 10000000}},
 	}
 	c.tariffMap = map[entities.ID]*entities.Tariff{}
 	for _, tariff := range c.tariffs {

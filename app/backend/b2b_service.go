@@ -108,12 +108,15 @@ func (c *B2BServiceImpl) UploadFromDir(table string, dirName string) (int, error
 }
 
 func (c *B2BServiceImpl) Search(accountId entities.ID, table string, filters map[string]interface{}, settings *SearchSettings) (*SearchResult, error) {
-	err := c.FeatureAccessService.CheckFeatureAccessableEmail(accountId)
+
+	err := c.FeatureAccessService.CheckFeatureAccessableB2BSearch(accountId)
 	if err != nil {
 		return nil, err
 	}
+
 	r := c.B2BRepo.Search(table, filters, settings)
 	c.FeatureAccessService.NotifyFeatureUsedB2BSearch(accountId)
+
 	return r, nil
 }
 

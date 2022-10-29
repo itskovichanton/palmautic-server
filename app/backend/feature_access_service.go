@@ -49,7 +49,7 @@ func (c *FeatureAccessServiceImpl) checkFeatureAccessable(accountId entities.ID,
 
 func (c *FeatureAccessServiceImpl) CheckFeatureAccessableB2BSearch(accountId entities.ID) error {
 	return c.checkFeatureAccessable(accountId, func(account *entities.User) bool {
-		return account.Tariff.FeatureAbilities.MaxB2BSearches > 0
+		return account.Tariff.FeatureAbilities.B2B && account.Tariff.FeatureAbilities.MaxB2BSearches > 0
 	}, FeatureNameB2BSearch, "Количество поисков B2B иссякло. Оно восстанавливается каждые сутки.")
 }
 

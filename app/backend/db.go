@@ -5,6 +5,7 @@ import (
 	"github.com/itskovichanton/core/pkg/core"
 	"os"
 	"path"
+	"runtime"
 	"time"
 )
 
@@ -119,4 +120,5 @@ func (c *InMemoryDemoDBServiceImpl) optimize() {
 			}
 		}
 	}
+	runtime.GC()
 }
