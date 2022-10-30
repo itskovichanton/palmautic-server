@@ -3,6 +3,7 @@ package entities
 import (
 	"fmt"
 	"github.com/itskovichanton/core/pkg/core/validation"
+	"golang.org/x/exp/slices"
 	"net/url"
 	"sort"
 	"strings"
@@ -91,4 +92,26 @@ func Ids(ids string) []ID {
 		r = append(r, ID(id))
 	}
 	return r
+}
+
+func Count[T any](a []T, f func(a T) bool) int {
+	r := 0
+	for _, x := range a {
+		if f(x) {
+			r++
+		}
+	}
+	return r
+}
+
+func IndexOf(s []string, variants ...string) int {
+	return slices.IndexFunc(s, func(e string) bool {
+		e = strings.ToUpper(e)
+		for _, v := range variants {
+			if strings.Contains(e, strings.ToUpper(v)) {
+				return true
+			}
+		}
+		return false
+	})
 }

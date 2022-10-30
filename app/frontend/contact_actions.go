@@ -48,17 +48,27 @@ func (c *DeleteContactAction) Run(arg interface{}) (interface{}, error) {
 type SearchContactAction struct {
 	pipeline.BaseActionImpl
 
-	ContactService backend.IContactService
+	ContactService  backend.IContactService
+	SequenceService backend.ISequenceService
 }
 
 func (c *SearchContactAction) Run(arg interface{}) (interface{}, error) {
 	p := arg.(*RetrievedEntityParams)
 	cp := p.CallParams
 	filter := p.Entity.(*entities.Contact)
-	return c.ContactService.Search(filter, &backend.ContactSearchSettings{
+	foundContacts := c.ContactService.Search(filter, &backend.ContactSearchSettings{
 		Offset: cp.GetParamInt("offset", 0),
 		Count:  cp.GetParamInt("count", 0),
-	}), nil
+	})
+	sequences := c.SequenceService.Search(&entities.Sequence{BaseEntity: entities.BaseEntity{AccountId: filter.AccountId}}, nil).Items
+	for _, contact := range foundContacts.Items {
+		for _, sequence := range sequences {
+			if sequence.Process.IsActiveForContact(contact.Id) {
+				contact.Sequences = append(contact.Sequences, sequence.ToIDAndName(sequence.Name))
+			}
+		}
+	}
+	return foundContacts, nil
 }
 
 type UploadContactsAction struct {
@@ -74,4 +84,16 @@ func (c *UploadContactsAction) Run(arg interface{}) (interface{}, error) {
 		return nil, err
 	}
 	return c.ContactService.Upload(entities.ID(cp.Caller.Session.Account.ID), backend.NewContactCSVIterator(f))
+}
+
+type ExportContactsAction struct {
+	pipeline.BaseActionImpl
+
+	ContactService backend.IContactService
+}
+
+func (c *ExportContactsAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*entities2.CallParams)
+	getFileKey, _, err := c.ContactService.Export(entities.ID(cp.Caller.Session.Account.ID))
+	return getFileKey, err
 }

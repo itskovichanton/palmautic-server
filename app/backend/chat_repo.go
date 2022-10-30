@@ -18,6 +18,7 @@ type IChatRepo interface {
 	SearchMsgs(filter *entities.ChatMsg) []*entities.ChatMsg
 	ClearChat(filter *entities.Chat)
 	SearchFirst(filter entities.BaseEntity) *entities.Chat
+	MoveToFolder(filter entities.BaseEntity, folderId entities.ID) *entities.Chat
 }
 
 type ChatRepoImpl struct {
@@ -25,6 +26,14 @@ type ChatRepoImpl struct {
 
 	DBService          IDBService
 	FileStorageService filestorage.IFileStorageService
+}
+
+func (c *ChatRepoImpl) MoveToFolder(filter entities.BaseEntity, folderId entities.ID) *entities.Chat {
+	r := c.SearchFirst(filter)
+	if r != nil {
+		r.FolderID = folderId
+	}
+	return r
 }
 
 func (c *ChatRepoImpl) SearchFirst(filter entities.BaseEntity) *entities.Chat {
@@ -71,9 +80,6 @@ func (c *ChatRepoImpl) Folders(accountId entities.ID) []*entities.Folder {
 	}, {
 		BaseEntity: entities.BaseEntity{Id: 900001},
 		Name:       "Встреча",
-	}, {
-		BaseEntity: entities.BaseEntity{Id: 900002},
-		Name:       "Финальные",
 	}}
 }
 
@@ -159,7 +165,7 @@ func (c *ChatRepoImpl) saveAttachments(m *entities.ChatMsg) {
 		}
 		fileContentData, _ := base64.StdEncoding.DecodeString(attachment.ContentBase64)
 		if fileContentData != nil {
-			fileName, _ := c.FileStorageService.PutFile(fmt.Sprintf("%v", m.AccountId), attachment.Name, fileContentData)
+			fileName, _, _ := c.FileStorageService.PutFile(fmt.Sprintf("%v", m.AccountId), attachment.Name, fileContentData)
 			attachment.FileNameServer = fileName
 			if slices.IndexFunc(updatedAttachments, func(x *entities.Attachment) bool { return x.FileNameServer == attachment.FileNameServer }) < 0 {
 				updatedAttachments = append(updatedAttachments, attachment)

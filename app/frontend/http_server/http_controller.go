@@ -22,10 +22,13 @@ type PalmauticHttpController struct {
 	CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction
 	AddContactsToSequenceAction  *frontend.AddContactsToSequenceAction
 	SearchContactAction          *frontend.SearchContactAction
+	DeleteAccountAction          *frontend.DeleteAccountAction
+	MoveChatToFolderAction       *frontend.MoveChatToFolderAction
 	DeleteContactAction          *frontend.DeleteContactAction
 	ClearTemplatesAction         *frontend.ClearTemplatesAction
 	GetTariffsAction             *frontend.GetTariffsAction
 	UploadContactsAction         *frontend.UploadContactsAction
+	ExportContactsAction         *frontend.ExportContactsAction
 	UploadB2BDataAction          *frontend.UploadB2BDataAction
 	GetB2BInfoAction             *frontend.GetB2BInfoAction
 	ClearB2BTableAction          *frontend.ClearB2BTableAction
@@ -64,6 +67,7 @@ func (c *PalmauticHttpController) Init() {
 	// accounts
 	c.EchoEngine.GET("/accounts/register", c.GetDefaultHandler(c.prepareAction(false, c.RegisterAccountAction)))
 	c.EchoEngine.GET("/accounts/login", c.GetDefaultHandler(c.prepareAction(false, c.GetUserAction, c.FindAccountAction)))
+	c.EchoEngine.GET("/accounts/delete", c.GetDefaultHandler(c.prepareAction(true, c.GetUserAction, c.DeleteAccountAction)))
 	c.EchoEngine.POST("/accounts/setEmailSettings", c.GetDefaultHandler(c.prepareAction(true, c.SetAccountSettingsAction)))
 
 	// accounting
@@ -113,6 +117,7 @@ func (c *PalmauticHttpController) Init() {
 	c.EchoEngine.POST("/contacts/search", c.GetDefaultHandler(c.prepareAction(true, c.readContact(), c.SearchContactAction)))
 	c.EchoEngine.POST("/contacts/delete", c.GetDefaultHandler(c.prepareAction(true, c.DeleteContactAction)))
 	c.EchoEngine.POST("/contacts/upload", c.GetDefaultHandler(c.prepareAction(true, c.UploadContactsAction)))
+	c.EchoEngine.GET("/contacts/export", c.GetDefaultHandler(c.prepareAction(true, c.ExportContactsAction)))
 
 	// b2b
 	c.EchoEngine.POST("/b2b/upload/:table", c.GetDefaultHandler(c.prepareAction(false, c.UploadB2BDataAction)))
@@ -132,6 +137,7 @@ func (c *PalmauticHttpController) Init() {
 	c.EchoEngine.POST("/chats/sendMsg", c.GetDefaultHandler(c.prepareAction(true, c.readChatMsg(), c.SendChatMsgAction)))
 	c.EchoEngine.POST("/chats/search", c.GetDefaultHandler(c.prepareAction(true, c.readChatMsg(), c.SearchChatMsgsAction)))
 	c.EchoEngine.POST("/chats/clear", c.GetDefaultHandler(c.prepareAction(true, c.readContact(), c.ClearChatAction)))
+	c.EchoEngine.GET("/chats/moveToFolder", c.GetDefaultHandler(c.prepareAction(true, c.MoveChatToFolderAction)))
 }
 
 func (c *PalmauticHttpController) prepareAction(requiresAuth bool, actions ...pipeline.IAction) pipeline.IAction {

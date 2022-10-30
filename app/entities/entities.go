@@ -50,12 +50,13 @@ func (c *BaseEntity) GetAccountId() ID {
 type Contact struct {
 	BaseEntity
 
-	Job      string
-	Phone    string `check:"phone" json:"phone"`
-	Name     string `check:"notempty" json:"name"`
-	Email    string `check:"notempty,email" json:"email"`
-	Company  string `json:"company"`
-	Linkedin string `json:"linkedin"`
+	Job       string
+	Phone     string `check:"phone" json:"phone"`
+	Name      string `check:"notempty" json:"name"`
+	Email     string `check:"notempty,email" json:"email"`
+	Company   string `json:"company"`
+	Linkedin  string `json:"linkedin"`
+	Sequences []*IDWithName
 }
 
 func (c Contact) SeemsLike(contact *Contact) bool {

@@ -1,6 +1,7 @@
 package frontend
 
 import (
+	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
 	"salespalm/server/app/backend"
 	"salespalm/server/app/entities"
@@ -43,4 +44,21 @@ func (c *ClearChatAction) Run(arg interface{}) (interface{}, error) {
 	filter := p.Entity.(*entities.Contact)
 	c.ChatService.ClearChat(&entities.Chat{Contact: filter})
 	return "cleared", nil
+}
+
+type MoveChatToFolderAction struct {
+	pipeline.BaseActionImpl
+
+	ChatService backend.IChatService
+}
+
+func (c *MoveChatToFolderAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*entities2.CallParams)
+	return c.ChatService.MoveToFolder(
+		entities.BaseEntity{
+			Id:        entities.ID(cp.GetParamInt64("chatId", 0)),
+			AccountId: entities.ID(cp.Caller.Session.Account.ID),
+		},
+		entities.ID(cp.GetParamInt64("folderId", 0)),
+	), nil
 }

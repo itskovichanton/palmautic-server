@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"github.com/asaskevich/EventBus"
 	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"github.com/itskovichanton/server/pkg/server/users"
 	"salespalm/server/app/entities"
@@ -12,6 +13,7 @@ type IAccountService interface {
 	FindByEmail(email string) *entities.User
 	Accounts() Accounts
 	FindById(id entities.ID) *entities.User
+	Delete(id entities.ID) *entities.User
 }
 
 type AccountServiceImpl struct {
@@ -20,6 +22,7 @@ type AccountServiceImpl struct {
 	UserRepo          IUserRepo
 	AuthService       users.IAuthService
 	AccountingService IAccountingService
+	EventBus          EventBus.Bus
 }
 
 func (c *AccountServiceImpl) Init() {
@@ -27,6 +30,14 @@ func (c *AccountServiceImpl) Init() {
 	for _, account := range c.UserRepo.Accounts() {
 		c.AuthService.Register(account.Account)
 	}
+}
+
+func (c *AccountServiceImpl) Delete(id entities.ID) *entities.User {
+	deleted := c.UserRepo.Delete(id)
+	if deleted != nil {
+		c.AuthService.Logout(deleted.Account.SessionToken)
+	}
+	return deleted
 }
 
 func (c *AccountServiceImpl) FindById(id entities.ID) *entities.User {
@@ -54,13 +65,15 @@ func (c *AccountServiceImpl) Register(account *entities2.Account, directorUserNa
 		Account:      session.Account,
 		Subordinates: nil, // оставляем пустыми, позже можно будет указать подчиненных
 	}
-	c.UserRepo.CreateOrUpdate(newUser)                                       // добавляем юзера в бд
-	c.AccountingService.AssignTariff(entities.ID(newUser.ID), TariffIDBasic) // устанавалием новому юзеру тариф Basic
+	c.UserRepo.CreateOrUpdate(newUser)                                            // добавляем юзера в бд
+	c.AccountingService.AssignTariff(entities.ID(newUser.ID), TariffIDEnterprise) // устанавливаем новому юзеру тариф Basic
 
 	// привязываем его к директору
 	if len(directorUserName) > 0 {
 		c.UserRepo.BindToDirectorByUserName(newUser, directorUserName)
 	}
+
+	c.EventBus.Publish(AccountRegisteredEventTopic, newUser)
 
 	return newUser, nil
 }

@@ -2,6 +2,7 @@ package backend
 
 import (
 	"salespalm/server/app/entities"
+	"sync"
 )
 
 type Accounts map[entities.ID]*entities.User
@@ -31,6 +32,21 @@ type DBContent struct {
 	ChatsContainer    *ChatsContainer
 	StatsContainer    *StatsContainer
 	Uniques           Dic
+
+	lock sync.Mutex
+}
+
+func (c *DBContent) DeleteAccount(accountId entities.ID) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	delete(c.TaskContainer.Tasks, accountId)
+	delete(c.Contacts, accountId)
+	delete(c.SequenceContainer.Sequences, accountId)
+	delete(c.StatsContainer.Stats, accountId)
+	delete(c.ChatsContainer.Chats, accountId)
+	delete(c.Folders, accountId)
+	delete(c.Accounts, accountId)
 }
 
 type StatsContainer struct {

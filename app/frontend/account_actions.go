@@ -9,6 +9,17 @@ import (
 	"salespalm/server/app/entities"
 )
 
+type DeleteAccountAction struct {
+	pipeline.BaseActionImpl
+
+	AccountService backend.IAccountService
+}
+
+func (c *DeleteAccountAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*entities2.CallParams)
+	return c.AccountService.Delete(entities.ID(cp.Caller.Session.Account.ID)), nil
+}
+
 type RegisterAccountAction struct {
 	pipeline.BaseActionImpl
 

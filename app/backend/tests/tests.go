@@ -36,6 +36,9 @@ func (c *Test) Start(actionCount int) {
 	c.lg = c.LoggerService.GetFileLogger(fmt.Sprintf("test-", uid), "", 1)
 	c.ld = logger.NewLD()
 	defer func() {
+		if c.accountId > 0 {
+			c.Services.AccountService.Delete(c.accountId)
+		}
 		logger.Result(c.ld, "ТЕСТ ЗАВЕРШЕН")
 		c.printLog()
 		logger.Action(c.ld, "RAM-Stats")
@@ -84,7 +87,7 @@ func rndSleep() {
 
 func (c *Test) randomAction() error {
 	action, f := utils.RandomEntry(c.actions)
-	logger.Action(c.ld, action)
+	logger.Action(c.ld, *action)
 	return (*f)()
 }
 
@@ -95,6 +98,7 @@ func (c *Test) initActions() {
 }
 
 func (c *Test) b2bSearch() error {
+
 	table := "persons"
 	if rndBool() {
 		table = "companies"

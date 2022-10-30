@@ -23,6 +23,7 @@ type IChatService interface {
 	AddMsg(contactCreds entities.BaseEntity, m *entities.ChatMsg, send bool) (*entities.Chat, error)
 	Search(filter *entities.ChatMsg) []*entities.ChatMsg
 	ClearChat(filter *entities.Chat)
+	MoveToFolder(filter entities.BaseEntity, folderId entities.ID) *entities.Chat
 }
 
 type ChatCommons struct {
@@ -52,6 +53,10 @@ func (c *ChatServiceImpl) Init() {
 			c.startAnswerScan(chat.Contact)
 		}
 	}
+}
+
+func (c *ChatServiceImpl) MoveToFolder(filter entities.BaseEntity, folderId entities.ID) *entities.Chat {
+	return c.ChatRepo.MoveToFolder(filter, folderId)
 }
 
 func (c *ChatServiceImpl) OnEmailOpened(q url.Values) {

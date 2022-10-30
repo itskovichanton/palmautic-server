@@ -1,7 +1,11 @@
 package backend
 
 import (
+	"encoding/csv"
+	"fmt"
 	"github.com/itskovichanton/core/pkg/core/validation"
+	"github.com/itskovichanton/server/pkg/server/filestorage"
+	"os"
 	"salespalm/server/app/entities"
 )
 
@@ -12,13 +16,15 @@ type IContactService interface {
 	Delete(accountId entities.ID, ids []entities.ID)
 	CreateOrUpdate(contact *entities.Contact) error
 	Upload(accountId entities.ID, iterator ContactIterator) (int, error)
+	Export(accountId entities.ID) (string, *filestorage.FileInfo, error)
 	GetByIndex(accountId entities.ID, index int) *entities.Contact
 }
 
 type ContactServiceImpl struct {
 	IContactService
 
-	ContactRepo IContactRepo
+	ContactRepo        IContactRepo
+	FileStorageService filestorage.IFileStorageService
 }
 
 func (c *ContactServiceImpl) SearchAll(filters []*entities.Contact) []*entities.Contact {
@@ -59,6 +65,31 @@ func (c *ContactServiceImpl) CreateOrUpdate(contact *entities.Contact) error {
 
 	c.ContactRepo.CreateOrUpdate(contact)
 	return nil
+}
+
+func (c *ContactServiceImpl) Export(accountId entities.ID) (string, *filestorage.FileInfo, error) {
+	f, key, err := c.FileStorageService.PutFile(fmt.Sprintf("%v", accountId), "contacts.csv", []byte{})
+	if err != nil {
+		return "", nil, err
+	}
+	csvFile, err := os.Create(f)
+	if err != nil {
+		return "", nil, err
+	}
+	defer func(csvFile *os.File) {
+		csvFile.Close()
+	}(csvFile)
+
+	csvwriter := csv.NewWriter(csvFile)
+	csvwriter.Write([]string{"Имя", "Должность", "Компания", "Email", "Телефон", "Linkedin"})
+	for _, contact := range c.Search(&entities.Contact{BaseEntity: entities.BaseEntity{AccountId: accountId}}, nil).Items {
+		_ = csvwriter.Write([]string{contact.Name, contact.Job, contact.Company, contact.Email, contact.Phone, contact.Linkedin})
+	}
+	csvwriter.Flush()
+	csvFile.Close()
+
+	fileInfo, err := c.FileStorageService.GetFile(key, nil)
+	return key, fileInfo, err
 }
 
 func (c *ContactServiceImpl) Upload(accountId entities.ID, iterator ContactIterator) (int, error) {

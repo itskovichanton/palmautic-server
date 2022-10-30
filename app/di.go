@@ -27,11 +27,14 @@ type DI struct {
 func (c *DI) InitDI() {
 
 	container := dig.New()
-	c.DI.InitDI(container)
 
 	container.Provide(c.NewApp)
+	container.Provide(c.NewMoveChatToFolderAction)
+	container.Provide(c.NewExportContactsAction)
 	container.Provide(c.NewGetTariffsAction)
+	container.Provide(c.NewUserRepoService)
 	container.Provide(c.NewWebhooksProcessorService)
+	container.Provide(c.NewDeleteAccountAction)
 	container.Provide(c.NewStatsService)
 	container.Provide(c.NewFeatureAccessService)
 	container.Provide(c.NewGetStatsAction)
@@ -112,6 +115,8 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewAccountingService)
 	container.Provide(c.NewTariffRepo)
 	container.Provide(c.NewCronScheduler)
+
+	c.DI.InitDI(container)
 }
 
 func (c *DI) NewCronScheduler() *gocron.Scheduler {
@@ -122,6 +127,15 @@ func (c *DI) NewCronScheduler() *gocron.Scheduler {
 
 func (c *DI) NewTariffRepo() backend.ITariffRepo {
 	r := &backend.TariffRepoImpl{}
+	r.Init()
+	return r
+}
+
+func (c *DI) NewUserRepoService(UserRepo backend.IUserRepo, userRepoService *users.UserRepoServiceImpl) users.IUserRepoService {
+	r := &backend.AuthUserRepoImpl{
+		UserRepoServiceImpl: *userRepoService,
+		UserRepo:            UserRepo,
+	}
 	r.Init()
 	return r
 }
@@ -176,11 +190,12 @@ func (c *DI) NewFeatureAccessService(UserRepo backend.IUserRepo, TariffRepo back
 	}
 }
 
-func (c *DI) NewAccountService(AccountingService backend.IAccountingService, UserRepo backend.IUserRepo, AuthService users.IAuthService) backend.IAccountService {
+func (c *DI) NewAccountService(EventBus EventBus.Bus, AccountingService backend.IAccountingService, UserRepo backend.IUserRepo, AuthService users.IAuthService) backend.IAccountService {
 	r := &backend.AccountServiceImpl{
 		UserRepo:          UserRepo,
 		AuthService:       AuthService,
 		AccountingService: AccountingService,
+		EventBus:          EventBus,
 	}
 	r.Init()
 	return r
@@ -367,9 +382,12 @@ func (c *DI) NewTemplateCompilerService() backend.ITemplateCompilerService {
 	return r
 }
 
-func (c *DI) NewHttpController(GetTariffsAction *frontend.GetTariffsAction, WebhooksProcessorService backend.IWebhooksProcessorService, GetAccountStatsAction *frontend.GetAccountStatsAction, SetAccountSettingsAction *frontend.SetAccountSettingsAction, FindAccountAction *frontend.FindAccountAction, RegisterAccountAction *frontend.RegisterAccountAction, ClearChatAction *frontend.ClearChatAction, SearchChatMsgsAction *frontend.SearchChatMsgsAction, SendChatMsgAction *frontend.SendChatMsgAction, CreateOrUpdateFolderAction *frontend.CreateOrUpdateFolderAction, SearchFolderAction *frontend.SearchFolderAction, DeleteFolderAction *frontend.DeleteFolderAction, DeleteSequenceAction *frontend.DeleteSequenceAction, StartSequenceAction *frontend.StartSequenceAction, StopSequenceAction *frontend.StopSequenceAction, NotifyMessageOpenedAction *frontend.NotifyMessageOpenedAction, GetNotificationsAction *frontend.GetNotificationsAction, SearchSequenceAction *frontend.SearchSequenceAction, MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactsToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
+func (c *DI) NewHttpController(ExportContactsAction *frontend.ExportContactsAction, DeleteAccountAction *frontend.DeleteAccountAction, MoveChatToFolderAction *frontend.MoveChatToFolderAction, GetTariffsAction *frontend.GetTariffsAction, WebhooksProcessorService backend.IWebhooksProcessorService, GetAccountStatsAction *frontend.GetAccountStatsAction, SetAccountSettingsAction *frontend.SetAccountSettingsAction, FindAccountAction *frontend.FindAccountAction, RegisterAccountAction *frontend.RegisterAccountAction, ClearChatAction *frontend.ClearChatAction, SearchChatMsgsAction *frontend.SearchChatMsgsAction, SendChatMsgAction *frontend.SendChatMsgAction, CreateOrUpdateFolderAction *frontend.CreateOrUpdateFolderAction, SearchFolderAction *frontend.SearchFolderAction, DeleteFolderAction *frontend.DeleteFolderAction, DeleteSequenceAction *frontend.DeleteSequenceAction, StartSequenceAction *frontend.StartSequenceAction, StopSequenceAction *frontend.StopSequenceAction, NotifyMessageOpenedAction *frontend.NotifyMessageOpenedAction, GetNotificationsAction *frontend.GetNotificationsAction, SearchSequenceAction *frontend.SearchSequenceAction, MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactsToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
 	r := &http_server.PalmauticHttpController{
 		HttpControllerImpl:           *httpController,
+		ExportContactsAction:         ExportContactsAction,
+		DeleteAccountAction:          DeleteAccountAction,
+		MoveChatToFolderAction:       MoveChatToFolderAction,
 		GetTariffsAction:             GetTariffsAction,
 		GetAccountStatsAction:        GetAccountStatsAction,
 		CreateOrUpdateContactAction:  createOrUpdateContactAction,
@@ -426,6 +444,12 @@ func (c *DI) NewRegisterAccountAction(AccountService backend.IAccountService) *f
 	}
 }
 
+func (c *DI) NewDeleteAccountAction(AccountService backend.IAccountService) *frontend.DeleteAccountAction {
+	return &frontend.DeleteAccountAction{
+		AccountService: AccountService,
+	}
+}
+
 func (c *DI) NewGetStatsAction(StatsService backend.IStatsService) *frontend.GetAccountStatsAction {
 	return &frontend.GetAccountStatsAction{
 		StatsService: StatsService,
@@ -441,6 +465,12 @@ func (c *DI) NewSetAccountSettingsAction(AccountSettingsService backend.IAccount
 func (c *DI) NewFindAccountAction(UserService backend.IAccountService) *frontend.FindAccountAction {
 	return &frontend.FindAccountAction{
 		UserService: UserService,
+	}
+}
+
+func (c *DI) NewMoveChatToFolderAction(ChatService backend.IChatService) *frontend.MoveChatToFolderAction {
+	return &frontend.MoveChatToFolderAction{
+		ChatService: ChatService,
 	}
 }
 
@@ -600,6 +630,12 @@ func (c *DI) NewAddContactFromB2BAction(b2bService backend.IB2BService) *fronten
 	}
 }
 
+func (c *DI) NewExportContactsAction(contactService backend.IContactService) *frontend.ExportContactsAction {
+	return &frontend.ExportContactsAction{
+		ContactService: contactService,
+	}
+}
+
 func (c *DI) NewCreateOrUpdateContactAction(contactService backend.IContactService) *frontend.CreateOrUpdateContactAction {
 	return &frontend.CreateOrUpdateContactAction{
 		ContactService: contactService,
@@ -612,9 +648,10 @@ func (c *DI) NewDeleteContactAction(contactService backend.IContactService) *fro
 	}
 }
 
-func (c *DI) NewSearchContactAction(contactService backend.IContactService) *frontend.SearchContactAction {
+func (c *DI) NewSearchContactAction(contactService backend.IContactService, SequenceService backend.ISequenceService) *frontend.SearchContactAction {
 	return &frontend.SearchContactAction{
-		ContactService: contactService,
+		SequenceService: SequenceService,
+		ContactService:  contactService,
 	}
 }
 
@@ -648,19 +685,23 @@ func (c *DI) NewB2BService(FeatureAccessService backend.IFeatureAccessService, B
 	}
 }
 
-func (c *DI) NewContactService(contactRepo backend.IContactRepo) backend.IContactService {
+func (c *DI) NewContactService(FileStorageService filestorage.IFileStorageService, contactRepo backend.IContactRepo) backend.IContactService {
 	return &backend.ContactServiceImpl{
-		ContactRepo: contactRepo,
+		FileStorageService: FileStorageService,
+		ContactRepo:        contactRepo,
 	}
 }
 
-func (c *DI) NewSequenceService(TemplateService backend.ITemplateService, ContactService backend.IContactService, SequenceRunnerService backend.ISequenceRunnerService, sequenceRepo backend.ISequenceRepo) backend.ISequenceService {
-	return &backend.SequenceServiceImpl{
+func (c *DI) NewSequenceService(EventBus EventBus.Bus, TemplateService backend.ITemplateService, ContactService backend.IContactService, SequenceRunnerService backend.ISequenceRunnerService, sequenceRepo backend.ISequenceRepo) backend.ISequenceService {
+	r := &backend.SequenceServiceImpl{
 		SequenceRepo:          sequenceRepo,
 		ContactService:        ContactService,
 		SequenceRunnerService: SequenceRunnerService,
 		TemplateService:       TemplateService,
+		EventBus:              EventBus,
 	}
+	r.Init()
+	return r
 }
 
 func (c *DI) NewClearTemplatesAction(TemplateService backend.ITemplateService) *frontend.ClearTemplatesAction {

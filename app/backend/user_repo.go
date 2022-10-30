@@ -9,10 +9,11 @@ import (
 type IUserRepo interface {
 	Accounts() Accounts
 	CreateOrUpdate(user *entities.User)
-	FindByUserName(username string) *entities.User
+	FindByUsername(username string) *entities.User
 	BindToDirectorByUserName(user *entities.User, name string) bool
 	FindByEmail(email string) *entities.User
 	FindById(id entities.ID) *entities.User
+	Delete(id entities.ID) *entities.User
 }
 
 type UserRepoImpl struct {
@@ -21,8 +22,19 @@ type UserRepoImpl struct {
 	DBService IDBService
 }
 
+func (c *UserRepoImpl) Delete(id entities.ID) *entities.User {
+	deleted := c.FindById(id)
+	if deleted != nil {
+		c.DBService.DBContent().DeleteAccount(id)
+	}
+	return deleted
+}
+
 func (c *UserRepoImpl) BindToDirectorByUserName(user *entities.User, directorUserName string) bool {
-	directorUser := c.FindByUserName(directorUserName)
+	directorUser := c.FindByUsername(directorUserName)
+	if directorUser == nil {
+		directorUser = c.FindByEmail(directorUserName)
+	}
 	if directorUser != nil {
 		subordinateIndex := slices.IndexFunc(directorUser.Subordinates, func(u *entities.User) bool {
 			return u.ID == user.ID
@@ -53,7 +65,7 @@ func (c *UserRepoImpl) FindById(id entities.ID) *entities.User {
 	return nil
 }
 
-func (c *UserRepoImpl) FindByUserName(username string) *entities.User {
+func (c *UserRepoImpl) FindByUsername(username string) *entities.User {
 	for _, account := range c.Accounts() {
 		if strings.EqualFold(account.Username, username) {
 			return account

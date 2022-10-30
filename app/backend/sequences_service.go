@@ -1,7 +1,9 @@
 package backend
 
 import (
+	"github.com/asaskevich/EventBus"
 	"github.com/itskovichanton/goava/pkg/goava/errs"
+	"github.com/jinzhu/copier"
 	"salespalm/server/app/entities"
 	"time"
 )
@@ -25,6 +27,7 @@ type SequenceServiceImpl struct {
 	ContactService        IContactService
 	SequenceRunnerService ISequenceRunnerService
 	TemplateService       ITemplateService
+	EventBus              EventBus.Bus
 }
 
 func (c *SequenceServiceImpl) GetByIndex(accountId entities.ID, index int) *entities.Sequence {
@@ -149,4 +152,19 @@ func (c *SequenceServiceImpl) CreateOrUpdate(sequence *entities.SequenceSpec) (*
 	//return sequence, usedTemplates, nil
 
 	return nil, nil, nil
+}
+
+func (c *SequenceServiceImpl) Init() {
+	c.EventBus.SubscribeAsync(AccountRegisteredEventTopic, c.onAccountRegistered, true)
+}
+
+func (c *SequenceServiceImpl) onAccountRegistered(a *entities.User) {
+	seqs := c.SequenceRepo.Search(&entities.Sequence{BaseEntity: entities.BaseEntity{AccountId: 1001}}, nil)
+	if seqs != nil {
+		seq := seqs.Items[0]
+		seqCopy := &entities.Sequence{}
+		copier.Copy(&seqCopy, &seq)
+		seqCopy.AccountId = entities.ID(a.ID)
+		c.SequenceRepo.CreateOrUpdate(seqCopy)
+	}
 }

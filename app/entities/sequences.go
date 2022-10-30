@@ -223,6 +223,17 @@ func (p *SequenceProcess) RUnlock() {
 	p.casMutR.RUnlock()
 }
 
+func (p *SequenceProcess) IsActiveForContact(contactId ID) bool {
+	p.Lock()
+	defer p.Unlock()
+	process := p.ByContact[contactId]
+	if process != nil {
+		_, activeTaskIndex := process.FindFirstNonFinalTask()
+		return activeTaskIndex >= 0
+	}
+	return false
+}
+
 type SequenceInstance struct {
 	Tasks []*Task
 }
