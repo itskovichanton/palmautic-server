@@ -10,6 +10,7 @@ type Chat struct {
 	FolderID ID
 	Msgs     []*ChatMsg
 	Subject  string
+	Sequence IDWithName
 }
 
 func (c *Chat) Id() ID {

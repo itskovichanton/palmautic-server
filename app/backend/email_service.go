@@ -133,5 +133,5 @@ func (c *EmailServiceImpl) prepareEmailHtml(html string, sendEmailParams *SendEm
 	q := url.Values{}
 	httputils.AddValues(q, httputils.ToValues(sendEmailParams.AdditionalParams))
 	notifyMeEmailOpenedUrl.RawQuery = q.Encode()
-	return strings.ReplaceAll(html, "</body>", fmt.Sprintf(`<img src="%v"></body>`, notifyMeEmailOpenedUrl.String()))
+	return strings.ReplaceAll(html, "</body>", fmt.Sprintf(`<img wh="1" src="%v"></body>`, notifyMeEmailOpenedUrl.String()))
 }

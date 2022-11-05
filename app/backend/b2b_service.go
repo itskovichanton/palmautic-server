@@ -31,7 +31,7 @@ type UploadSettings struct {
 }
 
 type B2BServiceImpl struct {
-	IContactService
+	IB2BService
 
 	B2BRepo              IB2BRepo
 	ContactRepo          IContactRepo

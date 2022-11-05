@@ -46,6 +46,18 @@ func (c *ClearChatAction) Run(arg interface{}) (interface{}, error) {
 	return "cleared", nil
 }
 
+type DeleteChatsAction struct {
+	pipeline.BaseActionImpl
+
+	ChatService backend.IChatService
+}
+
+func (c *DeleteChatsAction) Run(arg interface{}) (interface{}, error) {
+	p := arg.(*entities2.CallParams)
+	c.ChatService.DeleteChats(entities.ID(p.Caller.Session.Account.ID))
+	return "deleted", nil
+}
+
 type MoveChatToFolderAction struct {
 	pipeline.BaseActionImpl
 

@@ -14,6 +14,7 @@ import (
 type IEmailScannerService interface {
 	Run(sequence *entities.Sequence, contact *entities.Contact)
 	RunOnContact(contact *entities.Contact)
+	Stop(contactId entities.ID)
 }
 
 type EmailScannerServiceImpl struct {
@@ -51,6 +52,10 @@ func (c *EmailScannerServiceImpl) RunOnContact(contact *entities.Contact) {
 		contact)
 }
 
+func (c *EmailScannerServiceImpl) Stop(contactId entities.ID) {
+	c.EventBus.Publish(StopInMailScanEventTopic(-contactId, contactId))
+}
+
 func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *entities.Contact) {
 
 	if c.IsRunning(contact.Id) {
@@ -81,7 +86,7 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 	order := &FindEmailOrder{
 		MaxCount: 1,
 		Subject:  c.getSubjectNames(sequence, contact),
-		From:     []string{"itskovichae@gmail.com", "daemon"}, //contact.Email,
+		From:     []string{ /*"itskovichae@gmail.com"*/ contact.Email, "daemon"}, //contact.Email,
 	}
 
 	c.markRunning(contact.Id, true)

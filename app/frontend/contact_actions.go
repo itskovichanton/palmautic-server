@@ -60,14 +60,14 @@ func (c *SearchContactAction) Run(arg interface{}) (interface{}, error) {
 		Offset: cp.GetParamInt("offset", 0),
 		Count:  cp.GetParamInt("count", 0),
 	})
-	sequences := c.SequenceService.Search(&entities.Sequence{BaseEntity: entities.BaseEntity{AccountId: filter.AccountId}}, nil).Items
-	for _, contact := range foundContacts.Items {
-		for _, sequence := range sequences {
-			if sequence.Process.IsActiveForContact(contact.Id) {
-				contact.Sequences = append(contact.Sequences, sequence.ToIDAndName(sequence.Name))
-			}
-		}
-	}
+	//sequences := c.SequenceService.SearchAll(filter.AccountId).Items
+	//for _, contact := range foundContacts.Items {
+	//	for _, sequence := range sequences {
+	//		if sequence.Process.IsActiveForContact(contact.Id) && slices.IndexFunc(contact.Sequences, func(s *entities.IDWithName) bool { return s.Id == sequence.Id }) < 0 {
+	//			contact.Sequences = append(contact.Sequences, sequence.ToIDAndName(sequence.Name))
+	//		}
+	//	}
+	//}
 	return foundContacts, nil
 }
 

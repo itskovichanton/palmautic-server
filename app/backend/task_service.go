@@ -237,6 +237,7 @@ func (c *TaskServiceImpl) Execute(task *entities.Task) (*entities.Task, error) {
 		storedTask.Subject = task.Subject
 		c.TaskExecutorService.Execute(storedTask) // пока не проверяю статус выполнения
 		storedTask.Status = entities.TaskStatusCompleted
+		storedTask.ExecTime = time.Now()
 		c.RefreshTask(storedTask)
 
 		// Оповещаем шину

@@ -164,7 +164,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 				}
 				if bouncedTask != nil {
 					c.TaskService.MarkBounced(bouncedTask)
-					c.EventBus.Publish(EmailBouncedEventTopic, &TaskInMailResponseReceivedEventArgs{Sequence: sequence, Contact: contact, Task: bouncedTask, InMail: m})
+					c.EventBus.Publish(EmailBouncedEventTopic, &TaskInMailReplyReceivedEventArgs{Sequence: sequence, Contact: contact, Task: bouncedTask, InMail: m})
 					logger.Result(ld2, fmt.Sprintf("Пометил что bounce получен в задаче %v", bouncedTask.Id))
 				} else {
 					logger.Result(ld2, fmt.Sprintf("никакая задача не будет отвечена"))
@@ -195,7 +195,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 				}
 				if repliedTask != nil {
 					c.TaskService.MarkReplied(repliedTask)
-					c.EventBus.Publish(EmailResponseReceivedEventTopic, &TaskInMailResponseReceivedEventArgs{Sequence: sequence, Contact: contact, Task: repliedTask, InMail: m})
+					c.EventBus.Publish(EmailReplyReceivedEventTopic, &TaskInMailReplyReceivedEventArgs{Sequence: sequence, Contact: contact, Task: repliedTask, InMail: m})
 					logger.Result(ld2, fmt.Sprintf("Пометил что ответ получен в задаче %v", repliedTask.Id))
 				} else {
 					logger.Result(ld2, fmt.Sprintf("никакая задача не будет отвечена"))

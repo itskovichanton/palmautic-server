@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"salespalm/server/app/entities"
 	"strings"
-	"time"
 )
 
 type IChatService interface {
@@ -24,6 +23,7 @@ type IChatService interface {
 	Search(filter *entities.ChatMsg) []*entities.ChatMsg
 	ClearChat(filter *entities.Chat)
 	MoveToFolder(filter entities.BaseEntity, folderId entities.ID) *entities.Chat
+	DeleteChats(accountId entities.ID)
 }
 
 type ChatCommons struct {
@@ -45,8 +45,9 @@ type ChatServiceImpl struct {
 func (c *ChatServiceImpl) Init() {
 
 	c.EventBus.SubscribeAsync(BaseInMailReceivedEventTopic, c.OnInMailReceived, true)
-	c.EventBus.SubscribeAsync(SequenceRepliedEventTopic, c.OnSequenceFinished, true)
+	c.EventBus.SubscribeAsync(SequenceRepliedEventTopic, c.OnSequenceReplied, true)
 	c.EventBus.SubscribeAsync(EmailOpenedEventTopic, c.OnEmailOpened, true)
+	c.EventBus.SubscribeAsync(AccountBeforeDeletedEventTopic, c.onAccountDeleted, true)
 
 	for accountId, _ := range c.AccountService.Accounts() {
 		for _, chat := range c.ChatRepo.Chats(accountId) {
@@ -77,21 +78,27 @@ func (c *ChatServiceImpl) OnEmailOpened(q url.Values) {
 	}
 }
 
-func (c *ChatServiceImpl) OnSequenceFinished(sequence *entities.Sequence, sequenceTasks []*entities.Task, repliedTask *entities.Task) {
+func (c *ChatServiceImpl) OnSequenceReplied(sequence *entities.Sequence, sequenceTasks []*entities.Task, repliedTask *entities.Task) {
 
 	contactCreds := repliedTask.Contact.BaseEntity
 	c.AddInfoMsg(contactCreds, &entities.ChatMsg{Subject: repliedTask.Subject, Body: fmt.Sprintf(`Последовательность '%v' завершена для контакта %v. Теперь Вы можете переписываться с ним.`, sequence.Name, repliedTask.Contact.Name)})
 
 	for _, task := range sequenceTasks {
 		if task.Status == entities.TaskStatusCompleted || task.Status == entities.TaskStatusReplied {
-			c.AddMsg(contactCreds, &entities.ChatMsg{Subject: task.Subject, My: true, Body: task.Body, TaskType: task.Type, Opened: true}, false)
-			time.Sleep(200 * time.Millisecond)
+			c.AddMsg(contactCreds, &entities.ChatMsg{Subject: task.Subject, My: true, Body: task.Body, TaskType: task.Type, Opened: true, Time: task.ExecTime}, false)
 		}
+	}
+}
+
+func (c *ChatServiceImpl) DeleteChats(accountId entities.ID) {
+	for _, chat := range c.ChatRepo.All(accountId) {
+		c.ClearChat(chat)
 	}
 }
 
 func (c *ChatServiceImpl) ClearChat(filter *entities.Chat) {
 	c.ChatRepo.ClearChat(filter)
+	c.EmailScannerService.Stop(filter.Id())
 }
 
 func (c *ChatServiceImpl) Search(filter *entities.ChatMsg) []*entities.ChatMsg {
@@ -163,7 +170,7 @@ func (c *ChatServiceImpl) addMsg(contactCreds entities.BaseEntity, m *entities.C
 			Event:     EmailOpenedEventChatMsg,
 			Params: core.Params{
 				From:        c.AccountService.FindById(contactCreds.AccountId).Email(),
-				To:          []string{ /*contact.Email*/ "itskovichae@gmail.com"},
+				To:          []string{contact.Email /* "itskovichae@gmail.com"*/},
 				Subject:     chat.Subject,
 				Body:        m.Body,
 				Attachments: getAttachmentFiles(m.Attachments),
@@ -231,6 +238,13 @@ func (c *ChatServiceImpl) Chats(accountId entities.ID) []*entities.Chat {
 
 func (c *ChatServiceImpl) startAnswerScan(contact *entities.Contact) {
 	go c.EmailScannerService.RunOnContact(contact)
+}
+
+func (c *ChatServiceImpl) onAccountDeleted(account *entities.User) {
+	accountId := entities.ID(account.ID)
+	for _, chat := range c.ChatRepo.Chats(accountId) {
+		c.ClearChat(chat)
+	}
 }
 
 func prepareMsg(m *entities.ChatMsg) {

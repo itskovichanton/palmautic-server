@@ -54,8 +54,7 @@ type StatsContainer struct {
 }
 
 type ChatsContainer struct {
-	Chats   AccountChatsMap
-	Folders AccountFoldersMap
+	Chats AccountChatsMap
 }
 
 type SequencesContainer struct {

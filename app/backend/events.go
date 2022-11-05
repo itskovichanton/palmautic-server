@@ -21,7 +21,7 @@ func StopInMailScanEventTopic(sequenceId, contactId entities.ID) string {
 	return fmt.Sprintf("inmail-stop-scan:seq-%v:cont-%v", sequenceId, contactId)
 }
 
-const EmailResponseReceivedEventTopic = "inmail-received"
+const EmailReplyReceivedEventTopic = "inmail-received"
 const SequenceFinishedEventTopic = "sequence-finished"
 const EmailBouncedEventTopic = "email-bounced"
 const EmailOpenedEventTopic = "email-opened"
@@ -35,3 +35,5 @@ const FeatureUnaccessableByTariff = "feature-unaccessable-by-tariff"
 const SequenceRepliedEventTopic = "sequence-replied"
 const IncomingChatMsgEventTopic = "incoming-chat-msg"
 const AccountRegisteredEventTopic = "account-registered"
+const AccountDeletedEventTopic = "account-deleted"
+const AccountBeforeDeletedEventTopic = "account-before-delete"

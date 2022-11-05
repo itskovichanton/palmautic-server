@@ -61,7 +61,10 @@ func (c *ContactRepoImpl) Search(filter *entities.Contact, settings *ContactSear
 	filter.Name = strings.ToUpper(filter.Name)
 	rMap := c.DBService.DBContent().GetContacts()[filter.AccountId]
 	if rMap == nil {
-		return nil
+		return &ContactSearchResult{
+			Items:      []*entities.Contact{},
+			TotalCount: 0,
+		}
 	} else if filter.Id != 0 {
 		var r []*entities.Contact
 		searchResult := rMap[filter.Id]

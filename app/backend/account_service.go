@@ -5,6 +5,7 @@ import (
 	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"github.com/itskovichanton/server/pkg/server/users"
 	"salespalm/server/app/entities"
+	"time"
 )
 
 type IAccountService interface {
@@ -33,9 +34,15 @@ func (c *AccountServiceImpl) Init() {
 }
 
 func (c *AccountServiceImpl) Delete(id entities.ID) *entities.User {
-	deleted := c.UserRepo.Delete(id)
+	deleted := c.UserRepo.FindById(id)
 	if deleted != nil {
-		c.AuthService.Logout(deleted.Account.SessionToken)
+		c.EventBus.Publish(AccountBeforeDeletedEventTopic, deleted)
+		time.Sleep(20 * time.Second) // Даем всем процессам в БД остановиться
+		deleted = c.UserRepo.Delete(id)
+		if deleted != nil {
+			c.AuthService.Delete(deleted.Username)
+		}
+		c.EventBus.Publish(AccountDeletedEventTopic, deleted)
 	}
 	return deleted
 }
@@ -43,7 +50,7 @@ func (c *AccountServiceImpl) Delete(id entities.ID) *entities.User {
 func (c *AccountServiceImpl) FindById(id entities.ID) *entities.User {
 	r := c.UserRepo.FindById(id)
 	if r != nil {
-		c.AccountingService.AssignTariff(id, TariffIDBasic)
+		//c.AccountingService.AssignTariff(id, TariffIDEnterprise)
 	}
 	return r
 }

@@ -23,10 +23,18 @@ type EmailProcessorServiceImpl struct {
 func (c *EmailProcessorServiceImpl) replace(n *html.Node, accountId entities.ID) {
 	if n.Type == html.ElementNode {
 		if n.Data == "img" {
+			whAttrIndexToReplace := slices.IndexFunc(n.Attr, func(attr html.Attribute) bool {
+				return attr.Key == "wh" && attr.Val == "1" || attr.Key == "src" && strings.Contains(attr.Val, "event=")
+			})
+			if whAttrIndexToReplace > -1 {
+				n.Parent.RemoveChild(n)
+				return
+			}
+
 			srcAttrIndexToReplace := slices.IndexFunc(n.Attr, func(attr html.Attribute) bool { return attr.Key == "src" && !strings.HasPrefix(attr.Val, "http") })
 			if srcAttrIndexToReplace > -1 {
 				altAttrIndex := slices.IndexFunc(n.Attr, func(attr html.Attribute) bool { return attr.Key == "alt" && len(attr.Val) > 0 })
-				if altAttrIndex >= 1 {
+				if altAttrIndex > -1 {
 					altAttr := n.Attr[altAttrIndex]
 					n.Attr[srcAttrIndexToReplace] = html.Attribute{Key: "src", Val: fmt.Sprintf("%v/getFile?key=%v__%v", c.Config.Server.GetUrl(), accountId, altAttr.Val)}
 				}

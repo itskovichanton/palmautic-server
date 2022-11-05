@@ -27,7 +27,7 @@ func (c *StatsServiceImpl) Init() {
 	c.EventBus.SubscribeAsync(EmailBouncedEventTopic, c.OnTaskInMailBounced, true)
 }
 
-func (c *StatsServiceImpl) OnTaskInMailBounced(a *TaskInMailResponseReceivedEventArgs) {
+func (c *StatsServiceImpl) OnTaskInMailBounced(a *TaskInMailReplyReceivedEventArgs) {
 	a.Sequence.EmailBouncedCount++
 }
 

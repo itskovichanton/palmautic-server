@@ -143,6 +143,17 @@ func (s *Sequence) CountPeople() int {
 	return len(s.Process.ByContact)
 }
 
+func (s *Sequence) ResetStats() {
+	s.ReplyRate = 0
+	s.EmailBouncedCount = 0
+	s.EmailSendingCount = 0
+	s.EmailOpenedCount = 0
+	s.OpenRate = 0
+	s.Progress = 0
+	s.People = 0
+	s.BounceRate = 0
+}
+
 func (s *SequenceInstance) StatusTask() (*Task, int) {
 	for i := len(s.Tasks) - 1; i >= 0; i-- {
 		t := s.Tasks[i]
@@ -158,11 +169,11 @@ func (s *SequenceInstance) StatusTask() (*Task, int) {
 }
 
 func (s *SequenceInstance) CalcProgress() float32 {
-	_, statusTaskIndex := s.StatusTask()
-	if len(s.Tasks) == 0 || statusTaskIndex < 0 {
+	_, startTask := s.FindFirstNonFinalTask()
+	if len(s.Tasks) == 0 || startTask < 0 {
 		return 0
 	}
-	return float32(statusTaskIndex) / float32(len(s.Tasks))
+	return float32(startTask) / float32(len(s.Tasks))
 }
 
 func (s *SequenceInstance) FindFirstNonFinalTask() (*Task, int) {
@@ -232,6 +243,12 @@ func (p *SequenceProcess) IsActiveForContact(contactId ID) bool {
 		return activeTaskIndex >= 0
 	}
 	return false
+}
+
+func (p *SequenceProcess) Clear() {
+	p.Lock()
+	defer p.Unlock()
+	p.ByContact = map[ID]*SequenceInstance{}
 }
 
 type SequenceInstance struct {

@@ -19,6 +19,7 @@ type IChatRepo interface {
 	ClearChat(filter *entities.Chat)
 	SearchFirst(filter entities.BaseEntity) *entities.Chat
 	MoveToFolder(filter entities.BaseEntity, folderId entities.ID) *entities.Chat
+	All(accountId entities.ID) Chats
 }
 
 type ChatRepoImpl struct {
@@ -36,9 +37,16 @@ func (c *ChatRepoImpl) MoveToFolder(filter entities.BaseEntity, folderId entitie
 	return r
 }
 
+func (c *ChatRepoImpl) All(accountId entities.ID) Chats {
+	return c.DBService.DBContent().GetChats().Chats.ForAccount(accountId)
+}
+
 func (c *ChatRepoImpl) SearchFirst(filter entities.BaseEntity) *entities.Chat {
-	chats := c.DBService.DBContent().GetChats().Chats.ForAccount(filter.AccountId)
-	return chats[filter.Id]
+	chats := c.All(filter.AccountId)
+	if chats != nil {
+		return chats[filter.Id]
+	}
+	return nil
 }
 
 func (c *ChatRepoImpl) ClearChat(filter *entities.Chat) {
@@ -87,7 +95,9 @@ func (c *ChatRepoImpl) CreateOrUpdate(contact *entities.Contact, m *entities.Cha
 
 	created := false
 	c.DBService.DBContent().IDGenerator.AssignId(m)
-	m.Time = time.Now()
+	if m.Time.Unix() < 0 {
+		m.Time = time.Now()
+	}
 	m.ChatId = contact.Id
 	m.AccountId = contact.AccountId
 	c.saveAttachments(m)

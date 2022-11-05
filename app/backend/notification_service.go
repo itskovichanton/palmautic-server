@@ -7,6 +7,7 @@ import (
 	"golang.org/x/exp/slices"
 	"net/url"
 	"salespalm/server/app/entities"
+	"strings"
 	"sync"
 	"time"
 )
@@ -19,6 +20,10 @@ type INotificationService interface {
 type Notification struct {
 	Subject, Message, Alertness, Type string
 	Object                            interface{}
+}
+
+func (n *Notification) SeemsLike(x *Notification) bool {
+	return strings.EqualFold(n.Subject, x.Subject)
 }
 
 const (
@@ -50,7 +55,7 @@ func (c *NotificationServiceImpl) Init() {
 	c.lastNotificationTimes = map[entities.ID]*entities.TimesMap{}
 
 	c.EventBus.SubscribeAsync(EmailBouncedEventTopic, c.OnTaskInMailBounced, true)
-	c.EventBus.SubscribeAsync(EmailResponseReceivedEventTopic, c.OnTaskInMailResponseReceived, true)
+	c.EventBus.SubscribeAsync(EmailReplyReceivedEventTopic, c.OnTaskInMailReplyReceived, true)
 	c.EventBus.SubscribeAsync(SequenceFinishedEventTopic, c.OnSequenceFinished, true)
 	c.EventBus.SubscribeAsync(NewChatMsgEventTopic, c.OnNewChatMsg, true)
 	c.EventBus.SubscribeAsync(TariffUpdatedEventTopic, c.OnTariffUpdated, true)
@@ -116,6 +121,10 @@ func featureSubject(featureName string) string {
 }
 
 func (c *NotificationServiceImpl) OnSequenceFinished(a *SequenceFinishedEventArgs) {
+	// Если последовательность финишировала со статусом Replied - не показываем уведомление
+	if slices.IndexFunc(a.Tasks, func(t *entities.Task) bool { return t.Status == entities.TaskStatusReplied }) > -1 {
+		return
+	}
 	c.Add(a.Sequence.AccountId, &Notification{
 		Subject:   "Последовательность финишировала",
 		Message:   fmt.Sprintf(`"%v" финишировала для контакта %v`, a.Sequence.Name, a.Contact.Name),
@@ -123,7 +132,7 @@ func (c *NotificationServiceImpl) OnSequenceFinished(a *SequenceFinishedEventArg
 	}, nil)
 }
 
-func (c *NotificationServiceImpl) OnTaskInMailBounced(a *TaskInMailResponseReceivedEventArgs) {
+func (c *NotificationServiceImpl) OnTaskInMailBounced(a *TaskInMailReplyReceivedEventArgs) {
 	c.Add(a.Task.AccountId, &Notification{
 		Subject:   "Bounced:",
 		Message:   a.InMail.ContentParts[0].Content,
@@ -131,10 +140,10 @@ func (c *NotificationServiceImpl) OnTaskInMailBounced(a *TaskInMailResponseRecei
 	}, nil)
 }
 
-func (c *NotificationServiceImpl) OnTaskInMailResponseReceived(a *TaskInMailResponseReceivedEventArgs) {
+func (c *NotificationServiceImpl) OnTaskInMailReplyReceived(a *TaskInMailReplyReceivedEventArgs) {
 	c.Add(a.Task.AccountId, &Notification{
 		Subject:   a.Contact.Name + ":",
-		Message:   a.InMail.ContentParts[len(a.InMail.ContentParts)-1].Content,
+		Message:   a.InMail.ContentParts[0].PlainContent,
 		Alertness: entities.TaskAlertnessBlue,
 	}, nil)
 }
@@ -145,7 +154,7 @@ type SequenceFinishedEventArgs struct {
 	Tasks    []*entities.Task
 }
 
-type TaskInMailResponseReceivedEventArgs struct {
+type TaskInMailReplyReceivedEventArgs struct {
 	Sequence *entities.Sequence
 	Contact  *entities.Contact
 	Task     *entities.Task
@@ -164,6 +173,9 @@ func (c *NotificationServiceImpl) Get(accountId entities.ID, clearAfter bool) []
 func (c *NotificationServiceImpl) Add(accountId entities.ID, a *Notification, settings *NotificationAddingSettings) bool {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	if slices.IndexFunc(c.notifications[accountId], func(n *Notification) bool { return a.SeemsLike(n) }) > -1 {
+		return false
+	}
 	lastAddingTimes := c.lastNotificationTimes[accountId]
 	if lastAddingTimes == nil {
 		lastAddingTimes = entities.NewTimesMap()

@@ -60,6 +60,7 @@ type PalmauticHttpController struct {
 	FindAccountAction            *frontend.FindAccountAction
 	SetAccountSettingsAction     *frontend.SetAccountSettingsAction
 	WebhooksProcessorService     backend.IWebhooksProcessorService
+	DeleteChatsAction            *frontend.DeleteChatsAction
 }
 
 func (c *PalmauticHttpController) Init() {
@@ -126,7 +127,7 @@ func (c *PalmauticHttpController) Init() {
 	c.EchoEngine.GET("/b2b/clear/:table", c.GetDefaultHandler(c.prepareAction(false, c.ClearB2BTableAction)))
 	c.EchoEngine.GET("/b2b/search/:table", c.GetDefaultHandler(c.prepareAction(true, c.SearchB2BAction)))
 	c.EchoEngine.GET("/b2b/addToContacts", c.GetDefaultHandler(c.prepareAction(true, c.AddContactFromB2BAction)))
-	c.EchoEngine.GET("/b2b/addToSequence", c.GetDefaultHandler(c.prepareAction(true, c.AddContactsToSequenceAction)))
+	c.EchoEngine.GET("/b2b/addToSequence", c.GetDefaultHandler(c.prepareAction(true, c.AddToSequenceFromB2BAction)))
 
 	// folders
 	c.EchoEngine.POST("/folders/createOrUpdate", c.GetDefaultHandler(c.prepareAction(true, c.readFolder(), c.CreateOrUpdateFolderAction)))
@@ -138,6 +139,7 @@ func (c *PalmauticHttpController) Init() {
 	c.EchoEngine.POST("/chats/search", c.GetDefaultHandler(c.prepareAction(true, c.readChatMsg(), c.SearchChatMsgsAction)))
 	c.EchoEngine.POST("/chats/clear", c.GetDefaultHandler(c.prepareAction(true, c.readContact(), c.ClearChatAction)))
 	c.EchoEngine.GET("/chats/moveToFolder", c.GetDefaultHandler(c.prepareAction(true, c.MoveChatToFolderAction)))
+	c.EchoEngine.GET("/chats/deleteAll", c.GetDefaultHandler(c.prepareAction(true, c.DeleteChatsAction)))
 }
 
 func (c *PalmauticHttpController) prepareAction(requiresAuth bool, actions ...pipeline.IAction) pipeline.IAction {

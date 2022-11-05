@@ -12,7 +12,7 @@ type Task struct {
 	Description                                     string
 	Type                                            string
 	Status                                          string
-	StartTime, DueTime                              time.Time
+	StartTime, DueTime, ExecTime                    time.Time
 	Sequence                                        *IDWithName
 	Contact                                         *Contact
 	Action                                          string

@@ -76,6 +76,14 @@ func IDStr(id ID) string {
 	return fmt.Sprintf("%v", id)
 }
 
+func RetrieveIDs(a []IBaseEntity) []ID {
+	var r []ID
+	for _, x := range a {
+		r = append(r, x.GetId())
+	}
+	return r
+}
+
 func BaseEntitiesFromIds(ids string) []BaseEntity {
 	var r []BaseEntity
 	for idIndex, idStr := range strings.Split(ids, ",") {

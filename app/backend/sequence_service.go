@@ -3,7 +3,9 @@ package backend
 import (
 	"github.com/asaskevich/EventBus"
 	"github.com/itskovichanton/goava/pkg/goava/errs"
+	"github.com/itskovichanton/goava/pkg/goava/utils"
 	"github.com/jinzhu/copier"
+	"golang.org/x/exp/rand"
 	"salespalm/server/app/entities"
 	"time"
 )
@@ -18,6 +20,8 @@ type ISequenceService interface {
 	Start(accountId entities.ID, sequenceIds []entities.ID)
 	Stop(accountId entities.ID, sequenceIds []entities.ID)
 	Delete(accountId entities.ID, sequenceIds []entities.ID)
+	SearchAll(accountId entities.ID) *SequenceSearchResult
+	StopAll(accountId entities.ID)
 }
 
 type SequenceServiceImpl struct {
@@ -156,15 +160,42 @@ func (c *SequenceServiceImpl) CreateOrUpdate(sequence *entities.SequenceSpec) (*
 
 func (c *SequenceServiceImpl) Init() {
 	c.EventBus.SubscribeAsync(AccountRegisteredEventTopic, c.onAccountRegistered, true)
+	c.EventBus.SubscribeAsync(AccountBeforeDeletedEventTopic, c.onBeforeAccountDeleted, true)
+}
+
+func (c *SequenceServiceImpl) onBeforeAccountDeleted(a *entities.User) {
+	c.StopAll(entities.ID(a.ID))
 }
 
 func (c *SequenceServiceImpl) onAccountRegistered(a *entities.User) {
+
+	// В проде снеси
 	seqs := c.SequenceRepo.Search(&entities.Sequence{BaseEntity: entities.BaseEntity{AccountId: 1001}}, nil)
+	names := []string{"Найм IT-специалистов", "Найм сотрудников в отдел продаж", "Привлечение контрагентов", "Привлечение руководителей компаний для размещения рекламы", "Привлечение строительных компаний"}
 	if seqs != nil {
 		seq := seqs.Items[0]
-		seqCopy := &entities.Sequence{}
-		copier.Copy(&seqCopy, &seq)
-		seqCopy.AccountId = entities.ID(a.ID)
-		c.SequenceRepo.CreateOrUpdate(seqCopy)
+		n := rand.Intn(len(names) - 1)
+		if n <= 0 {
+			n = 1
+		}
+		for i := n; i > 0; i-- {
+			seqCopy := &entities.Sequence{}
+			copier.Copy(&seqCopy, &seq)
+			seqCopy.Name = names[i]
+			seqCopy.Id = 0
+			seqCopy.AccountId = entities.ID(a.ID)
+			seqCopy.ResetStats()
+			c.SequenceRepo.CreateOrUpdate(seqCopy)
+			c.Stop(seqCopy.AccountId, []entities.ID{seqCopy.Id})
+			seqCopy.Process.Clear()
+		}
 	}
+}
+
+func (c *SequenceServiceImpl) StopAll(accountId entities.ID) {
+	c.Stop(accountId, utils.Map(c.SearchAll(accountId).Items, func(a *entities.Sequence) entities.ID { return a.Id }))
+}
+
+func (c *SequenceServiceImpl) SearchAll(accountId entities.ID) *SequenceSearchResult {
+	return c.Search(&entities.Sequence{BaseEntity: entities.BaseEntity{AccountId: accountId}}, nil)
 }

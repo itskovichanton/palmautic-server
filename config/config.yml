@@ -54,8 +54,8 @@ java-tools:
 profile: dev
 
 prod:
-  mainServiceUrl: http://192.168.200.85:5002
+  mainServiceUrl: http://82.146.41.108:5007
 
 dev:
-  mainServiceUrl: http://192.168.200.85:5005
+  mainServiceUrl: http://82.146.41.108:5007
 
