@@ -118,15 +118,15 @@ func (t *B2BTable) FindById(id ID) MapWithId {
 type MapWithId map[string]interface{}
 
 func (c MapWithId) SetId(id ID) {
-	c["id"] = id
+	c["Id"] = id
 }
 
 func (c MapWithId) Id() ID {
-	return c["id"].(ID)
+	return c["Id"].(ID)
 }
 
 const (
-	FilterTypeChoise = "choise"
+	FilterTypeChoice = "choice"
 	FilterTypeFlag   = "flag"
 	FilterTypeValue  = "value"
 	FilterTypeText   = "text"
@@ -156,7 +156,7 @@ func (c *Filter) GetName() string {
 	return c.Name
 }
 
-type ChoiseFilter struct {
+type ChoiceFilter struct {
 	Filter
 	Variants []string
 }

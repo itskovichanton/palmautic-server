@@ -48,15 +48,16 @@ func (c *B2BServiceImpl) AddToSequence(accountId entities.ID, ids []entities.ID,
 func (c *B2BServiceImpl) AddToContacts(accountId entities.ID, b2bItemIds []entities.ID) []entities.ID {
 	var added []entities.ID
 	for _, b2bItemId := range b2bItemIds {
-		item := c.B2BRepo.FindById(b2bItemId)
+		item, _ := c.B2BRepo.FindById(b2bItemId)
 		if item != nil {
 			newContact := &entities.Contact{
 				BaseEntity: entities.BaseEntity{AccountId: accountId},
 				Phone:      cast.ToString(item["Phone"]),
-				Name:       cast.ToString(item["FullName"]),
+				Name:       cast.ToString(item["Name"]),
 				Email:      cast.ToString(item["Email"]),
 				Company:    cast.ToString(item["Company"]),
 				Linkedin:   cast.ToString(item["Linkedin"]),
+				Job:        cast.ToString(item["Title"]),
 			}
 			if len(newContact.Name) == 0 {
 				newContact.Name = cast.ToString(item["Name"])
@@ -114,14 +115,14 @@ func (c *B2BServiceImpl) Search(accountId entities.ID, table string, filters map
 		return nil, err
 	}
 
-	r := c.B2BRepo.Search(table, filters, settings)
+	r, _ := c.B2BRepo.Search(table, filters, settings)
 	c.FeatureAccessService.NotifyFeatureUsedB2BSearch(accountId)
 
 	return r, nil
 }
 
 func (c *B2BServiceImpl) ClearTable(table string) {
-	c.B2BRepo.Table(table).Data = nil
+	c.B2BRepo.Clear(table)
 	c.B2BRepo.Refresh()
 }
 

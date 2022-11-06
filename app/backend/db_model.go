@@ -126,8 +126,8 @@ func (c *DBContent) GetTaskContainer() *TaskContainer {
 
 func (c *DBContent) createFilter(f string) entities.IFilter {
 	switch f {
-	case entities.FilterTypeChoise:
-		return &entities.ChoiseFilter{}
+	case entities.FilterTypeChoice:
+		return &entities.ChoiceFilter{}
 	case entities.FilterTypeFlag:
 		return &entities.FlagFilter{}
 	case entities.FilterTypeText, entities.FilterTypeValue:

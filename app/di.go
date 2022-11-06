@@ -244,7 +244,7 @@ func (c *DI) NewSequenceRunnerService(NotificationService backend.INotificationS
 		SequenceRepo:        SequenceRepo,
 		ContactService:      ContactService,
 	}
-	go r.Init()
+	//go r.Init()
 	return r
 }
 
@@ -310,15 +310,14 @@ func (c *DI) NewManualEmailTaskExecutorService(msgDeliveryEmailService backend.I
 }
 
 func (c *DI) NewDBService(idGenerator backend.IDGenerator, config *core.Config) (backend.IDBService, error) {
-	r := &backend.InMemoryDemoDBServiceImpl{
+	r := &backend.DBServiceImpl{
 		IDGenerator: idGenerator,
 		Config:      config,
 	}
-	err := r.Load()
+	err := r.Init()
 	if err != nil {
 		return nil, err
 	}
-	r.Init()
 	return r, nil
 }
 
@@ -363,11 +362,12 @@ func (c *DI) NewContactRepo(dbService backend.IDBService) backend.IContactRepo {
 	}
 }
 
-func (c *DI) NewB2BRepo(dbService backend.IDBService) backend.IB2BRepo {
-	r := &backend.B2BRepoImpl{
-		DBService: dbService,
+func (c *DI) NewB2BRepo(MainService backend.IMainServiceAPIClientService, dbService backend.IDBService) backend.IB2BRepo {
+	r := &backend.B2BDBRepoImpl{
+		MainService: MainService,
+		DBService:   dbService,
 	}
-	r.Refresh()
+	r.Init()
 	return r
 }
 

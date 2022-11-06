@@ -117,8 +117,7 @@ func (c *PersonMapperImpl) mapPersons1(data []string) (entities.MapWithId, error
 		return nil, io.EOF
 	}
 	return entities.MapWithId{
-		"FullName": data[0] + " " + data[1],
-		"Name":     data[2],
+		"Name":     data[0] + " " + data[1],
 		"Company":  data[3],
 		"Email":    data[4],
 		"Linkedin": data[5],

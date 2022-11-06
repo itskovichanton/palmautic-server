@@ -54,8 +54,12 @@ java-tools:
 profile: dev
 
 prod:
-  mainServiceUrl: http://82.146.41.108:5007
+  mainServiceUrl: http://82.146.41.108:5008
+  db:
+    url: root:92559255@tcp(localhost:3306)/palmautic_prod?charset=utf8mb4
 
 dev:
-  mainServiceUrl: http://82.146.41.108:5007
+  mainServiceUrl: http://172.27.32.1:5008
+  db:
+    url: myuser3:92559255@tcp(172.27.32.1:3306)/palmautic?charset=utf8mb4&parseTime=True&loc=Local
 

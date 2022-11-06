@@ -8,11 +8,12 @@ import (
 )
 
 type IB2BRepo interface {
-	Search(table string, filters map[string]interface{}, settings *SearchSettings) *SearchResult
-	CreateOrUpdate(table string, a entities.MapWithId)
+	Search(table string, filters map[string]interface{}, settings *SearchSettings) (*SearchResult, error)
+	CreateOrUpdate(table string, a entities.MapWithId) error
 	Refresh()
 	Table(table string) *entities.B2BTable
-	FindById(id entities.ID) entities.MapWithId
+	FindById(id entities.ID) (entities.MapWithId, error)
+	Clear(table string) error
 }
 
 type B2BRepoImpl struct {
@@ -21,17 +22,22 @@ type B2BRepoImpl struct {
 	DBService IDBService
 }
 
-func (c *B2BRepoImpl) FindById(id entities.ID) entities.MapWithId {
-	for _, t := range c.DBService.DBContent().B2Bdb.Tables {
-		r := t.FindById(id)
-		if r != nil {
-			return r
-		}
-	}
+func (c *B2BRepoImpl) Clear(table string) error {
+	c.Table(table).Data = nil
 	return nil
 }
 
-func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}, settings *SearchSettings) *SearchResult {
+func (c *B2BRepoImpl) FindById(id entities.ID) (entities.MapWithId, error) {
+	for _, t := range c.DBService.DBContent().B2Bdb.Tables {
+		r := t.FindById(id)
+		if r != nil {
+			return r, nil
+		}
+	}
+	return nil, nil
+}
+
+func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}, settings *SearchSettings) (*SearchResult, error) {
 
 	if settings.MaxSearchCount == 0 {
 		settings.MaxSearchCount = 1000
@@ -42,7 +48,7 @@ func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}, setti
 	}
 	t := c.Table(table)
 	if t == nil {
-		return result
+		return result, nil
 	}
 	filterMap := t.FilterMap()
 	for _, p := range t.Data {
@@ -78,15 +84,16 @@ func (c *B2BRepoImpl) Search(table string, filters map[string]interface{}, setti
 	} else {
 		result.Items = []entities.MapWithId{}
 	}
-	return result
+	return result, nil
 }
 
-func (c *B2BRepoImpl) CreateOrUpdate(table string, a entities.MapWithId) {
+func (c *B2BRepoImpl) CreateOrUpdate(table string, a entities.MapWithId) error {
 	a.SetId(c.DBService.DBContent().IDGenerator.GenerateIntID(0))
 	t := c.Table(table)
 	if t != nil {
 		t.Data = append(t.Data, a)
 	}
+	return nil
 }
 
 func (c *B2BRepoImpl) Table(table string) *entities.B2BTable {
@@ -127,8 +134,8 @@ func (c *B2BRepoImpl) Refresh() {
 		for _, f := range t.Filters {
 			t.FilterTypes = append(t.FilterTypes, f.GetType())
 			switch e := f.(type) {
-			case *entities.ChoiseFilter:
-				e.Variants = c.calcChoiseFilterVariants(t.Data, e, t.FilterMap())
+			case *entities.ChoiceFilter:
+				e.Variants = c.calcChoiceFilterVariants(t.Data, e, t.FilterMap())
 				break
 			}
 		}
@@ -138,38 +145,38 @@ func (c *B2BRepoImpl) Refresh() {
 
 func (c *B2BRepoImpl) calcCompanyFilters() []entities.IFilter {
 	return []entities.IFilter{
-		&entities.ChoiseFilter{
+		&entities.ChoiceFilter{
 			Filter: entities.Filter{
 				Index:       0,
 				Name:        "category",
 				Description: "Категория",
-				Type:        entities.FilterTypeChoise,
+				Type:        entities.FilterTypeChoice,
 			},
 		},
-		&entities.ChoiseFilter{
+		&entities.ChoiceFilter{
 			Filter: entities.Filter{
 				Index:       1,
 				Name:        "country",
 				Description: "Страна",
-				Type:        entities.FilterTypeChoise,
+				Type:        entities.FilterTypeChoice,
 			},
 		},
-		&entities.ChoiseFilter{
+		&entities.ChoiceFilter{
 			Filter: entities.Filter{
 				Index:           2,
 				DependsOnFilter: "country",
 				Name:            "region",
 				Description:     "Регион",
-				Type:            entities.FilterTypeChoise,
+				Type:            entities.FilterTypeChoice,
 			},
 		},
-		&entities.ChoiseFilter{
+		&entities.ChoiceFilter{
 			Filter: entities.Filter{
 				Index:           3,
 				DependsOnFilter: "region",
 				Name:            "city",
 				Description:     "Населенный пункт",
-				Type:            entities.FilterTypeChoise,
+				Type:            entities.FilterTypeChoice,
 			},
 		},
 		&entities.FlagFilter{
@@ -209,30 +216,30 @@ func (c *B2BRepoImpl) calcCompanyFilters() []entities.IFilter {
 
 func (c *B2BRepoImpl) calcPersonFilters() []entities.IFilter {
 	return []entities.IFilter{
-		&entities.ChoiseFilter{
+		&entities.ChoiceFilter{
 			Filter: entities.Filter{
 				Index:       0,
 				Name:        "industry",
 				Description: "Индустрия",
-				Type:        entities.FilterTypeChoise,
+				Type:        entities.FilterTypeChoice,
 			},
 		},
-		&entities.ChoiseFilter{
+		&entities.ChoiceFilter{
 			Filter: entities.Filter{
 				//DependsOnFilter: "industry",
 				Index:       1,
 				Name:        "company",
 				Description: "Компания",
-				Type:        entities.FilterTypeChoise,
+				Type:        entities.FilterTypeChoice,
 			},
 		},
-		&entities.ChoiseFilter{
+		&entities.ChoiceFilter{
 			Filter: entities.Filter{
 				//DependsOnFilter: "company",
 				Index:       2,
 				Name:        "title",
 				Description: "Должность",
-				Type:        entities.FilterTypeChoise,
+				Type:        entities.FilterTypeChoice,
 			},
 		},
 		&entities.FlagFilter{
@@ -270,7 +277,7 @@ func (c *B2BRepoImpl) calcPersonFilters() []entities.IFilter {
 	}
 }
 
-func (c *B2BRepoImpl) calcChoiseFilterVariants(data []entities.MapWithId, f1 *entities.ChoiseFilter, filterMap map[string]entities.IFilter) []string {
+func (c *B2BRepoImpl) calcChoiceFilterVariants(data []entities.MapWithId, f1 *entities.ChoiceFilter, filterMap map[string]entities.IFilter) []string {
 	var r []string
 	if data == nil {
 		return r
