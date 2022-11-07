@@ -86,7 +86,7 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 	order := &FindEmailOrder{
 		MaxCount: 1,
 		Subject:  c.getSubjectNames(sequence, contact),
-		From:     []string{ /*"itskovichae@gmail.com"*/ contact.Email, "daemon"}, //contact.Email,
+		From:     []string{"itskovichae@gmail.com", contact.Email, "daemon"}, //contact.Email,
 	}
 
 	c.markRunning(contact.Id, true)

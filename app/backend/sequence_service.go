@@ -97,7 +97,7 @@ func (c *SequenceServiceImpl) Start(accountId entities.ID, sequenceIds []entitie
 			seq.Stopped = false
 			go func() {
 				if seq.Process != nil && seq.Process.ByContact != nil {
-					locked := seq.Process.RLock()
+					locked := seq.Process.Lock()
 					for contactId, _ := range seq.Process.ByContact {
 						contactToRun := c.ContactService.FindFirst(&entities.Contact{BaseEntity: entities.BaseEntity{AccountId: accountId, Id: contactId}})
 						if contactToRun != nil {
@@ -108,7 +108,7 @@ func (c *SequenceServiceImpl) Start(accountId entities.ID, sequenceIds []entitie
 						}
 					}
 					if locked {
-						seq.Process.RUnlock()
+						seq.Process.Unlock()
 					}
 				}
 			}()
@@ -186,7 +186,7 @@ func (c *SequenceServiceImpl) onAccountRegistered(a *entities.User) {
 			seqCopy.AccountId = entities.ID(a.ID)
 			seqCopy.ResetStats()
 			c.SequenceRepo.CreateOrUpdate(seqCopy)
-			c.Stop(seqCopy.AccountId, []entities.ID{seqCopy.Id})
+			//c.Stop(seqCopy.AccountId, []entities.ID{seqCopy.Id})
 			seqCopy.Process.Clear()
 		}
 	}

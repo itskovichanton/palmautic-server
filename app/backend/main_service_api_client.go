@@ -29,6 +29,10 @@ type IMainServiceAPIClientService interface {
 	Query(mainServiceUrl string, uri string, sql string, params map[string]interface{}, resultGetter func() interface{}, dataGetter func(interface{}) (interface{}, error), paramTypes map[string]string) (*Query, error)
 	QueryDomainDBForMapsWithSpecifiedUrl(mainServiceUrl string, sql string, params map[string]interface{}, paramTypes map[string]string) (*Query, error)
 	QueryDomainDBForMapWithSpecifiedUrl(mainServiceUrl string, sql string, params map[string]interface{}, paramTypes map[string]string) (*Query, error)
+	ExecDomainDBWithSpecifiedUrl(mainServiceUrl string, sql string, params map[string]interface{}, paramTypes map[string]string) (*Query, error)
+	ExecDomainDB(sql string, params map[string]interface{}, paramTypes map[string]string) (*Query, error)
+	UpdateDomainDBWithSpecifiedUrl(mainServiceUrl string, sql string, params map[string]interface{}, paramTypes map[string]string) (*Query, error)
+	UpdateDomainDB(sql string, params map[string]interface{}, paramTypes map[string]string) (*Query, error)
 }
 
 type Query struct {
@@ -69,6 +73,14 @@ func (c *JavaMainServiceAPIClientServiceImpl) QueryDomainDBForMap(sql string, pa
 	return c.QueryDomainDBForMapWithSpecifiedUrl(c.Config.Props.MainServiceUrl, sql, params, paramTypes)
 }
 
+func (c *JavaMainServiceAPIClientServiceImpl) ExecDomainDB(sql string, params map[string]interface{}, paramTypes map[string]string) (*Query, error) {
+	return c.ExecDomainDBWithSpecifiedUrl(c.Config.Props.MainServiceUrl, sql, params, paramTypes)
+}
+
+func (c *JavaMainServiceAPIClientServiceImpl) UpdateDomainDB(sql string, params map[string]interface{}, paramTypes map[string]string) (*Query, error) {
+	return c.UpdateDomainDBWithSpecifiedUrl(c.Config.Props.MainServiceUrl, sql, params, paramTypes)
+}
+
 func (c *JavaMainServiceAPIClientServiceImpl) QueryDomainDBForMapsWithSpecifiedUrl(mainServiceUrl string, sql string, params map[string]interface{}, paramTypes map[string]string) (*Query, error) {
 	return c.Query(mainServiceUrl, "domaindb/query", sql, params, func() interface{} {
 		return []map[string]interface{}{}
@@ -79,6 +91,22 @@ func (c *JavaMainServiceAPIClientServiceImpl) QueryDomainDBForMapsWithSpecifiedU
 
 func (c *JavaMainServiceAPIClientServiceImpl) QueryDomainDBForMapWithSpecifiedUrl(mainServiceUrl string, sql string, params map[string]interface{}, paramTypes map[string]string) (*Query, error) {
 	return c.Query(mainServiceUrl, "domaindb/queryfirst", sql, params, func() interface{} {
+		return map[string]interface{}{}
+	}, func(data interface{}) (interface{}, error) {
+		return cast.ToStringMapE(data)
+	}, paramTypes)
+}
+
+func (c *JavaMainServiceAPIClientServiceImpl) ExecDomainDBWithSpecifiedUrl(mainServiceUrl string, sql string, params map[string]interface{}, paramTypes map[string]string) (*Query, error) {
+	return c.Query(mainServiceUrl, "domaindb/executeProc", sql, params, func() interface{} {
+		return map[string]interface{}{}
+	}, func(data interface{}) (interface{}, error) {
+		return cast.ToStringMapE(data)
+	}, paramTypes)
+}
+
+func (c *JavaMainServiceAPIClientServiceImpl) UpdateDomainDBWithSpecifiedUrl(mainServiceUrl string, sql string, params map[string]interface{}, paramTypes map[string]string) (*Query, error) {
+	return c.Query(mainServiceUrl, "domaindb/update", sql, params, func() interface{} {
 		return map[string]interface{}{}
 	}, func(data interface{}) (interface{}, error) {
 		return cast.ToStringMapE(data)

@@ -16,6 +16,7 @@ import (
 	"go.uber.org/dig"
 	"net/http"
 	"salespalm/server/app/backend"
+	"salespalm/server/app/backend/tests"
 	"salespalm/server/app/frontend"
 	"salespalm/server/app/frontend/http_server"
 	"time"
@@ -31,7 +32,10 @@ func (c *DI) InitDI() {
 
 	container.Provide(c.NewApp)
 	container.Provide(c.NewMoveChatToFolderAction)
+	container.Provide(c.NewTestService)
 	container.Provide(c.NewExportContactsAction)
+	container.Provide(c.NewOptimizationService)
+	container.Provide(c.NewStartSeqTestAction)
 	container.Provide(c.NewDeleteChatsAction)
 	container.Provide(c.NewGetTariffsAction)
 	container.Provide(c.NewUserRepoService)
@@ -201,12 +205,13 @@ func (c *DI) NewFeatureAccessService(UserRepo backend.IUserRepo, TariffRepo back
 	}
 }
 
-func (c *DI) NewAccountService(EventBus EventBus.Bus, AccountingService backend.IAccountingService, UserRepo backend.IUserRepo, AuthService users.IAuthService) backend.IAccountService {
+func (c *DI) NewAccountService(ContactService backend.IContactService, EventBus EventBus.Bus, AccountingService backend.IAccountingService, UserRepo backend.IUserRepo, AuthService users.IAuthService) backend.IAccountService {
 	r := &backend.AccountServiceImpl{
 		UserRepo:          UserRepo,
 		AuthService:       AuthService,
 		AccountingService: AccountingService,
 		EventBus:          EventBus,
+		ContactService:    ContactService,
 	}
 	r.Init()
 	return r
@@ -244,7 +249,7 @@ func (c *DI) NewSequenceRunnerService(NotificationService backend.INotificationS
 		SequenceRepo:        SequenceRepo,
 		ContactService:      ContactService,
 	}
-	//go r.Init()
+	go r.Init()
 	return r
 }
 
@@ -356,9 +361,10 @@ func (c *DI) NewFolderRepo(dbService backend.IDBService) backend.IFolderRepo {
 	}
 }
 
-func (c *DI) NewContactRepo(dbService backend.IDBService) backend.IContactRepo {
+func (c *DI) NewContactRepo(MainService backend.IMainServiceAPIClientService, dbService backend.IDBService) backend.IContactRepo {
 	return &backend.ContactRepoImpl{
-		DBService: dbService,
+		DBService:   dbService,
+		MainService: MainService,
 	}
 }
 
@@ -393,9 +399,10 @@ func (c *DI) NewTemplateCompilerService() backend.ITemplateCompilerService {
 	return r
 }
 
-func (c *DI) NewHttpController(DeleteChatsAction *frontend.DeleteChatsAction, AddToSequenceFromB2BAction *frontend.AddToSequenceFromB2BAction, ExportContactsAction *frontend.ExportContactsAction, DeleteAccountAction *frontend.DeleteAccountAction, MoveChatToFolderAction *frontend.MoveChatToFolderAction, GetTariffsAction *frontend.GetTariffsAction, WebhooksProcessorService backend.IWebhooksProcessorService, GetAccountStatsAction *frontend.GetAccountStatsAction, SetAccountSettingsAction *frontend.SetAccountSettingsAction, FindAccountAction *frontend.FindAccountAction, RegisterAccountAction *frontend.RegisterAccountAction, ClearChatAction *frontend.ClearChatAction, SearchChatMsgsAction *frontend.SearchChatMsgsAction, SendChatMsgAction *frontend.SendChatMsgAction, CreateOrUpdateFolderAction *frontend.CreateOrUpdateFolderAction, SearchFolderAction *frontend.SearchFolderAction, DeleteFolderAction *frontend.DeleteFolderAction, DeleteSequenceAction *frontend.DeleteSequenceAction, StartSequenceAction *frontend.StartSequenceAction, StopSequenceAction *frontend.StopSequenceAction, NotifyMessageOpenedAction *frontend.NotifyMessageOpenedAction, GetNotificationsAction *frontend.GetNotificationsAction, SearchSequenceAction *frontend.SearchSequenceAction, MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactsToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
+func (c *DI) NewHttpController(StartSeqTestAction *frontend.StartSeqTestAction, DeleteChatsAction *frontend.DeleteChatsAction, AddToSequenceFromB2BAction *frontend.AddToSequenceFromB2BAction, ExportContactsAction *frontend.ExportContactsAction, DeleteAccountAction *frontend.DeleteAccountAction, MoveChatToFolderAction *frontend.MoveChatToFolderAction, GetTariffsAction *frontend.GetTariffsAction, WebhooksProcessorService backend.IWebhooksProcessorService, GetAccountStatsAction *frontend.GetAccountStatsAction, SetAccountSettingsAction *frontend.SetAccountSettingsAction, FindAccountAction *frontend.FindAccountAction, RegisterAccountAction *frontend.RegisterAccountAction, ClearChatAction *frontend.ClearChatAction, SearchChatMsgsAction *frontend.SearchChatMsgsAction, SendChatMsgAction *frontend.SendChatMsgAction, CreateOrUpdateFolderAction *frontend.CreateOrUpdateFolderAction, SearchFolderAction *frontend.SearchFolderAction, DeleteFolderAction *frontend.DeleteFolderAction, DeleteSequenceAction *frontend.DeleteSequenceAction, StartSequenceAction *frontend.StartSequenceAction, StopSequenceAction *frontend.StopSequenceAction, NotifyMessageOpenedAction *frontend.NotifyMessageOpenedAction, GetNotificationsAction *frontend.GetNotificationsAction, SearchSequenceAction *frontend.SearchSequenceAction, MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactToSequenceAction *frontend.AddContactsToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
 	r := &http_server.PalmauticHttpController{
 		HttpControllerImpl:           *httpController,
+		StartSeqTestAction:           StartSeqTestAction,
 		ExportContactsAction:         ExportContactsAction,
 		DeleteChatsAction:            DeleteChatsAction,
 		DeleteAccountAction:          DeleteAccountAction,
@@ -796,4 +803,32 @@ func (c *DI) NewSearchSequenceAction(sequenceService backend.ISequenceService) *
 	return &frontend.SearchSequenceAction{
 		SequenceService: sequenceService,
 	}
+}
+
+func (c *DI) NewTestService(TaskService backend.ITaskService, generator goava.IGenerator, LoggerService logger.ILoggerService, AccountService backend.IAccountService, SequenceService backend.ISequenceService, B2BService backend.IB2BService) tests.ITestService {
+	return &tests.TestServiceImpl{
+		TestStatsService: &tests.TestStatsServiceImpl{
+			LoggerService: LoggerService,
+		},
+		Services: &tests.Services{
+			AccountService:  AccountService,
+			SequenceService: SequenceService,
+			B2BService:      B2BService,
+			TaskService:     TaskService,
+		},
+		LoggerService: LoggerService,
+		Generator:     generator,
+	}
+}
+
+func (c *DI) NewStartSeqTestAction(TestService tests.ITestService) *frontend.StartSeqTestAction {
+	return &frontend.StartSeqTestAction{
+		TestService: TestService,
+	}
+}
+
+func (c *DI) NewOptimizationService() backend.IOptimizationService {
+	r := &backend.OptimizationServiceImpl{}
+	r.Start()
+	return r
 }

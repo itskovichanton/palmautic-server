@@ -6,7 +6,6 @@ import (
 )
 
 type Accounts map[entities.ID]*entities.User
-type Contacts map[entities.ID]*entities.Contact
 type Tasks map[entities.ID]*entities.Task
 type Sequences map[entities.ID]*entities.Sequence
 type Folders map[entities.ID]*entities.Folder
@@ -24,7 +23,6 @@ func (c Chats) Clear(chatId entities.ID) {
 type DBContent struct {
 	IDGenerator       IDGenerator
 	Accounts          Accounts
-	Contacts          AccountContactsMap
 	TaskContainer     *TaskContainer
 	B2Bdb             *entities.B2Bdb
 	SequenceContainer *SequencesContainer
@@ -41,7 +39,6 @@ func (c *DBContent) DeleteAccount(accountId entities.ID) {
 	defer c.lock.Unlock()
 
 	delete(c.TaskContainer.Tasks, accountId)
-	delete(c.Contacts, accountId)
 	delete(c.SequenceContainer.Sequences, accountId)
 	delete(c.StatsContainer.Stats, accountId)
 	delete(c.ChatsContainer.Chats, accountId)
@@ -88,13 +85,6 @@ func (c *DBContent) GetFolders() AccountFoldersMap {
 	return c.Folders
 }
 
-func (c *DBContent) GetContacts() AccountContactsMap {
-	if c.Contacts == nil {
-		c.Contacts = AccountContactsMap{}
-	}
-	return c.Contacts
-}
-
 func (c *DBContent) GetSequenceContainer() *SequencesContainer {
 	if c.SequenceContainer == nil {
 		c.SequenceContainer = &SequencesContainer{
@@ -136,7 +126,6 @@ func (c *DBContent) createFilter(f string) entities.IFilter {
 	return nil
 }
 
-type AccountContactsMap map[entities.ID]Contacts
 type AccountFoldersMap map[entities.ID]Folders
 type AccountChatsMap map[entities.ID]Chats
 type AccountStatsMap map[entities.ID]*entities.Stats
@@ -153,27 +142,6 @@ func (c AccountStatsMap) ForAccount(accountId entities.ID) *entities.Stats {
 		c[accountId] = &entities.Stats{Sequences: entities.SequenceStats{BySequence: map[entities.ID]*entities.SequenceStatsCounter{}}}
 	}
 	return c[accountId]
-}
-
-func (c AccountContactsMap) ForAccount(accountId entities.ID) Contacts {
-	if c[accountId] == nil {
-		c[accountId] = Contacts{}
-	}
-	return c[accountId]
-}
-
-func (c AccountContactsMap) Exists(contact *entities.Contact) entities.ID {
-	contacts := c.ForAccount(contact.AccountId)
-	if contacts == nil {
-		return -1
-	}
-
-	for contactId, existingContact := range contacts {
-		if existingContact.SeemsLike(contact) {
-			return contactId
-		}
-	}
-	return -1
 }
 
 type AccountTasksMap map[entities.ID]Tasks

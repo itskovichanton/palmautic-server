@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"salespalm/server/app/entities"
 	"strings"
+	"sync"
+	"time"
 )
 
 type IEmailService interface {
@@ -36,6 +38,7 @@ type EmailServiceImpl struct {
 	AccountService       IAccountService
 	FeatureAccessService IFeatureAccessService
 	Config               *server.Config
+	sync.Mutex
 }
 
 func GetEmailOpenedContactName(q url.Values) string {
@@ -77,11 +80,18 @@ func GetEmailOpenedEventChatMsgId(q url.Values) entities.ID {
 }
 
 func (c *EmailServiceImpl) SendCorporate(params *SendEmailParams, preprocessor func(srv *email.Email, m *email.Message)) error {
-	params.From = "noreply@palmautic.ru"
+	params.From = "noreply@`palmautic-dev`.ru"
 	return c.Send(params, preprocessor)
 }
 
 func (c *EmailServiceImpl) Send(params *SendEmailParams, preprocessor func(srv *email.Email, m *email.Message)) error {
+
+	// Все отправки встают в очередь - отправляем письмо, ждем 5 сек - потом только берем след отправку
+	c.Lock()
+	defer func() {
+		time.Sleep(5 * time.Second)
+		c.Unlock()
+	}()
 
 	err := c.FeatureAccessService.CheckFeatureAccessableEmail(params.AccountId)
 	if err != nil {
@@ -102,6 +112,7 @@ func (c *EmailServiceImpl) Send(params *SendEmailParams, preprocessor func(srv *
 	}
 
 	params.SenderConfig = senderConfig
+	params.Send = false
 	err = c.EmailService.SendPreprocessed(&params.Params, func(srv *email.Email, m *email.Message) {
 		if preprocessor != nil {
 			preprocessor(srv, m)

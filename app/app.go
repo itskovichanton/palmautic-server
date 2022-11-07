@@ -9,6 +9,7 @@ import (
 	"salespalm/server/app/backend"
 	"salespalm/server/app/entities"
 	"salespalm/server/app/frontend/http_server"
+	"time"
 )
 
 type PalmauticServerApp struct {
@@ -31,11 +32,13 @@ type PalmauticServerApp struct {
 	EmailTaskExecutorService backend.IEmailTaskExecutorService
 	NotificationService      backend.INotificationService
 	ChatService              backend.IChatService
+	IOptimizationService     backend.IOptimizationService
 }
 
 func (c *PalmauticServerApp) Run() error {
 	c.registerUsers()
 	c.tests()
+	time.Sleep(5 * time.Second)
 	return c.HttpController.Start()
 }
 

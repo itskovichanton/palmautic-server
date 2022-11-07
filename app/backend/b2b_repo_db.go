@@ -3,6 +3,7 @@ package backend
 import (
 	"fmt"
 	"github.com/fatih/structs"
+	"github.com/itskovichanton/core/pkg/core/validation"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cast"
 	"golang.org/x/exp/slices"
@@ -62,12 +63,12 @@ func (c *B2BDBRepoImpl) Search(table string, filters map[string]interface{}, set
 		settings.MaxSearchCount = 1000
 	}
 
-	result := &SearchResult{
+	r := &SearchResult{
 		Items: []entities.MapWithId{},
 	}
 	t := c.Table(table)
 	if t == nil {
-		return result, nil
+		return r, nil
 	}
 	filterMap := t.FilterMap()
 
@@ -90,11 +91,14 @@ func (c *B2BDBRepoImpl) Search(table string, filters map[string]interface{}, set
 	}
 	results, err := c.queryResults(whereClause, settings) //m.Where(whereClause).Offset(settings.Offset).Limit(settings.Count).Find(&results).Error
 	if err != nil {
-		return result, err
+		return r, err
 	}
-	result.Items = results
-	result.TotalCount = len(result.Items)
-	return result, nil
+	r.Items = results
+
+	q, err := c.MainService.QueryDomainDBForMap(fmt.Sprintf(`select count(*) as total from b2b where %v`, whereClause), nil, nil)
+	r.TotalCount, err = validation.CheckInt("total", q.Result.(map[string]interface{})["total"])
+
+	return r, nil
 }
 
 func (c *B2BDBRepoImpl) exportTable(table string) error {
@@ -399,7 +403,7 @@ func (c *B2BDBRepoImpl) calcWhereClauseAndPart(f entities.IFilter, filterName st
 
 func (c *B2BDBRepoImpl) queryResults(whereClause string, settings *SearchSettings) ([]entities.MapWithId, error) {
 	var r []entities.MapWithId
-	q, err := c.MainService.QueryDomainDBForMaps(fmt.Sprintf("select * from palmautic.b2b where %v limit %v, %v", whereClause, settings.Offset, settings.Count), nil, nil)
+	q, err := c.MainService.QueryDomainDBForMaps(fmt.Sprintf("select * from b2b where %v limit %v, %v", whereClause, settings.Offset, settings.Count), nil, nil)
 	if err != nil {
 		return r, err
 	}

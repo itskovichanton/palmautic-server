@@ -1,6 +1,7 @@
 package entities
 
 import (
+	"github.com/itskovichanton/core/pkg/core/validation"
 	"github.com/itskovichanton/goava/pkg/goava/utils/case_insensitive"
 	"github.com/spf13/cast"
 )
@@ -50,13 +51,12 @@ func (c *BaseEntity) GetAccountId() ID {
 type Contact struct {
 	BaseEntity
 
-	Job       string
-	Phone     string `check:"phone" json:"phone"`
-	Name      string `check:"notempty" json:"name"`
-	Email     string `check:"notempty,email" json:"email"`
-	Company   string `json:"company"`
-	Linkedin  string `json:"linkedin"`
-	Sequences []*IDWithName
+	Job      string
+	Phone    string `check:"phone" json:"phone"`
+	Name     string `check:"notempty" json:"name"`
+	Email    string `check:"notempty,email" json:"email"`
+	Company  string `json:"company"`
+	Linkedin string `json:"linkedin"`
 }
 
 func (c Contact) SeemsLike(contact *Contact) bool {
@@ -122,7 +122,8 @@ func (c MapWithId) SetId(id ID) {
 }
 
 func (c MapWithId) Id() ID {
-	return c["Id"].(ID)
+	id, _ := validation.CheckInt64("Id", c["Id"])
+	return ID(id)
 }
 
 const (

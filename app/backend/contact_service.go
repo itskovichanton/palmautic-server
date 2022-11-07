@@ -3,7 +3,6 @@ package backend
 import (
 	"encoding/csv"
 	"fmt"
-	"github.com/itskovichanton/core/pkg/core/validation"
 	"github.com/itskovichanton/server/pkg/server/filestorage"
 	"os"
 	"salespalm/server/app/entities"
@@ -17,7 +16,7 @@ type IContactService interface {
 	CreateOrUpdate(contact *entities.Contact) error
 	Upload(accountId entities.ID, iterator ContactIterator) (int, error)
 	Export(accountId entities.ID) (string, *filestorage.FileInfo, error)
-	GetByIndex(accountId entities.ID, index int) *entities.Contact
+	Clear(accountId entities.ID)
 }
 
 type ContactServiceImpl struct {
@@ -25,6 +24,10 @@ type ContactServiceImpl struct {
 
 	ContactRepo        IContactRepo
 	FileStorageService filestorage.IFileStorageService
+}
+
+func (c *ContactServiceImpl) Clear(accountId entities.ID) {
+	c.ContactRepo.Clear(accountId)
 }
 
 func (c *ContactServiceImpl) SearchAll(filters []*entities.Contact) []*entities.Contact {
@@ -36,10 +39,6 @@ func (c *ContactServiceImpl) SearchAll(filters []*entities.Contact) []*entities.
 		}
 	}
 	return r
-}
-
-func (c *ContactServiceImpl) GetByIndex(accountId entities.ID, index int) *entities.Contact {
-	return c.ContactRepo.GetByIndex(accountId, index)
 }
 
 func (c *ContactServiceImpl) FindFirst(filter *entities.Contact) *entities.Contact {
@@ -59,9 +58,9 @@ func (c *ContactServiceImpl) Delete(accountId entities.ID, ids []entities.ID) {
 }
 
 func (c *ContactServiceImpl) CreateOrUpdate(contact *entities.Contact) error {
-	if err := validation.CheckFirst("contact", contact); err != nil {
-		return err
-	}
+	//if err := validation.CheckFirst("contact", contact); err != nil {
+	//	return err
+	//}
 
 	c.ContactRepo.CreateOrUpdate(contact)
 	return nil

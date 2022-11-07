@@ -4,6 +4,7 @@ import (
 	"golang.org/x/exp/maps"
 	"salespalm/server/app/entities"
 	"strings"
+	"sync"
 )
 
 type ITaskRepo interface {
@@ -18,13 +19,21 @@ type TaskRepoImpl struct {
 	ITaskRepo
 
 	DBService IDBService
+	sync.Mutex
 }
 
 func (c *TaskRepoImpl) Clear(accountId entities.ID) {
+	c.Lock()
+	defer c.Unlock()
+
 	c.DBService.DBContent().GetTaskContainer().Tasks[accountId] = Tasks{}
 }
 
 func (c *TaskRepoImpl) Search(filter *entities.Task, settings *SearchSettings) *TaskSearchResult {
+
+	c.Lock()
+	defer c.Unlock()
+
 	rMap := c.DBService.DBContent().GetTaskContainer().Tasks[filter.AccountId]
 	if len(rMap) == 0 {
 		return c.applySettings([]*entities.Task{}, settings)
@@ -106,6 +115,10 @@ func (c *TaskRepoImpl) applySettings(r []*entities.Task, settings *SearchSetting
 }
 
 func (c *TaskRepoImpl) Delete(filter *entities.Task) *entities.Task {
+
+	c.Lock()
+	defer c.Unlock()
+
 	tasks := c.DBService.DBContent().GetTaskContainer().Tasks[filter.AccountId]
 	deleted := tasks[filter.Id]
 	if deleted != nil {
@@ -115,6 +128,10 @@ func (c *TaskRepoImpl) Delete(filter *entities.Task) *entities.Task {
 }
 
 func (c *TaskRepoImpl) CreateOrUpdate(task *entities.Task) {
+
+	c.Lock()
+	defer c.Unlock()
+
 	c.DBService.DBContent().IDGenerator.AssignId(task)
 	c.DBService.DBContent().GetTaskContainer().Tasks.ForAccount(task.AccountId)[task.Id] = task
 }

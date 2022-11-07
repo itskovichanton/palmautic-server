@@ -62,7 +62,7 @@ func (c *B2BServiceImpl) AddToContacts(accountId entities.ID, b2bItemIds []entit
 			if len(newContact.Name) == 0 {
 				newContact.Name = cast.ToString(item["Name"])
 			}
-			c.ContactRepo.CreateOrUpdateIfNoDuplicate(newContact)
+			c.ContactRepo.CreateOrUpdate(newContact)
 			if newContact.ReadyForSearch() {
 				added = append(added, newContact.Id)
 			}

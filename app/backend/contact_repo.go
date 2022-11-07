@@ -1,8 +1,11 @@
 package backend
 
 import (
-	"github.com/jinzhu/copier"
-	"golang.org/x/exp/maps"
+	"fmt"
+	"github.com/itskovichanton/core/pkg/core/validation"
+	"github.com/itskovichanton/goava/pkg/goava/utils"
+	"github.com/mitchellh/mapstructure"
+	"github.com/spf13/cast"
 	"salespalm/server/app/entities"
 	"strings"
 )
@@ -10,16 +13,16 @@ import (
 type IContactRepo interface {
 	Search(filter *entities.Contact, settings *ContactSearchSettings) *ContactSearchResult
 	Delete(accountId entities.ID, ids []entities.ID)
-	CreateOrUpdate(contact *entities.Contact)
-	DeleteDuplicates(accountId entities.ID)
-	CreateOrUpdateIfNoDuplicate(contact *entities.Contact)
-	GetByIndex(accountId entities.ID, index int) *entities.Contact
+	CreateOrUpdate(contact *entities.Contact) error
+	FindById(id entities.ID) *entities.Contact
+	Clear(accountId entities.ID)
 }
 
 type ContactRepoImpl struct {
 	IContactRepo
 
-	DBService IDBService
+	DBService   IDBService
+	MainService IMainServiceAPIClientService
 }
 
 type ContactSearchResult struct {
@@ -31,105 +34,78 @@ type ContactSearchSettings struct {
 	Offset, Count, MaxSearchCount int
 }
 
-func (c *ContactRepoImpl) GetByIndex(accountId entities.ID, index int) *entities.Contact {
-	if index < 0 {
-		index = 0
-	}
-	contacts := c.DBService.DBContent().GetContacts().ForAccount(accountId)
-	if contacts != nil {
-		i := 0
-		for {
-			for _, r := range contacts {
-				i++
-				if i > index {
-					return r
-				}
-			}
-		}
-	}
-	return nil
+func (c *ContactRepoImpl) Clear(accountId entities.ID) {
+	c.MainService.UpdateDomainDB(fmt.Sprintf(`delete from contacts where accountId=%v`, accountId), nil, nil)
 }
 
-func (c *ContactRepoImpl) DeleteDuplicates(accountId entities.ID) {
-	contacts := c.DBService.DBContent().GetContacts().ForAccount(accountId)
-	if contacts != nil {
-		//UniqueMap(contacts)
+func (c *ContactRepoImpl) FindById(id entities.ID) *entities.Contact {
+	q, err := c.MainService.QueryDomainDBForMap(fmt.Sprintf("select * from contacts where contacts.Id=%v", id), nil, nil)
+	if err != nil {
+		return nil
 	}
+	if err != nil {
+		return nil
+	}
+	rM := q.Result.(map[string]interface{})
+	if len(rM) == 0 {
+		rM = nil
+	}
+	return decodeContact(rM)
 }
 
 func (c *ContactRepoImpl) Search(filter *entities.Contact, settings *ContactSearchSettings) *ContactSearchResult {
+
+	r := &ContactSearchResult{Items: []*entities.Contact{}}
 	filter.Name = strings.ToUpper(filter.Name)
-	rMap := c.DBService.DBContent().GetContacts()[filter.AccountId]
-	if rMap == nil {
-		return &ContactSearchResult{
-			Items:      []*entities.Contact{},
-			TotalCount: 0,
-		}
-	} else if filter.Id != 0 {
-		var r []*entities.Contact
-		searchResult := rMap[filter.Id]
-		if searchResult != nil {
-			r = append(r, searchResult)
-		}
-		return c.applySettings(r, settings)
+	if filter.Id != 0 {
+		r.Items = append(r.Items, c.FindById(filter.Id))
+		r.TotalCount = 1
+		return r
 	}
-	r := maps.Values(rMap)
+
+	whereClause := fmt.Sprintf("(AccountId=%v)", filter.AccountId)
 	if len(filter.Name) > 0 {
-		var rFiltered []*entities.Contact
-		for _, p := range r {
-			if strings.Contains(strings.ToUpper(p.Name), filter.Name) || strings.Contains(strings.ToUpper(p.Company), filter.Name) {
-				rFiltered = append(rFiltered, p)
-			}
-		}
-		r = rFiltered
+		whereClause += fmt.Sprintf("and (upper(name) like '%%%v%%')", filter.Name)
 	}
-	entities.SortById(r)
-	return c.applySettings(r, settings)
+	limitClause := ""
+	if settings != nil {
+		limitClause = fmt.Sprintf("limit %v, %v", settings.Offset, settings.Count)
+	}
+	q, err := c.MainService.QueryDomainDBForMaps(fmt.Sprintf(`select * from contacts where %v order by id desc %v`, whereClause, limitClause), nil, nil)
+	if err != nil {
+		println(err.Error())
+	}
+	r.Items = utils.Map(q.Result.([]map[string]interface{}), func(a map[string]interface{}) *entities.Contact { return decodeContact(a) })
+
+	q, err = c.MainService.QueryDomainDBForMap(fmt.Sprintf(`select count(*) as total from contacts where %v`, whereClause), nil, nil)
+	r.TotalCount, err = validation.CheckInt("total", q.Result.(map[string]interface{})["total"])
+
+	return r
+}
+
+func decodeContact(a map[string]interface{}) *entities.Contact {
+	var contact entities.Contact
+	mapstructure.Decode(a, &contact)
+	contact.AccountId = entities.ID(cast.ToInt64(a["AccountId"]))
+	contact.Id = entities.ID(cast.ToInt64(a["Id"]))
+	return &contact
 }
 
 func (c *ContactRepoImpl) Delete(accountId entities.ID, ids []entities.ID) {
-	contacts := c.DBService.DBContent().GetContacts()[accountId]
-	for _, id := range ids {
-		delete(contacts, id)
-	}
-	c.DBService.DBContent().GetContacts()[accountId] = contacts
-	c.DBService.Reload()
+	idsI := utils.Map(ids, func(a entities.ID) int64 { return int64(a) })
+	c.MainService.UpdateDomainDB(fmt.Sprintf(`delete from contacts where accountId=%v and Id in (%v)`, accountId, strings.Join(cast.ToStringSlice(idsI), ",")), nil, nil)
 }
 
-func (c *ContactRepoImpl) CreateOrUpdateIfNoDuplicate(contact *entities.Contact) {
-	if c.DBService.DBContent().GetContacts().Exists(contact) > 0 {
-		return
+func (c *ContactRepoImpl) CreateOrUpdate(a *entities.Contact) error {
+	q, err := c.MainService.QueryDomainDBForMap(fmt.Sprintf("SELECT createOrUpdateContact(%v,%v,'%v','%v','%v','%v','%v','%v') as id;", a.AccountId, a.Id, a.Name, a.Phone, a.Email, a.Job, a.Company, a.Linkedin), nil, nil)
+	if err != nil {
+		return err
 	}
-	c.CreateOrUpdate(contact)
-}
-
-func (c *ContactRepoImpl) CreateOrUpdate(contact *entities.Contact) {
-	if c.DBService.DBContent().GetContacts().Exists(contact) > 0 {
-		return
+	r := q.Result.(map[string]interface{})
+	contactId, err := validation.CheckInt64("id", r["id"])
+	if err != nil {
+		return err
 	}
-	c.DBService.DBContent().IDGenerator.AssignId(contact)
-	old := c.DBService.DBContent().GetContacts().ForAccount(contact.AccountId)[contact.Id]
-	if old == nil {
-		c.DBService.DBContent().GetContacts().ForAccount(contact.AccountId)[contact.Id] = contact
-	} else {
-		copier.Copy(old, contact)
-	}
-}
-
-func (c *ContactRepoImpl) applySettings(r []*entities.Contact, settings *ContactSearchSettings) *ContactSearchResult {
-	result := &ContactSearchResult{Items: r}
-	result.TotalCount = len(result.Items)
-	if settings == nil {
-		return result
-	}
-	lastElemIndex := settings.Offset + settings.Count
-	if settings.Count > 0 && lastElemIndex < result.TotalCount {
-		result.Items = result.Items[settings.Offset:lastElemIndex]
-	} else if settings.Offset < len(result.Items) {
-		result.Items = result.Items[settings.Offset:]
-	} else {
-		result.Items = []*entities.Contact{}
-	}
-
-	return result
+	a.Id = entities.ID(contactId)
+	return nil
 }

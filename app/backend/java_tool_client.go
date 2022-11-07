@@ -82,7 +82,7 @@ func (c *JavaToolClientImpl) Init() {
 func (c *JavaToolClientImpl) FindEmail(params *FindEmailParams) ([]*FindEmailResult, error) {
 	b := new(bytes.Buffer)
 	err := json.NewEncoder(b).Encode(params)
-	println(string(b.Bytes()))
+	//println(string(b.Bytes()))
 	if err != nil {
 		return nil, err
 	}

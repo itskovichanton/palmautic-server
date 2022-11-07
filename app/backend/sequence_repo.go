@@ -1,11 +1,10 @@
 package backend
 
 import (
-	"github.com/viney-shih/go-lock"
 	"golang.org/x/exp/maps"
 	"salespalm/server/app/entities"
 	"strings"
-	"time"
+	"sync"
 )
 
 type ISequenceRepo interface {
@@ -26,11 +25,11 @@ type SequenceRepoImpl struct {
 	ISequenceRepo
 
 	DBService IDBService
-	mutex     *lock.CASMutex
+	mutex     sync.Mutex
 }
 
 func (c *SequenceRepoImpl) Init() {
-	c.mutex = lock.NewCASMutex()
+	//c.mutex = lock.NewCASMutex()
 }
 
 func (c *SequenceRepoImpl) Delete(accountId entities.ID, ids []entities.ID) {
@@ -77,14 +76,12 @@ type SequenceSearchResult struct {
 func (c *SequenceRepoImpl) Search(filter *entities.Sequence, settings *SequenceSearchSettings) *SequenceSearchResult {
 	var r []*entities.Sequence
 	if filter.AccountId == 0 {
-		locked := c.mutex.RTryLockWithTimeout(5 * time.Second)
+		c.mutex.Lock()
 		for accountId, _ := range c.DBService.DBContent().GetSequenceContainer().Sequences {
 			filter.AccountId = accountId
 			r = append(r, c.searchForAccount(filter)...)
 		}
-		if locked {
-			c.mutex.RUnlock()
-		}
+		c.mutex.Unlock()
 	} else {
 		r = c.searchForAccount(filter)
 	}

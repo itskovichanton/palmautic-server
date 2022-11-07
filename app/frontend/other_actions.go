@@ -36,7 +36,7 @@ type NotifyMessageOpenedAction struct {
 }
 
 func (c *NotifyMessageOpenedAction) Run(arg interface{}) (interface{}, error) {
-	cp := arg.(*entities2.CallParams)
-	println(cp.GetParamStr("taskId"))
+	//cp := arg.(*entities2.CallParams)
+	//println(cp.GetParamStr("taskId"))
 	return "cool", nil
 }

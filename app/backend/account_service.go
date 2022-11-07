@@ -24,6 +24,7 @@ type AccountServiceImpl struct {
 	AuthService       users.IAuthService
 	AccountingService IAccountingService
 	EventBus          EventBus.Bus
+	ContactService    IContactService
 }
 
 func (c *AccountServiceImpl) Init() {
@@ -42,6 +43,7 @@ func (c *AccountServiceImpl) Delete(id entities.ID) *entities.User {
 		if deleted != nil {
 			c.AuthService.Delete(deleted.Username)
 		}
+		c.ContactService.Clear(id)
 		c.EventBus.Publish(AccountDeletedEventTopic, deleted)
 	}
 	return deleted

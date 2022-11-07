@@ -74,7 +74,7 @@ func (c *DBServiceImpl) Init() error {
 	if err != nil {
 		return err
 	}
-	c.startPeriodicSavings()
+	//c.startPeriodicSavings()
 	return nil
 }
 
@@ -106,6 +106,9 @@ func (c *DBServiceImpl) Load() error {
 }
 
 func (c *DBServiceImpl) Save() error {
+	c.data.lock.Lock()
+	defer c.data.lock.Unlock()
+
 	dataBytes, err := json.Marshal(c.data)
 	if err != nil {
 		return err
@@ -136,12 +139,6 @@ func (c *DBServiceImpl) optimize() {
 				}
 			}
 		}
-		for _, task := range c.data.TaskContainer.Tasks[accountId] {
-			contacts := c.data.Contacts[accountId]
-			if contacts != nil && task.Contact != nil {
-				task.Contact = contacts[task.Contact.Id]
-			}
-		}
 	}
 	runtime.GC()
 }
@@ -152,7 +149,7 @@ func (c *DBServiceImpl) startPeriodicSavings() {
 			time.Sleep(30 * time.Second)
 			err := c.Save()
 			if err == nil {
-				println("DB auto-saved successfully")
+				//println("DB auto-saved successfully")
 			} else {
 				println("DB auto-save failed: " + err.Error())
 			}

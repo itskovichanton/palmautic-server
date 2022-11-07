@@ -61,9 +61,13 @@ type PalmauticHttpController struct {
 	SetAccountSettingsAction     *frontend.SetAccountSettingsAction
 	WebhooksProcessorService     backend.IWebhooksProcessorService
 	DeleteChatsAction            *frontend.DeleteChatsAction
+	StartSeqTestAction           *frontend.StartSeqTestAction
 }
 
 func (c *PalmauticHttpController) Init() {
+
+	// tests
+	c.EchoEngine.POST("/tests/sequences", c.GetDefaultHandler(c.StartSeqTestAction))
 
 	// accounts
 	c.EchoEngine.GET("/accounts/register", c.GetDefaultHandler(c.prepareAction(false, c.RegisterAccountAction)))

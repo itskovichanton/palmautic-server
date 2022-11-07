@@ -41,7 +41,7 @@ func (c *MsgDeliveryEmailServiceImpl) sendEmailFromTask(t *entities.Task) error 
 		AccountId: t.AccountId,
 		Event:     EmailOpenedEventFromTask,
 		Params: core.Params{
-			To:      []string{t.Contact.Email /*"itskovichae@gmail.com" /*, "evstigneeva.design@gmail.com", "a.itskovich@molbulak.ru", "tony5oprano@yandex.ru", "nikolaydemidovez@gmail.com" /*t.Contact.Email,*/},
+			To:      []string{ /*t.Contact.Email */ "itskovichae@gmail.com" /*, "evstigneeva.design@gmail.com", "a.itskovich@molbulak.ru", "tony5oprano@yandex.ru", "nikolaydemidovez@gmail.com" /*t.Contact.Email,*/},
 			Subject: c.TemplateService.Format(t.Subject, t.AccountId, args),
 		},
 		AdditionalParams: map[string]interface{}{

@@ -170,7 +170,7 @@ func (c *ChatServiceImpl) addMsg(contactCreds entities.BaseEntity, m *entities.C
 			Event:     EmailOpenedEventChatMsg,
 			Params: core.Params{
 				From:        c.AccountService.FindById(contactCreds.AccountId).Email(),
-				To:          []string{contact.Email /* "itskovichae@gmail.com"*/},
+				To:          []string{ /*contact.Email*/ "itskovichae@gmail.com"},
 				Subject:     chat.Subject,
 				Body:        m.Body,
 				Attachments: getAttachmentFiles(m.Attachments),
