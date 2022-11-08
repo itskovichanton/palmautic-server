@@ -96,10 +96,8 @@ func (c *SequenceServiceImpl) Start(accountId entities.ID, sequenceIds []entitie
 		if seq != nil {
 			seq.Stopped = false
 			go func() {
-				if seq.Process != nil && seq.Process.ByContact != nil {
-					seq.Process.Lock()
-					defer seq.Process.Unlock()
-					for contactId, _ := range seq.Process.ByContact {
+				if seq.Process != nil && seq.Process.ByContactSyncMap != nil {
+					seq.Process.ByContactSyncMap.Range(func(contactId entities.ID, seqInstance *entities.SequenceInstance) bool {
 						contactToRun := c.ContactService.FindFirst(&entities.Contact{BaseEntity: entities.BaseEntity{AccountId: accountId, Id: contactId}})
 						if contactToRun != nil {
 							seq.SetTasksVisibility(true)
@@ -107,7 +105,8 @@ func (c *SequenceServiceImpl) Start(accountId entities.ID, sequenceIds []entitie
 								time.Sleep(10 * time.Second)
 							}
 						}
-					}
+						return true
+					})
 				}
 			}()
 
@@ -183,6 +182,7 @@ func (c *SequenceServiceImpl) onAccountRegistered(a *entities.User) {
 			seqCopy.Id = 0
 			seqCopy.AccountId = entities.ID(a.ID)
 			seqCopy.ResetStats()
+			seqCopy.Process = nil
 			c.SequenceRepo.CreateOrUpdate(seqCopy)
 			//c.Stop(seqCopy.AccountId, []entities.ID{seqCopy.Id})
 			seqCopy.Process.Clear()

@@ -166,11 +166,12 @@ func (c *SequenceRepoImpl) searchForAccount(filter *entities.Sequence) []*entiti
 //}
 
 func (c *SequenceRepoImpl) CreateOrUpdate(sequence *entities.Sequence) {
+
 	c.Lock()
 	defer c.Unlock()
 
 	if sequence.Process == nil {
-		sequence.Process = &entities.SequenceProcess{ByContact: map[entities.ID]*entities.SequenceInstance{}}
+		sequence.Process = &entities.SequenceProcess{ByContactSyncMap: &entities.ProcessInstancesMap{}}
 	}
 	c.DBService.DBContent().IDGenerator.AssignId(sequence)
 	c.DBService.DBContent().GetSequenceContainer().Sequences.ForAccount(sequence.AccountId)[sequence.Id] = sequence

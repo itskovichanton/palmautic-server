@@ -25,6 +25,7 @@ type UserRepoImpl struct {
 }
 
 func (c *UserRepoImpl) Delete(id entities.ID) *entities.User {
+
 	c.Lock()
 	defer c.Unlock()
 
@@ -53,6 +54,7 @@ func (c *UserRepoImpl) BindToDirectorByUserName(user *entities.User, directorUse
 }
 
 func (c *UserRepoImpl) FindByEmail(email string) *entities.User {
+
 	c.Lock()
 	defer c.Unlock()
 
@@ -65,6 +67,7 @@ func (c *UserRepoImpl) FindByEmail(email string) *entities.User {
 }
 
 func (c *UserRepoImpl) FindById(id entities.ID) *entities.User {
+
 	c.Lock()
 	defer c.Unlock()
 
@@ -78,6 +81,7 @@ func (c *UserRepoImpl) FindById(id entities.ID) *entities.User {
 }
 
 func (c *UserRepoImpl) FindByUsername(username string) *entities.User {
+
 	c.Lock()
 	defer c.Unlock()
 
@@ -90,6 +94,7 @@ func (c *UserRepoImpl) FindByUsername(username string) *entities.User {
 }
 
 func (c *UserRepoImpl) CreateOrUpdate(account *entities.User) {
+
 	c.Lock()
 	defer c.Unlock()
 

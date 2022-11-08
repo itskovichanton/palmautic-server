@@ -57,7 +57,7 @@ func (c *SeqTest) Start(settings *SeqTestSettings) {
 		if c.accountId > 0 {
 			//c.Services.AccountService.Delete(c.accountId)
 		}
-		c.EventBus.Unsubscribe(backend.EmailSentEventTopic, c.OnEmailSent)
+		//c.EventBus.Unsubscribe(backend.EmailSentEventTopic, c.OnEmailSent)
 		logger.Result(c.ld, "ТЕСТ ЗАВЕРШЕН")
 		c.printLog()
 	}()
@@ -89,22 +89,22 @@ func (c *SeqTest) Start(settings *SeqTestSettings) {
 
 	c.EventBus.SubscribeAsync(backend.EmailSentEventTopic, c.OnEmailSent, true)
 
-	startTime := time.Now()
+	//startTime := time.Now()
 	minSleep()
 
 	// Выполняем задачи
 	go c.executeTasks()
 
-	for time.Now().Sub(startTime) < time.Hour*time.Duration(settings.DurationHours) {
-		// Добавляем контакты из б2б в последовательности
-		err = c.addFromB2BToSequences(settings)
-		if err != nil {
-			logger.Err(c.ld, err)
-			return
-		}
-
-		time.Sleep(15 * time.Minute) // даем время закончится тесту
+	//for time.Now().Sub(startTime) < time.Hour*time.Duration(settings.DurationHours) {
+	// Добавляем контакты из б2б в последовательности
+	err = c.addFromB2BToSequences(settings)
+	if err != nil {
+		logger.Err(c.ld, err)
+		return
 	}
+
+	//time.Sleep(15 * time.Minute) // даем время закончится тесту
+	//}
 }
 
 func (c *SeqTest) addFromB2BToSequences(settings *SeqTestSettings) error {
@@ -164,7 +164,7 @@ func (c *SeqTest) addItemsFromB2BToSequences(sequencesCount int, sequences []*en
 		logger.Result(c.ld, fmt.Sprintf("Добавлено %v контактов в последовательность '%v', id=%v", len(addedContactIds), sequences[seqIndex].Name, sequences[seqIndex].Id))
 	}
 	c.printLog()
-	time.Sleep(1 * time.Minute)
+	time.Sleep(2 * time.Minute)
 	return nil
 }
 

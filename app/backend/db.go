@@ -12,6 +12,7 @@ import (
 	"path"
 	"runtime"
 	"salespalm/server/app/entities"
+	"sync"
 	"time"
 )
 
@@ -30,6 +31,7 @@ type DBServiceImpl struct {
 	Config      *core.Config
 	IDGenerator IDGenerator
 	db          *gorm.DB
+	sync.Mutex
 }
 
 func (c *DBServiceImpl) DB() *gorm.DB {
@@ -121,13 +123,17 @@ func (c *DBServiceImpl) getDBFileName() string {
 }
 
 func (c *DBServiceImpl) optimize() {
+
+	c.Lock()
+	defer c.Unlock()
+
 	for _, t := range c.data.B2Bdb.Tables {
 		t.Data = []entities.MapWithId{}
 	}
 	for accountId, _ := range c.data.Accounts {
 		for _, seq := range c.data.SequenceContainer.Sequences[accountId] {
-			if seq.Process != nil && seq.Process.ByContact != nil {
-				for _, pr := range seq.Process.ByContact {
+			if seq.Process != nil && seq.Process.ByContactSyncMap != nil {
+				seq.Process.ByContactSyncMap.Range(func(key entities.ID, pr *entities.SequenceInstance) bool {
 					for taskIndex, task := range pr.Tasks {
 						if task.Id > 0 {
 							linkedTask := c.data.TaskContainer.Tasks[accountId][task.Id]
@@ -136,10 +142,19 @@ func (c *DBServiceImpl) optimize() {
 							}
 						}
 					}
-				}
+					return true
+				})
 			}
 		}
 	}
+
+	// Добавляем процессы в синхронизированную мапу
+	for _, accountSequences := range c.data.SequenceContainer.Sequences {
+		for _, seq := range accountSequences {
+			seq.Process.Prepare()
+		}
+	}
+
 	runtime.GC()
 }
 

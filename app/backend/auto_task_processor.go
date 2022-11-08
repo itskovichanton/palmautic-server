@@ -35,28 +35,27 @@ func (c *AutoTaskProcessorServiceImpl) Start() {
 
 	for {
 
-		c.lock.Lock()
+		//c.lock.Lock()
 		var tasks []*entities.Task
 		for _, sequence := range c.SequenceService.Search(&entities.Sequence{}, nil).Items {
-			if sequence.Process != nil && sequence.Process.ByContact != nil {
-				sequence.Process.Lock()
-				for _, sequenceInstance := range sequence.Process.ByContact {
+			if sequence.Process != nil && sequence.Process.ByContactSyncMap != nil {
+				sequence.Process.ByContactSyncMap.Range(func(key entities.ID, sequenceInstance *entities.SequenceInstance) bool {
 					for _, task := range sequenceInstance.Tasks {
 						if task.Status == entities.TaskStatusStarted && task.AutoExecutable() {
 							tasks = append(tasks, task)
 						}
 					}
-				}
-				sequence.Process.Unlock()
+					return true
+				})
 			}
 		}
-		c.lock.Unlock()
+		//c.lock.Unlock()
 
 		if len(tasks) == 0 {
 			continue
 		}
 
-		c.lock.Lock()
+		//c.lock.Lock()
 		logger.Subject(ld, "Ищу")
 		logger.Result(ld, fmt.Sprintf("Получил %v тасков", len(tasks)))
 		logger.Print(lg, ld)
@@ -74,7 +73,7 @@ func (c *AutoTaskProcessorServiceImpl) Start() {
 			logger.Print(lg, ld)
 
 		}
-		c.lock.Unlock()
+		//c.lock.Unlock()
 
 		time.Sleep(30 * time.Second)
 

@@ -1,10 +1,5 @@
 package entities
 
-import (
-	"sync"
-	"sync/atomic"
-)
-
 type Sequence struct {
 	BaseEntity
 
@@ -21,35 +16,33 @@ type Sequence struct {
 
 func (s *Sequence) CountTasksByFilter(filter func(t *Task) bool) int {
 	r := 0
-	if s.Process == nil || s.Process.ByContact == nil || len(s.Process.ByContact) == 0 {
+	if s.Process == nil || s.Process.ByContactSyncMap == nil || s.Process.ByContactSyncMap.Empty() {
 		return r
 	}
-	s.Process.Lock()
-	defer s.Process.Unlock()
-	for _, seqInstance := range s.Process.ByContact {
+	s.Process.ByContactSyncMap.Range(func(key ID, seqInstance *SequenceInstance) bool {
 		for _, t := range seqInstance.Tasks {
 			if filter(t) {
 				r++
 			}
 		}
-	}
+		return true
+	})
 	return r
 }
 
 func (s *Sequence) CalcByStatus(status string) int {
 	r := 0
-	if s.Process == nil || s.Process.ByContact == nil || len(s.Process.ByContact) == 0 {
+	if s.Process == nil || s.Process.ByContactSyncMap == nil || s.Process.ByContactSyncMap.Empty() {
 		return r
 	}
-	s.Process.Lock()
-	defer s.Process.Unlock()
-	for _, seqInstance := range s.Process.ByContact {
+	s.Process.ByContactSyncMap.Range(func(key ID, seqInstance *SequenceInstance) bool {
 		for _, t := range seqInstance.Tasks {
 			if t.Status == status {
 				r++
 			}
 		}
-	}
+		return true
+	})
 	return r
 }
 
@@ -63,31 +56,29 @@ func (s *Sequence) CalcReplyRate() float32 {
 
 func (s *Sequence) CalcReplies() int {
 	r := 0
-	if s.Process == nil || s.Process.ByContact == nil || len(s.Process.ByContact) == 0 {
+	if s.Process == nil || s.Process.ByContactSyncMap == nil || s.Process.ByContactSyncMap.Empty() {
 		return r
 	}
-	s.Process.Lock()
-	defer s.Process.Unlock()
-	for _, seqInstance := range s.Process.ByContact {
+	s.Process.ByContactSyncMap.Range(func(key ID, seqInstance *SequenceInstance) bool {
 		repliedTask, _ := seqInstance.FindTaskByStatus(TaskStatusReplied)
 		if repliedTask != nil {
 			r++
 		}
-	}
+		return true
+	})
 	return r
 }
 
 func (s *Sequence) CalcProgress() float32 {
 	var r float32 = 0.0
-	if s.Process == nil || s.Process.ByContact == nil || len(s.Process.ByContact) == 0 {
+	if s.Process == nil || s.Process.ByContactSyncMap == nil || s.Process.ByContactSyncMap.Empty() {
 		return r
 	}
-	s.Process.Lock()
-	defer s.Process.Unlock()
-	for _, seqInstance := range s.Process.ByContact {
+	s.Process.ByContactSyncMap.Range(func(key ID, seqInstance *SequenceInstance) bool {
 		r += seqInstance.CalcProgress()
-	}
-	return r / float32(len(s.Process.ByContact))
+		return true
+	})
+	return r / float32(s.Process.ByContactSyncMap.Len())
 }
 
 func (s *Sequence) Refresh() {
@@ -103,32 +94,31 @@ func (s *Sequence) Refresh() {
 	s.Progress = s.CalcProgress()
 	s.ReplyRate = s.CalcReplyRate()
 	s.People = 0
-	if s.Process != nil && s.Process.ByContact != nil {
+	if s.Process != nil && s.Process.ByContactSyncMap != nil {
 		s.People = s.CountPeople()
-		s.Process.Lock()
-		defer s.Process.Unlock()
-		for _, process := range s.Process.ByContact {
-			for _, task := range process.Tasks {
+		s.Process.ByContactSyncMap.Range(func(key ID, seqInstance *SequenceInstance) bool {
+			for _, task := range seqInstance.Tasks {
 				task.Refresh()
 			}
-		}
+			return true
+		})
+
 	}
 }
 
 func (s *Sequence) SetTasksVisibility(visible bool) {
-	if s.Process != nil && s.Process.ByContact != nil {
-		s.Process.Lock()
-		defer s.Process.Unlock()
-		for _, process := range s.Process.ByContact {
-			for _, task := range process.Tasks {
+	if s.Process != nil && s.Process.ByContactSyncMap != nil {
+		s.Process.ByContactSyncMap.Range(func(key ID, seqInstance *SequenceInstance) bool {
+			for _, task := range seqInstance.Tasks {
 				task.Invisible = !visible
 			}
-		}
+			return true
+		})
 	}
 }
 
 func (s *Sequence) CountPeople() int {
-	return len(s.Process.ByContact)
+	return s.Process.ByContactSyncMap.Len()
 }
 
 func (s *Sequence) ResetStats() {
@@ -196,52 +186,12 @@ type SequenceModel struct {
 }
 
 type SequenceProcess struct {
-	ByContact map[ID]*SequenceInstance
-	//casMut, casMutR *lock.CASMutex
-	m      sync.RWMutex
-	locked atomic.Bool
+	ByContact        map[ID]*SequenceInstance
+	ByContactSyncMap *ProcessInstancesMap
 }
-
-func (p *SequenceProcess) Unlock() {
-	if p.locked.Load() {
-		p.locked.Store(false)
-		p.m.Unlock()
-	}
-}
-
-func (p *SequenceProcess) Lock() {
-	if !p.locked.Load() {
-		p.m.Lock()
-		p.locked.Store(true)
-	}
-}
-
-//func (p *SequenceProcess) RLock() bool {
-//	if p.casMutR == nil {
-//		p.casMutR = lock.NewCASMutex()
-//	}
-//	return p.casMutR.RTryLockWithTimeout(5 * time.Second)
-//}
-//
-//func (p *SequenceProcess) Lock() bool {
-//	if p.casMut == nil {
-//		p.casMut = lock.NewCASMutex()
-//	}
-//	return p.casMut.TryLockWithTimeout(5 * time.Second)
-//}
-//
-//func (p *SequenceProcess) Unlock() {
-//	p.casMut.Unlock()
-//}
-//
-//func (p *SequenceProcess) RUnlock() {
-//	p.casMutR.RUnlock()
-//}
 
 func (p *SequenceProcess) IsActiveForContact(contactId ID) bool {
-	p.Lock()
-	defer p.Unlock()
-	process := p.ByContact[contactId]
+	process, _ := p.ByContactSyncMap.Load(contactId)
 	if process != nil {
 		_, activeTaskIndex := process.FindFirstNonFinalTask()
 		return activeTaskIndex >= 0
@@ -250,9 +200,11 @@ func (p *SequenceProcess) IsActiveForContact(contactId ID) bool {
 }
 
 func (p *SequenceProcess) Clear() {
-	p.Lock()
-	defer p.Unlock()
-	p.ByContact = map[ID]*SequenceInstance{}
+	p.ByContactSyncMap = &ProcessInstancesMap{}
+}
+
+func (p *SequenceProcess) Prepare() {
+	p.ByContactSyncMap = NewProcessInstancesMap(p.ByContact)
 }
 
 type SequenceInstance struct {

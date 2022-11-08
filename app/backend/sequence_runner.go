@@ -36,17 +36,16 @@ func (c *SequenceRunnerServiceImpl) Init() {
 	c.timeFormat = "15:04:05"
 
 	for _, sequence := range c.SequenceRepo.Search(&entities.Sequence{}, nil).Items {
-		if sequence.Stopped || sequence.Process == nil || sequence.Process.ByContact == nil {
+		if sequence.Stopped || sequence.Process == nil || sequence.Process.ByContactSyncMap == nil {
 			continue
 		}
-		sequence.Process.Lock()
-		for contactId, _ := range sequence.Process.ByContact {
+		sequence.Process.ByContactSyncMap.Range(func(contactId entities.ID, seqInstance *entities.SequenceInstance) bool {
 			contact := c.ContactService.FindFirst(&entities.Contact{BaseEntity: entities.BaseEntity{Id: contactId, AccountId: sequence.AccountId}})
 			if contact != nil && c.Run(sequence, contact, true) {
 				time.Sleep(2 * time.Second)
 			}
-		}
-		sequence.Process.Unlock()
+			return true
+		})
 	}
 }
 
@@ -67,22 +66,20 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 	logger.Print(lg, ld)
 
 	if sequence.Process == nil {
-		sequence.Process = &entities.SequenceProcess{ByContact: map[entities.ID]*entities.SequenceInstance{}}
+		sequence.Process = &entities.SequenceProcess{ByContactSyncMap: &entities.ProcessInstancesMap{}}
 	}
 
-	contactProcess := sequence.Process.ByContact[contact.Id]
+	contactProcess, _ := sequence.Process.ByContactSyncMap.Load(contact.Id)
 
 	if contactProcess == nil || len(contactProcess.Tasks) == 0 {
 
-		sequence.Process.Lock()
-		if sequence.Process.ByContact == nil {
-			sequence.Process.ByContact = map[entities.ID]*entities.SequenceInstance{}
+		if sequence.Process.ByContactSyncMap == nil {
+			sequence.Process.ByContactSyncMap = &entities.ProcessInstancesMap{}
 		}
-		sequence.Process.ByContact[contact.Id] = &entities.SequenceInstance{}
-		sequence.Process.Unlock()
+		sequence.Process.ByContactSyncMap.Store(contact.Id, &entities.SequenceInstance{})
 
 		c.buildProcess(sequence, contact, ld, lg)
-		contactProcess = sequence.Process.ByContact[contact.Id]
+		contactProcess, _ = sequence.Process.ByContactSyncMap.Load(contact.Id)
 		c.refreshTasks(lg, "Сценарий построен", contact, contactProcess.Tasks)
 
 	} else {
@@ -146,7 +143,8 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 				logger.Args(ld2, fmt.Sprintf("contact=%v, mail-subject=%v", contact.Name, m.Subject))
 				var bouncedTask *entities.Task
 				println(strings.ToUpper(m.Subject))
-				for _, t := range sequence.Process.ByContact[contact.Id].Tasks {
+				processInstance, _ := sequence.Process.ByContactSyncMap.Load(contact.Id)
+				for _, t := range processInstance.Tasks {
 					if t.HasFinalStatus() && t.HasTypeEmail() {
 						println(strings.ToUpper("TO " + t.Subject))
 						if bouncedTask == nil {
@@ -177,7 +175,8 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 				logger.Args(ld2, fmt.Sprintf("contact=%v, mail-subject=%v", contact.Name, m.Subject))
 				var repliedTask *entities.Task
 				println(strings.ToUpper(m.Subject))
-				for _, t := range sequence.Process.ByContact[contact.Id].Tasks {
+				processInstance, _ := sequence.Process.ByContactSyncMap.Load(contact.Id)
+				for _, t := range processInstance.Tasks {
 					if t.HasFinalStatus() && t.HasTypeEmail() {
 						println(strings.ToUpper("TO " + t.Subject))
 						if repliedTask == nil {
@@ -373,9 +372,7 @@ func (c *SequenceRunnerServiceImpl) buildProcess(sequence *entities.Sequence, co
 	}
 
 	sequenceInstance := &entities.SequenceInstance{}
-	sequence.Process.Lock()
-	sequence.Process.ByContact[contact.Id] = sequenceInstance
-	sequence.Process.Unlock()
+	sequence.Process.ByContactSyncMap.Store(contact.Id, sequenceInstance)
 	steps := sequence.Model.Steps
 	stepsCount := len(steps)
 	var lastDueTime time.Time

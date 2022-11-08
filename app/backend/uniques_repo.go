@@ -20,8 +20,10 @@ func (c *UniquesRepoImpl) Init() {
 }
 
 func (c *UniquesRepoImpl) Put(key string, value interface{}) bool {
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
+
 	_, exists := c.DBService.DBContent().Uniques[key]
 	c.DBService.DBContent().Uniques[key] = value
 	return exists

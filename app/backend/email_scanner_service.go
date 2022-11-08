@@ -48,7 +48,7 @@ func (c *EmailScannerServiceImpl) IsRunning(contactId entities.ID) bool {
 
 func (c *EmailScannerServiceImpl) RunOnContact(contact *entities.Contact) {
 	c.Run(&entities.Sequence{BaseEntity: entities.BaseEntity{Id: -contact.Id, AccountId: contact.AccountId},
-		Process: &entities.SequenceProcess{ByContact: map[entities.ID]*entities.SequenceInstance{}}},
+		Process: &entities.SequenceProcess{ByContactSyncMap: &entities.ProcessInstancesMap{}}},
 		contact)
 }
 
@@ -126,9 +126,7 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 
 func (c *EmailScannerServiceImpl) getSubjectNames(sequence *entities.Sequence, contact *entities.Contact) []string {
 	r := []string{}
-	sequence.Process.Lock()
-	defer sequence.Process.Unlock()
-	process := sequence.Process.ByContact[contact.Id]
+	process, _ := sequence.Process.ByContactSyncMap.Load(contact.Id)
 	if process != nil {
 		for _, task := range process.Tasks {
 			if task.HasTypeEmail() {
@@ -141,6 +139,6 @@ func (c *EmailScannerServiceImpl) getSubjectNames(sequence *entities.Sequence, c
 
 func (c *EmailScannerServiceImpl) markRunning(contactId entities.ID, running bool) {
 	c.lock.Lock()
+	defer c.lock.Unlock()
 	c.running[contactId] = running
-	c.lock.Unlock()
 }

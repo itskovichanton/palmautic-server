@@ -35,6 +35,7 @@ type DBContent struct {
 }
 
 func (c *DBContent) DeleteAccount(accountId entities.ID) {
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

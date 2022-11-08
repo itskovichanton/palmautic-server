@@ -23,6 +23,7 @@ type TaskRepoImpl struct {
 }
 
 func (c *TaskRepoImpl) Clear(accountId entities.ID) {
+
 	c.Lock()
 	defer c.Unlock()
 
