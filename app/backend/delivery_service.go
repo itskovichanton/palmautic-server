@@ -23,17 +23,17 @@ type MsgDeliveryEmailServiceImpl struct {
 
 func (c *MsgDeliveryEmailServiceImpl) SendEmail(t *entities.Task) {
 	go func() {
-		err := c.sendEmailFromTask(t)
-		if err != nil {
+		sendingResult := c.sendEmailFromTask(t)
+		if sendingResult.Error != nil {
 			t.SendingFailed = true
 		} else {
 			t.Sent = true
-			c.EventBus.Publish(EmailSentEventTopic, t)
+			c.EventBus.Publish(EmailSentEventTopic, t, sendingResult)
 		}
 	}()
 }
 
-func (c *MsgDeliveryEmailServiceImpl) sendEmailFromTask(t *entities.Task) error {
+func (c *MsgDeliveryEmailServiceImpl) sendEmailFromTask(t *entities.Task) *SendEmailResult {
 	args := map[string]interface{}{
 		"Contact": t.Contact,
 	}

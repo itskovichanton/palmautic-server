@@ -37,7 +37,7 @@ func (c *CommonsServiceImpl) Commons(accountId entities.ID) *Commons {
 		Tasks:           c.TaskService.Commons(accountId),
 		Sequences:       c.SequenceService.Commons(accountId),
 		Templates:       c.TemplateService.Commons(accountId),
-		Account:         c.AccountService.Accounts()[accountId],
+		Account:         c.AccountService.FindById(accountId),
 		Folders:         c.FolderService.Search(&entities.Folder{BaseEntity: entities.BaseEntity{AccountId: accountId}}),
 		Chats:           c.ChatService.Commons(accountId),
 		AccountSettings: c.AccountSettingsService.Commons(),

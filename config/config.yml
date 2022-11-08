@@ -59,7 +59,7 @@ prod:
     url: root:92559255@tcp(localhost:3306)/palmautic_prod?charset=utf8mb4&allowPublicKeyRetrieval=true&useSSL=false
 
 dev:
-  mainServiceUrl: http://172.25.240.1:5008
+  mainServiceUrl: http://172.24.64.1:5008
   db:
     url: myuser3:92559255@tcp(172.27.32.1:3306)/palmautic?charset=utf8mb4&parseTime=True&loc=Local&allowPublicKeyRetrieval=true&useSSL=false
 

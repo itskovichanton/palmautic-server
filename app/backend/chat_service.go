@@ -165,7 +165,7 @@ func (c *ChatServiceImpl) addMsg(contactCreds entities.BaseEntity, m *entities.C
 
 	if m.My && send && !info {
 		chat := c.ChatRepo.SearchFirst(entities.BaseEntity{Id: m.ChatId, AccountId: contactCreds.AccountId})
-		err := c.EmailService.Send(&SendEmailParams{
+		sendingResult := c.EmailService.Send(&SendEmailParams{
 			AccountId: contact.AccountId,
 			Event:     EmailOpenedEventChatMsg,
 			Params: core.Params{
@@ -182,8 +182,8 @@ func (c *ChatServiceImpl) addMsg(contactCreds entities.BaseEntity, m *entities.C
 				"contactName": contact.Name,
 			},
 		}, nil)
-		if err != nil {
-			return nil, err
+		if sendingResult.Error != nil {
+			return nil, sendingResult.Error
 		}
 	}
 

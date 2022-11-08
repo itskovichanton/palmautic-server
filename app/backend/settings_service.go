@@ -41,7 +41,7 @@ func (c *AccountSettingsServiceImpl) SetEmailSettings(accountId entities.ID, ema
 	if err != nil {
 		return nil, err
 	}
-	account := c.UserService.Accounts()[accountId]
+	account := c.UserService.FindById(accountId)
 	account.InMailSettings = emailSettings
 
 	return account, err

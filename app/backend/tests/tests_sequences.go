@@ -2,6 +2,7 @@ package tests
 
 import (
 	"fmt"
+	"github.com/asaskevich/EventBus"
 	"github.com/itskovichanton/core/pkg/core/logger"
 	"github.com/itskovichanton/goava/pkg/goava"
 	entities2 "github.com/itskovichanton/server/pkg/server/entities"
@@ -20,14 +21,30 @@ type SeqTest struct {
 	accountId     entities.ID
 	lg            *log.Logger
 	ld            map[string]interface{}
+	EventBus      EventBus.Bus
 }
 
 type SeqTestSettings struct {
-	ContactsToAdd, AccountsCount, ContactBatchCount int
+	ContactsToAdd, AccountsCount, ContactBatchCount, DurationHours int
 }
 
 func (s *SeqTestSettings) Info() string {
 	return fmt.Sprintf("(ContactsToAdd=%v, AccountsCount=%v, ContactBatchCount=%v)", s.ContactsToAdd, s.AccountsCount, s.ContactBatchCount)
+}
+
+func (c *SeqTest) OnEmailSent(task *entities.Task, sendingResult *backend.SendEmailResult) {
+
+	if task.AccountId != c.accountId {
+		return
+	}
+
+	ld := map[string]interface{}{}
+	logger.Action(ld, fmt.Sprintf("Письмо отправлено на %v", task.Contact.Email))
+	if sendingResult.Error != nil {
+		logger.Err(ld, sendingResult.Error)
+	}
+	logger.Result(ld, fmt.Sprintf("На отправку ушло %s", sendingResult.ElapsedTime))
+	logger.Print(c.lg, ld)
 }
 
 func (c *SeqTest) Start(settings *SeqTestSettings) {
@@ -38,8 +55,9 @@ func (c *SeqTest) Start(settings *SeqTestSettings) {
 	c.ld = logger.NewLD()
 	defer func() {
 		if c.accountId > 0 {
-			c.Services.AccountService.Delete(c.accountId)
+			//c.Services.AccountService.Delete(c.accountId)
 		}
+		c.EventBus.Unsubscribe(backend.EmailSentEventTopic, c.OnEmailSent)
 		logger.Result(c.ld, "ТЕСТ ЗАВЕРШЕН")
 		c.printLog()
 	}()
@@ -69,27 +87,32 @@ func (c *SeqTest) Start(settings *SeqTestSettings) {
 		ImapPort: 993,
 	}
 
-	rndSleep()
+	c.EventBus.SubscribeAsync(backend.EmailSentEventTopic, c.OnEmailSent, true)
+
+	startTime := time.Now()
+	minSleep()
 
 	// Выполняем задачи
 	go c.executeTasks()
 
-	// Добавляем контакты из б2б в последовательности
-	err = c.addFromB2BToSequences(settings)
-	if err != nil {
-		logger.Err(c.ld, err)
-		return
-	}
+	for time.Now().Sub(startTime) < time.Hour*time.Duration(settings.DurationHours) {
+		// Добавляем контакты из б2б в последовательности
+		err = c.addFromB2BToSequences(settings)
+		if err != nil {
+			logger.Err(c.ld, err)
+			return
+		}
 
-	time.Sleep(40 * time.Minute) // даем время закончится тесту
+		time.Sleep(15 * time.Minute) // даем время закончится тесту
+	}
 }
 
 func (c *SeqTest) addFromB2BToSequences(settings *SeqTestSettings) error {
 
-	table := "persons"
-	if rndBool() {
-		table = "companies"
-	}
+	//table := "persons"
+	//if rndBool() {
+	table := "companies"
+	//}
 	logger.Action(c.ld, "B2BService.Search")
 	b2bItems, err := c.Services.B2BService.Search(c.accountId, table, map[string]interface{}{}, &backend.SearchSettings{Offset: 0, Count: settings.ContactsToAdd})
 	if err != nil {
@@ -147,12 +170,18 @@ func (c *SeqTest) addItemsFromB2BToSequences(sequencesCount int, sequences []*en
 
 func (c *SeqTest) executeTasks() {
 	for {
+		time.Sleep(5 * time.Second)
 		tasks := c.Services.TaskService.Search(&entities.Task{BaseEntity: entities.BaseEntity{AccountId: c.accountId}}, nil).Items
-		for taskIndex, task := range tasks {
-			if taskIndex%2 == 0 {
+		for _, task := range tasks {
+			if !task.HasFinalStatus() {
 				ld := map[string]interface{}{}
-				logger.Action(ld, fmt.Sprintf("Выполняю таск %v", task.Name))
-				c.Services.TaskService.Execute(task)
+				logger.Action(ld, fmt.Sprintf("Выполняю таск %v", task.Description))
+				t, err := c.Services.TaskService.Execute(task)
+				if err != nil {
+					logger.Err(ld, err)
+				} else {
+					logger.Result(ld, t.Status)
+				}
 				logger.Print(c.lg, ld)
 
 				time.Sleep(5 * time.Second)

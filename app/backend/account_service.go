@@ -88,7 +88,7 @@ func (c *AccountServiceImpl) Register(account *entities2.Account, directorUserNa
 }
 
 func (c *AccountServiceImpl) AsContact(accountId entities.ID) *entities.Contact {
-	r := c.UserRepo.Accounts()[accountId]
+	r := c.UserRepo.FindById(accountId)
 	if r == nil {
 		return nil
 	}

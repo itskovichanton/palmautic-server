@@ -39,7 +39,7 @@ func (c *AutoTaskProcessorServiceImpl) Start() {
 		var tasks []*entities.Task
 		for _, sequence := range c.SequenceService.Search(&entities.Sequence{}, nil).Items {
 			if sequence.Process != nil && sequence.Process.ByContact != nil {
-				locked := sequence.Process.Lock()
+				sequence.Process.Lock()
 				for _, sequenceInstance := range sequence.Process.ByContact {
 					for _, task := range sequenceInstance.Tasks {
 						if task.Status == entities.TaskStatusStarted && task.AutoExecutable() {
@@ -47,9 +47,7 @@ func (c *AutoTaskProcessorServiceImpl) Start() {
 						}
 					}
 				}
-				if locked {
-					sequence.Process.Unlock()
-				}
+				sequence.Process.Unlock()
 			}
 		}
 		c.lock.Unlock()

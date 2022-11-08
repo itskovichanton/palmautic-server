@@ -67,7 +67,7 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 	logger.DisableSetChopOffFields(ld)
 	logger.Action(ld, "Подключаюсь")
 	logger.Args(ld, fmt.Sprintf("seq=%v cont=%v", sequence.Id, contact.Id))
-	account := c.AccountService.Accounts()[contact.AccountId]
+	account := c.AccountService.FindById(contact.AccountId)
 	if account == nil {
 		logger.Result(ld, "Настройки почты не установлены. СТОП.")
 		logger.Print(lg, ld)
@@ -126,7 +126,8 @@ func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *enti
 
 func (c *EmailScannerServiceImpl) getSubjectNames(sequence *entities.Sequence, contact *entities.Contact) []string {
 	r := []string{}
-	locked := sequence.Process.Lock()
+	sequence.Process.Lock()
+	defer sequence.Process.Unlock()
 	process := sequence.Process.ByContact[contact.Id]
 	if process != nil {
 		for _, task := range process.Tasks {
@@ -134,9 +135,6 @@ func (c *EmailScannerServiceImpl) getSubjectNames(sequence *entities.Sequence, c
 				r = append(r, task.Subject)
 			}
 		}
-	}
-	if locked {
-		sequence.Process.Unlock()
 	}
 	return r
 }

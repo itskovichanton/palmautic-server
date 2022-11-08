@@ -805,8 +805,9 @@ func (c *DI) NewSearchSequenceAction(sequenceService backend.ISequenceService) *
 	}
 }
 
-func (c *DI) NewTestService(TaskService backend.ITaskService, generator goava.IGenerator, LoggerService logger.ILoggerService, AccountService backend.IAccountService, SequenceService backend.ISequenceService, B2BService backend.IB2BService) tests.ITestService {
+func (c *DI) NewTestService(EventBus EventBus.Bus, TaskService backend.ITaskService, generator goava.IGenerator, LoggerService logger.ILoggerService, AccountService backend.IAccountService, SequenceService backend.ISequenceService, B2BService backend.IB2BService) tests.ITestService {
 	return &tests.TestServiceImpl{
+		EventBus: EventBus,
 		TestStatsService: &tests.TestStatsServiceImpl{
 			LoggerService: LoggerService,
 		},

@@ -81,6 +81,10 @@ func (c *Test) Start(actionCount int) {
 	c.printLog()
 }
 
+func minSleep() {
+	time.Sleep(1 * time.Second)
+}
+
 func rndSleep() {
 	time.Sleep(time.Duration(rand.Intn(30)) * time.Second)
 }

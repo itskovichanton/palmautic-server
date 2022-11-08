@@ -97,7 +97,8 @@ func (c *SequenceServiceImpl) Start(accountId entities.ID, sequenceIds []entitie
 			seq.Stopped = false
 			go func() {
 				if seq.Process != nil && seq.Process.ByContact != nil {
-					locked := seq.Process.Lock()
+					seq.Process.Lock()
+					defer seq.Process.Unlock()
 					for contactId, _ := range seq.Process.ByContact {
 						contactToRun := c.ContactService.FindFirst(&entities.Contact{BaseEntity: entities.BaseEntity{AccountId: accountId, Id: contactId}})
 						if contactToRun != nil {
@@ -106,9 +107,6 @@ func (c *SequenceServiceImpl) Start(accountId entities.ID, sequenceIds []entitie
 								time.Sleep(10 * time.Second)
 							}
 						}
-					}
-					if locked {
-						seq.Process.Unlock()
 					}
 				}
 			}()

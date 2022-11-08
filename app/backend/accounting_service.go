@@ -33,7 +33,7 @@ func (c *AccountingServiceImpl) Init() {
 }
 
 func (c *AccountingServiceImpl) Tariffs(accountId entities.ID) []*entities.Tariff {
-	account := c.UserRepo.Accounts()[accountId]
+	account := c.UserRepo.FindById(accountId)
 
 	if account.Tariff == nil || account.Tariff.Creds.Id == TariffIDBasic && !account.Tariff.Expired() {
 		return []*entities.Tariff{c.TariffRepo.FindById(TariffIDBasic), c.TariffRepo.FindById(TariffIDProfessional), c.TariffRepo.FindById(TariffIDEnterprise)}
@@ -44,7 +44,7 @@ func (c *AccountingServiceImpl) Tariffs(accountId entities.ID) []*entities.Tarif
 
 func (c *AccountingServiceImpl) AssignTariff(accountId, tariffId entities.ID) {
 
-	account := c.UserRepo.Accounts()[accountId]
+	account := c.UserRepo.FindById(accountId)
 	tariff := c.TariffRepo.FindById(tariffId)
 
 	if account.Tariff != nil && account.Tariff.Creds.Id == tariffId {

@@ -129,7 +129,7 @@ func (c *TemplateServiceImpl) prepareArgs(accountId entities.ID, args map[string
 	if args == nil {
 		args = map[string]interface{}{}
 	}
-	args["Me"] = c.AccountService.Accounts()[accountId]
+	args["Me"] = c.AccountService.FindById(accountId)
 	return args
 }
 

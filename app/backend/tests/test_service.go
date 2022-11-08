@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"github.com/asaskevich/EventBus"
 	"github.com/itskovichanton/core/pkg/core/logger"
 	"github.com/itskovichanton/goava/pkg/goava"
 	"salespalm/server/app/backend"
@@ -18,6 +19,7 @@ type TestServiceImpl struct {
 	LoggerService    logger.ILoggerService
 	Generator        goava.IGenerator
 	TestStatsService ITestStatsService
+	EventBus         EventBus.Bus
 }
 
 type Services struct {
@@ -49,17 +51,13 @@ func (c *TestServiceImpl) StartSequencesTest(settings *SeqTestSettings) {
 	go c.TestStatsService.Start(settings.Info())
 
 	for i := 0; i < settings.AccountsCount; i++ {
-
 		t := &SeqTest{
 			LoggerService: c.LoggerService,
 			Services:      c.Services,
 			Generator:     c.Generator,
+			EventBus:      c.EventBus,
 		}
-
 		go t.Start(settings)
-
 		time.Sleep(10 * time.Second)
-
 	}
-
 }

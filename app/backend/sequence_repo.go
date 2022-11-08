@@ -25,7 +25,8 @@ type SequenceRepoImpl struct {
 	ISequenceRepo
 
 	DBService IDBService
-	mutex     sync.Mutex
+	sync.Mutex
+	lock2 sync.Mutex
 }
 
 func (c *SequenceRepoImpl) Init() {
@@ -33,6 +34,10 @@ func (c *SequenceRepoImpl) Init() {
 }
 
 func (c *SequenceRepoImpl) Delete(accountId entities.ID, ids []entities.ID) {
+
+	c.Lock()
+	defer c.Unlock()
+
 	sequences := c.DBService.DBContent().GetSequenceContainer().Sequences[accountId]
 	for _, id := range ids {
 		delete(sequences, id)
@@ -50,6 +55,10 @@ func (c *SequenceRepoImpl) FindFirst(filter *entities.Sequence) *entities.Sequen
 }
 
 func (c *SequenceRepoImpl) GetByIndex(accountId entities.ID, index int) *entities.Sequence {
+
+	c.Lock()
+	defer c.Unlock()
+
 	if index < 0 {
 		index = 1
 	}
@@ -74,14 +83,16 @@ type SequenceSearchResult struct {
 }
 
 func (c *SequenceRepoImpl) Search(filter *entities.Sequence, settings *SequenceSearchSettings) *SequenceSearchResult {
+
+	c.Lock()
+	defer c.Unlock()
+
 	var r []*entities.Sequence
 	if filter.AccountId == 0 {
-		c.mutex.Lock()
 		for accountId, _ := range c.DBService.DBContent().GetSequenceContainer().Sequences {
 			filter.AccountId = accountId
 			r = append(r, c.searchForAccount(filter)...)
 		}
-		c.mutex.Unlock()
 	} else {
 		r = c.searchForAccount(filter)
 	}
@@ -105,6 +116,10 @@ func (c *SequenceRepoImpl) applySettings(r []*entities.Sequence, settings *Seque
 }
 
 func (c *SequenceRepoImpl) searchForAccount(filter *entities.Sequence) []*entities.Sequence {
+
+	//c.lock2.Lock()
+	//defer c.lock2.Unlock()
+
 	rMap := c.DBService.DBContent().GetSequenceContainer().Sequences[filter.AccountId]
 	if len(rMap) == 0 {
 		return []*entities.Sequence{}
@@ -151,6 +166,9 @@ func (c *SequenceRepoImpl) searchForAccount(filter *entities.Sequence) []*entiti
 //}
 
 func (c *SequenceRepoImpl) CreateOrUpdate(sequence *entities.Sequence) {
+	c.Lock()
+	defer c.Unlock()
+
 	if sequence.Process == nil {
 		sequence.Process = &entities.SequenceProcess{ByContact: map[entities.ID]*entities.SequenceInstance{}}
 	}

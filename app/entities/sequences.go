@@ -1,8 +1,8 @@
 package entities
 
 import (
-	"github.com/viney-shih/go-lock"
-	"time"
+	"sync"
+	"sync/atomic"
 )
 
 type Sequence struct {
@@ -24,16 +24,14 @@ func (s *Sequence) CountTasksByFilter(filter func(t *Task) bool) int {
 	if s.Process == nil || s.Process.ByContact == nil || len(s.Process.ByContact) == 0 {
 		return r
 	}
-	locked := s.Process.Lock()
+	s.Process.Lock()
+	defer s.Process.Unlock()
 	for _, seqInstance := range s.Process.ByContact {
 		for _, t := range seqInstance.Tasks {
 			if filter(t) {
 				r++
 			}
 		}
-	}
-	if locked {
-		s.Process.Unlock()
 	}
 	return r
 }
@@ -43,16 +41,14 @@ func (s *Sequence) CalcByStatus(status string) int {
 	if s.Process == nil || s.Process.ByContact == nil || len(s.Process.ByContact) == 0 {
 		return r
 	}
-	locked := s.Process.RLock()
+	s.Process.Lock()
+	defer s.Process.Unlock()
 	for _, seqInstance := range s.Process.ByContact {
 		for _, t := range seqInstance.Tasks {
 			if t.Status == status {
 				r++
 			}
 		}
-	}
-	if locked {
-		s.Process.RUnlock()
 	}
 	return r
 }
@@ -70,15 +66,13 @@ func (s *Sequence) CalcReplies() int {
 	if s.Process == nil || s.Process.ByContact == nil || len(s.Process.ByContact) == 0 {
 		return r
 	}
-	locked := s.Process.Lock()
+	s.Process.Lock()
+	defer s.Process.Unlock()
 	for _, seqInstance := range s.Process.ByContact {
 		repliedTask, _ := seqInstance.FindTaskByStatus(TaskStatusReplied)
 		if repliedTask != nil {
 			r++
 		}
-	}
-	if locked {
-		s.Process.Unlock()
 	}
 	return r
 }
@@ -88,12 +82,10 @@ func (s *Sequence) CalcProgress() float32 {
 	if s.Process == nil || s.Process.ByContact == nil || len(s.Process.ByContact) == 0 {
 		return r
 	}
-	locked := s.Process.Lock()
+	s.Process.Lock()
+	defer s.Process.Unlock()
 	for _, seqInstance := range s.Process.ByContact {
 		r += seqInstance.CalcProgress()
-	}
-	if locked {
-		s.Process.Unlock()
 	}
 	return r / float32(len(s.Process.ByContact))
 }
@@ -113,28 +105,24 @@ func (s *Sequence) Refresh() {
 	s.People = 0
 	if s.Process != nil && s.Process.ByContact != nil {
 		s.People = s.CountPeople()
-		locked := s.Process.Lock()
+		s.Process.Lock()
+		defer s.Process.Unlock()
 		for _, process := range s.Process.ByContact {
 			for _, task := range process.Tasks {
 				task.Refresh()
 			}
-		}
-		if locked {
-			s.Process.Unlock()
 		}
 	}
 }
 
 func (s *Sequence) SetTasksVisibility(visible bool) {
 	if s.Process != nil && s.Process.ByContact != nil {
-		locked := s.Process.RLock()
+		s.Process.Lock()
+		defer s.Process.Unlock()
 		for _, process := range s.Process.ByContact {
 			for _, task := range process.Tasks {
 				task.Invisible = !visible
 			}
-		}
-		if locked {
-			s.Process.RUnlock()
 		}
 	}
 }
@@ -208,31 +196,47 @@ type SequenceModel struct {
 }
 
 type SequenceProcess struct {
-	ByContact       map[ID]*SequenceInstance
-	casMut, casMutR *lock.CASMutex
-}
-
-func (p *SequenceProcess) RLock() bool {
-	if p.casMutR == nil {
-		p.casMutR = lock.NewCASMutex()
-	}
-	return p.casMutR.RTryLockWithTimeout(5 * time.Second)
-}
-
-func (p *SequenceProcess) Lock() bool {
-	if p.casMut == nil {
-		p.casMut = lock.NewCASMutex()
-	}
-	return p.casMut.TryLockWithTimeout(5 * time.Second)
+	ByContact map[ID]*SequenceInstance
+	//casMut, casMutR *lock.CASMutex
+	m      sync.RWMutex
+	locked atomic.Bool
 }
 
 func (p *SequenceProcess) Unlock() {
-	p.casMut.Unlock()
+	if p.locked.Load() {
+		p.locked.Store(false)
+		p.m.Unlock()
+	}
 }
 
-func (p *SequenceProcess) RUnlock() {
-	p.casMutR.RUnlock()
+func (p *SequenceProcess) Lock() {
+	if !p.locked.Load() {
+		p.m.Lock()
+		p.locked.Store(true)
+	}
 }
+
+//func (p *SequenceProcess) RLock() bool {
+//	if p.casMutR == nil {
+//		p.casMutR = lock.NewCASMutex()
+//	}
+//	return p.casMutR.RTryLockWithTimeout(5 * time.Second)
+//}
+//
+//func (p *SequenceProcess) Lock() bool {
+//	if p.casMut == nil {
+//		p.casMut = lock.NewCASMutex()
+//	}
+//	return p.casMut.TryLockWithTimeout(5 * time.Second)
+//}
+//
+//func (p *SequenceProcess) Unlock() {
+//	p.casMut.Unlock()
+//}
+//
+//func (p *SequenceProcess) RUnlock() {
+//	p.casMutR.RUnlock()
+//}
 
 func (p *SequenceProcess) IsActiveForContact(contactId ID) bool {
 	p.Lock()

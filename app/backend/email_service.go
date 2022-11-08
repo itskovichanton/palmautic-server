@@ -15,8 +15,8 @@ import (
 )
 
 type IEmailService interface {
-	Send(params *SendEmailParams, preprocessor func(srv *email.Email, m *email.Message)) error
-	SendCorporate(params *SendEmailParams, preprocessor func(srv *email.Email, m *email.Message)) error
+	Send(params *SendEmailParams, preprocessor func(srv *email.Email, m *email.Message)) *SendEmailResult
+	SendCorporate(params *SendEmailParams, preprocessor func(srv *email.Email, m *email.Message)) *SendEmailResult
 }
 
 type SendEmailParams struct {
@@ -24,6 +24,11 @@ type SendEmailParams struct {
 	AdditionalParams map[string]interface{}
 	Event            string
 	AccountId        entities.ID
+}
+
+type SendEmailResult struct {
+	Error       error
+	ElapsedTime time.Duration
 }
 
 const (
@@ -79,12 +84,25 @@ func GetEmailOpenedEventChatMsgId(q url.Values) entities.ID {
 	return entities.ID(id)
 }
 
-func (c *EmailServiceImpl) SendCorporate(params *SendEmailParams, preprocessor func(srv *email.Email, m *email.Message)) error {
+func (c *EmailServiceImpl) SendCorporate(params *SendEmailParams, preprocessor func(srv *email.Email, m *email.Message)) *SendEmailResult {
 	params.From = "noreply@`palmautic-dev`.ru"
 	return c.Send(params, preprocessor)
 }
 
-func (c *EmailServiceImpl) Send(params *SendEmailParams, preprocessor func(srv *email.Email, m *email.Message)) error {
+func (c *EmailServiceImpl) Send(params *SendEmailParams, preprocessor func(srv *email.Email, m *email.Message)) *SendEmailResult {
+	startTime := time.Now()
+	r := &SendEmailResult{}
+	r.Error = c.send(params, preprocessor)
+	r.ElapsedTime = time.Now().Sub(startTime)
+	return r
+}
+
+func (c *EmailServiceImpl) send(params *SendEmailParams, preprocessor func(srv *email.Email, m *email.Message)) error {
+
+	err := c.FeatureAccessService.CheckFeatureAccessableEmail(params.AccountId)
+	if err != nil {
+		return err
+	}
 
 	// Все отправки встают в очередь - отправляем письмо, ждем 5 сек - потом только берем след отправку
 	c.Lock()
@@ -93,13 +111,8 @@ func (c *EmailServiceImpl) Send(params *SendEmailParams, preprocessor func(srv *
 		c.Unlock()
 	}()
 
-	err := c.FeatureAccessService.CheckFeatureAccessableEmail(params.AccountId)
-	if err != nil {
-		return err
-	}
-
 	var senderConfig *core.SenderConfig
-	senderAccount := c.AccountService.Accounts()[params.AccountId]
+	senderAccount := c.AccountService.FindById(params.AccountId)
 
 	if senderAccount != nil && senderAccount.InMailSettings != nil {
 		emailSettings := senderAccount.InMailSettings
@@ -123,6 +136,9 @@ func (c *EmailServiceImpl) Send(params *SendEmailParams, preprocessor func(srv *
 		m.BodyHTML = c.prepareEmailHtml(m.BodyHTML, params)
 		m.BodyText = ""
 	})
+	if !params.Send {
+		time.Sleep(5 * time.Second)
+	}
 
 	if err == nil {
 		c.FeatureAccessService.NotifyFeatureUsedEmail(params.AccountId)

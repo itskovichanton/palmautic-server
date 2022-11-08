@@ -31,7 +31,7 @@ func (c *StatsServiceImpl) OnTaskInMailBounced(a *TaskInMailReplyReceivedEventAr
 	a.Sequence.EmailBouncedCount++
 }
 
-func (c *StatsServiceImpl) OnEmailSent(task *entities.Task) {
+func (c *StatsServiceImpl) OnEmailSent(task *entities.Task, sendingResult *SendEmailResult) {
 	sequence := c.SequenceService.FindFirst(&entities.Sequence{BaseEntity: entities.BaseEntity{AccountId: task.AccountId, Id: task.Sequence.Id}})
 	if sequence != nil {
 		sequence.EmailSendingCount++
@@ -72,7 +72,7 @@ type AccountStats struct {
 func (c *StatsServiceImpl) Search(accountId entities.ID) *FullStats {
 
 	r := &FullStats{ByAccount: map[entities.ID]*AccountStats{}}
-	me := c.AccountService.Accounts()[accountId]
+	me := c.AccountService.FindById(accountId)
 	accountIds := []entities.ID{accountId}
 	for _, subord := range me.Subordinates {
 		accountIds = append(accountIds, entities.ID(subord.ID))
@@ -82,7 +82,7 @@ func (c *StatsServiceImpl) Search(accountId entities.ID) *FullStats {
 		sequences := c.SequenceService.Search(&entities.Sequence{BaseEntity: entities.BaseEntity{AccountId: accId}}, nil).Items
 		c.removeInternals(sequences)
 		stats := &AccountStats{
-			AccountName: c.AccountService.Accounts()[accId].FullName,
+			AccountName: c.AccountService.FindById(accId).FullName,
 			ByTasks:     c.StatsRepo.Search(accId),
 			Sequences:   sequences,
 		}
