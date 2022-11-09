@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"fmt"
 	"github.com/asaskevich/EventBus"
 	"github.com/itskovichanton/core/pkg/core/frmclient"
 	"github.com/itskovichanton/goava/pkg/goava/errs"
@@ -234,7 +235,7 @@ func (c *TaskServiceImpl) Execute(task *entities.Task) (*entities.Task, error) {
 
 		// Обновили задачу в БД в соответствии с тем, что хочет отправить юзер
 		storedTask.Body = task.Body
-		storedTask.Subject = task.Subject
+		storedTask.Subject = fmt.Sprintf("%v [Задача #%v, Аккаунт=%v]", task.Subject, task.Id, task.AccountId)
 		c.TaskExecutorService.Execute(storedTask) // пока не проверяю статус выполнения
 		storedTask.Status = entities.TaskStatusCompleted
 		storedTask.ExecTime = time.Now()

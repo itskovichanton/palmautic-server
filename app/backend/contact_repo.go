@@ -97,6 +97,7 @@ func (c *ContactRepoImpl) Delete(accountId entities.ID, ids []entities.ID) {
 }
 
 func (c *ContactRepoImpl) CreateOrUpdate(a *entities.Contact) error {
+
 	q, err := c.MainService.QueryDomainDBForMap(fmt.Sprintf("SELECT createOrUpdateContact(%v,%v,'%v','%v','%v','%v','%v','%v') as id;", a.AccountId, a.Id, a.Name, a.Phone, a.Email, a.Job, a.Company, a.Linkedin), nil, nil)
 	if err != nil {
 		return err

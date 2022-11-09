@@ -394,7 +394,14 @@ func (e *entry) tryExpungeLocked() (isExpunged bool) {
 }
 
 func (m *SyncMap) Len() int {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return len(m.dirty)
+	r := 0
+	m.Range(func(key, value any) bool {
+		r++
+		return true
+	})
+	return r
+}
+
+func (m *SyncMap) Empty() bool {
+	return m.Len() == 0
 }

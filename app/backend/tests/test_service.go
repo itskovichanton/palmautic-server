@@ -57,7 +57,7 @@ func (c *TestServiceImpl) StartSequencesTest(settings *SeqTestSettings) {
 			Generator:     c.Generator,
 			EventBus:      c.EventBus,
 		}
-		go t.Start(settings)
+		go func(i int) { t.Start(settings, i) }(i)
 		time.Sleep(10 * time.Second)
 	}
 }

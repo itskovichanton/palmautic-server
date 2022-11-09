@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"salespalm/server/app/entities"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -43,7 +42,7 @@ type EmailServiceImpl struct {
 	AccountService       IAccountService
 	FeatureAccessService IFeatureAccessService
 	Config               *server.Config
-	sync.Mutex
+	mutexMap             IDToMutexMap
 }
 
 func GetEmailOpenedContactName(q url.Values) string {
@@ -104,11 +103,12 @@ func (c *EmailServiceImpl) send(params *SendEmailParams, preprocessor func(srv *
 		return err
 	}
 
-	// Все отправки встают в очередь - отправляем письмо, ждем 5 сек - потом только берем след отправку
-	c.Lock()
+	// Все отправки для одного аккаунта встают в очередь - отправляем письмо, ждем 5 сек - потом только берем след отправку
+	m, _ := c.mutexMap.LoadOrStore(params.AccountId)
+	m.Lock()
 	defer func() {
-		time.Sleep(5 * time.Second)
-		c.Unlock()
+		time.Sleep(20 * time.Second)
+		m.Unlock()
 	}()
 
 	var senderConfig *core.SenderConfig
@@ -125,7 +125,7 @@ func (c *EmailServiceImpl) send(params *SendEmailParams, preprocessor func(srv *
 	}
 
 	params.SenderConfig = senderConfig
-	params.Send = false
+	params.Send = true
 	err = c.EmailService.SendPreprocessed(&params.Params, func(srv *email.Email, m *email.Message) {
 		if preprocessor != nil {
 			preprocessor(srv, m)

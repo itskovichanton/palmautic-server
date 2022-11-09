@@ -60,7 +60,10 @@ func (c *B2BServiceImpl) AddToContacts(accountId entities.ID, b2bItemIds []entit
 				Job:        cast.ToString(item["Title"]),
 			}
 			if len(newContact.Name) == 0 {
-				newContact.Name = cast.ToString(item["Name"])
+				newContact.Name = newContact.Company
+			}
+			if len(newContact.Name) == 0 {
+				newContact.Name = newContact.Email
 			}
 			c.ContactRepo.CreateOrUpdate(newContact)
 			if newContact.ReadyForSearch() {

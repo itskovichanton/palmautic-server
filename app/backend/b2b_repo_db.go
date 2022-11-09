@@ -96,7 +96,9 @@ func (c *B2BDBRepoImpl) Search(table string, filters map[string]interface{}, set
 	r.Items = results
 
 	q, err := c.MainService.QueryDomainDBForMap(fmt.Sprintf(`select count(*) as total from b2b where %v`, whereClause), nil, nil)
-	r.TotalCount, err = validation.CheckInt("total", q.Result.(map[string]interface{})["total"])
+	if err == nil {
+		r.TotalCount, err = validation.CheckInt("total", q.Result.(map[string]interface{})["total"])
+	}
 
 	return r, nil
 }

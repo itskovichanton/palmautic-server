@@ -47,11 +47,11 @@ func (c *SeqTest) OnEmailSent(task *entities.Task, sendingResult *backend.SendEm
 	logger.Print(c.lg, ld)
 }
 
-func (c *SeqTest) Start(settings *SeqTestSettings) {
+func (c *SeqTest) Start(settings *SeqTestSettings, accountIndex int) {
 
 	// Подготовка
 	uid := c.Generator.GenerateUuid().String()
-	c.lg = c.LoggerService.GetFileLogger(fmt.Sprintf("seq-test-%v", uid), "", 1)
+
 	c.ld = logger.NewLD()
 	defer func() {
 		if c.accountId > 0 {
@@ -77,15 +77,8 @@ func (c *SeqTest) Start(settings *SeqTestSettings) {
 
 	c.account = user
 	c.accountId = entities.ID(c.account.ID)
-
-	user.InMailSettings = &entities.InMailSettings{
-		SmtpHost: "mail.molbulak.com",
-		ImapHost: "mail.molbulak.com",
-		Login:    "a.itskovich@molbulak.com",
-		Password: "92y62uH9",
-		SmtpPort: 465,
-		ImapPort: 993,
-	}
+	c.lg = c.LoggerService.GetFileLogger(fmt.Sprintf("seq-test-%v-id-%v", uid, c.accountId), "", 1)
+	user.InMailSettings = &entities.InMailSettings{SmtpHost: "smtp.mail.ru", ImapHost: "imap.mail.ru", ImapPort: 993, SmtpPort: 465, Login: "kheyfets.peter@mail.ru", Password: "RgLAhpg44TXjHVNkcTeq"}
 
 	c.EventBus.SubscribeAsync(backend.EmailSentEventTopic, c.OnEmailSent, true)
 
@@ -97,7 +90,7 @@ func (c *SeqTest) Start(settings *SeqTestSettings) {
 
 	//for time.Now().Sub(startTime) < time.Hour*time.Duration(settings.DurationHours) {
 	// Добавляем контакты из б2б в последовательности
-	err = c.addFromB2BToSequences(settings)
+	err = c.addFromB2BToSequences(settings, accountIndex)
 	if err != nil {
 		logger.Err(c.ld, err)
 		return
@@ -107,14 +100,14 @@ func (c *SeqTest) Start(settings *SeqTestSettings) {
 	//}
 }
 
-func (c *SeqTest) addFromB2BToSequences(settings *SeqTestSettings) error {
+func (c *SeqTest) addFromB2BToSequences(settings *SeqTestSettings, accountIndex int) error {
 
 	//table := "persons"
 	//if rndBool() {
 	table := "companies"
 	//}
 	logger.Action(c.ld, "B2BService.Search")
-	b2bItems, err := c.Services.B2BService.Search(c.accountId, table, map[string]interface{}{}, &backend.SearchSettings{Offset: 0, Count: settings.ContactsToAdd})
+	b2bItems, err := c.Services.B2BService.Search(c.accountId, table, map[string]interface{}{}, &backend.SearchSettings{Offset: accountIndex * settings.ContactsToAdd, Count: settings.ContactsToAdd})
 	if err != nil {
 		return err
 	}
