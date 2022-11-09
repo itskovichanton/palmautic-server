@@ -282,12 +282,13 @@ func (c *DI) NewTaskExecutorService(manualEmailTaskExecutorService backend.IEmai
 	}
 }
 
-func (c *DI) NewEmailService(Config *server.Config, FeatureAccessService backend.IFeatureAccessService, emailService core.IEmailService, AccountService backend.IAccountService) backend.IEmailService {
+func (c *DI) NewEmailService(EventBus EventBus.Bus, Config *server.Config, FeatureAccessService backend.IFeatureAccessService, emailService core.IEmailService, AccountService backend.IAccountService) backend.IEmailService {
 	return &backend.EmailServiceImpl{
 		EmailService:         emailService,
 		AccountService:       AccountService,
 		FeatureAccessService: FeatureAccessService,
 		Config:               Config,
+		EventBus:             EventBus,
 	}
 }
 

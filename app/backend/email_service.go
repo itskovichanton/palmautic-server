@@ -2,6 +2,7 @@ package backend
 
 import (
 	"fmt"
+	"github.com/asaskevich/EventBus"
 	"github.com/itskovichanton/core/pkg/core"
 	"github.com/itskovichanton/core/pkg/core/email"
 	"github.com/itskovichanton/core/pkg/core/validation"
@@ -43,6 +44,7 @@ type EmailServiceImpl struct {
 	FeatureAccessService IFeatureAccessService
 	Config               *server.Config
 	mutexMap             IDToMutexMap
+	EventBus             EventBus.Bus
 }
 
 func GetEmailOpenedContactName(q url.Values) string {
@@ -126,6 +128,8 @@ func (c *EmailServiceImpl) send(params *SendEmailParams, preprocessor func(srv *
 
 	params.SenderConfig = senderConfig
 	params.Send = true
+
+	startTime := time.Now()
 	err = c.EmailService.SendPreprocessed(&params.Params, func(srv *email.Email, m *email.Message) {
 		if preprocessor != nil {
 			preprocessor(srv, m)
@@ -138,6 +142,10 @@ func (c *EmailServiceImpl) send(params *SendEmailParams, preprocessor func(srv *
 	})
 	if !params.Send {
 		time.Sleep(5 * time.Second)
+	}
+	elapsedTime := time.Now().Sub(startTime)
+	if elapsedTime > 10*time.Minute {
+		c.EventBus.Publish(EmailSenderSlowedDownEventTopic, params.AccountId, elapsedTime)
 	}
 
 	if err == nil {

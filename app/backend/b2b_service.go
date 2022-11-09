@@ -59,12 +59,15 @@ func (c *B2BServiceImpl) AddToContacts(accountId entities.ID, b2bItemIds []entit
 				Linkedin:   cast.ToString(item["Linkedin"]),
 				Job:        cast.ToString(item["Title"]),
 			}
+			//if len(newContact.Email) == 0 {
+			//	newContact.Email = "itskovichae@gmail.com"
+			//}
 			if len(newContact.Name) == 0 {
 				newContact.Name = newContact.Company
 			}
-			if len(newContact.Name) == 0 {
-				newContact.Name = newContact.Email
-			}
+			//if len(newContact.Name) == 0 {
+			//	newContact.Name = utils.MD5(fmt.Sprintf("%s%v", time.Now(), rand.Int()))
+			//}
 			c.ContactRepo.CreateOrUpdate(newContact)
 			if newContact.ReadyForSearch() {
 				added = append(added, newContact.Id)

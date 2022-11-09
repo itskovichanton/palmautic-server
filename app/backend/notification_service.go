@@ -62,7 +62,19 @@ func (c *NotificationServiceImpl) Init() {
 	c.EventBus.SubscribeAsync(FeatureUnaccessableByTariff, c.OnFeatureUnaccessableByTariffReceived, true)
 	c.EventBus.SubscribeAsync(EmailOpenedEventTopic, c.OnEmailOpened, true)
 	c.EventBus.SubscribeAsync(IncomingChatMsgEventTopic, c.OnIncomingChatMsgReceived, true)
+	c.EventBus.SubscribeAsync(EmailSenderSlowedDownEventTopic, c.OnEmailSenderSlowedDown, true)
 
+}
+
+func (c *NotificationServiceImpl) OnEmailSenderSlowedDown(accountId entities.ID, elapsedTime time.Duration) {
+	c.Add(accountId, &Notification{
+		Subject:   "Мы заметили замедление работы вашего почтового сервера",
+		Message:   fmt.Sprintf("Время отправки последнего письма - %s. Письма могут отправляться не сразу, но мы будем делать попытки их отправить.", elapsedTime),
+		Alertness: "red",
+	}, &NotificationAddingSettings{
+		TimeFromLastAdding: 20 * time.Minute,
+		Unique:             true,
+	})
 }
 
 func (c *NotificationServiceImpl) OnIncomingChatMsgReceived(msgChat *entities.Chat) {

@@ -167,6 +167,13 @@ func (c *SeqTest) executeTasks() {
 		tasks := c.Services.TaskService.Search(&entities.Task{BaseEntity: entities.BaseEntity{AccountId: c.accountId}}, nil).Items
 		for _, task := range tasks {
 			if !task.HasFinalStatus() {
+
+				if task.HasTypeEmail() {
+					time.Sleep(20 * time.Second)
+				} else {
+					time.Sleep(60 * time.Second)
+				}
+
 				ld := map[string]interface{}{}
 				logger.Action(ld, fmt.Sprintf("Выполняю таск %v", task.Description))
 				t, err := c.Services.TaskService.Execute(task)
@@ -177,7 +184,6 @@ func (c *SeqTest) executeTasks() {
 				}
 				logger.Print(c.lg, ld)
 
-				time.Sleep(5 * time.Second)
 			}
 		}
 	}

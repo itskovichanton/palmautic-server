@@ -74,11 +74,16 @@ func (c *ContactRepoImpl) Search(filter *entities.Contact, settings *ContactSear
 	q, err := c.MainService.QueryDomainDBForMaps(fmt.Sprintf(`select * from contacts where %v order by id desc %v`, whereClause, limitClause), nil, nil)
 	if err != nil {
 		println(err.Error())
+	} else {
+		r.Items = utils.Map(q.Result.([]map[string]interface{}), func(a map[string]interface{}) *entities.Contact { return decodeContact(a) })
 	}
-	r.Items = utils.Map(q.Result.([]map[string]interface{}), func(a map[string]interface{}) *entities.Contact { return decodeContact(a) })
 
 	q, err = c.MainService.QueryDomainDBForMap(fmt.Sprintf(`select count(*) as total from contacts where %v`, whereClause), nil, nil)
-	r.TotalCount, err = validation.CheckInt("total", q.Result.(map[string]interface{})["total"])
+	if err != nil {
+		println(err.Error())
+	} else {
+		r.TotalCount, err = validation.CheckInt("total", q.Result.(map[string]interface{})["total"])
+	}
 
 	return r
 }
