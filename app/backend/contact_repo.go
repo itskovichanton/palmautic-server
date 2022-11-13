@@ -35,11 +35,11 @@ type ContactSearchSettings struct {
 }
 
 func (c *ContactRepoImpl) Clear(accountId entities.ID) {
-	c.MainService.UpdateDomainDB(fmt.Sprintf(`delete from contacts where accountId=%v`, accountId), nil, nil)
+	c.MainService.UpdateDomainDB(`delete from contacts where accountId=:ACCOUNT_ID`, map[string]interface{}{"ACCOUNT_ID": accountId}, nil)
 }
 
 func (c *ContactRepoImpl) FindById(id entities.ID) *entities.Contact {
-	q, err := c.MainService.QueryDomainDBForMap(fmt.Sprintf("select * from contacts where contacts.Id=%v", id), nil, nil)
+	q, err := c.MainService.QueryDomainDBForMap("select * from contacts where contacts.Id=:ID", map[string]interface{}{"ID": id}, nil)
 	if err != nil {
 		return nil
 	}
@@ -98,12 +98,12 @@ func decodeContact(a map[string]interface{}) *entities.Contact {
 
 func (c *ContactRepoImpl) Delete(accountId entities.ID, ids []entities.ID) {
 	idsI := utils.Map(ids, func(a entities.ID) int64 { return int64(a) })
-	c.MainService.UpdateDomainDB(fmt.Sprintf(`delete from contacts where accountId=%v and Id in (%v)`, accountId, strings.Join(cast.ToStringSlice(idsI), ",")), nil, nil)
+	c.MainService.UpdateDomainDB(fmt.Sprintf(`delete from contacts where accountId=:ACCOUNT_ID and Id in (%v)`, strings.Join(cast.ToStringSlice(idsI), ",")), map[string]interface{}{"ACCOUNT_ID": accountId}, nil)
 }
 
 func (c *ContactRepoImpl) CreateOrUpdate(a *entities.Contact) error {
 
-	q, err := c.MainService.QueryDomainDBForMap(fmt.Sprintf("SELECT createOrUpdateContact(%v,%v,'%v','%v','%v','%v','%v','%v') as id;", a.AccountId, a.Id, a.Name, a.Phone, a.Email, a.Job, a.Company, a.Linkedin), nil, nil)
+	q, err := c.MainService.QueryDomainDBForMap("SELECT createOrUpdateContact(:ACCOUNT_ID, :ID, :NAME, :PHONE, :EMAIL, :JOB, :COMPANY, :LINKEDIN) as id", map[string]interface{}{"ACCOUNT_ID": a.AccountId, "ID": a.Id, "NAME": a.Name, "PHONE": a.Phone, "EMAIL": a.Email, "JOB": a.Job, "COMPANY": a.Company, "LINKEDIN": a.Linkedin}, nil)
 	if err != nil {
 		return err
 	}

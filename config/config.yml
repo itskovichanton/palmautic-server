@@ -16,7 +16,7 @@ service:
     SuccessExitStatus: 1 2 8 SIGKILL
 
 fr:
-  url: http://46.148.231.73:8091
+  url: http://82.146.41.108:8091
   developerId: 106567582
 
 actions:

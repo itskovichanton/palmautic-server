@@ -43,6 +43,7 @@ func (c *EmailScannerServiceImpl) Init() {
 func (c *EmailScannerServiceImpl) IsRunning(contactId entities.ID) bool {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+
 	return c.running[contactId]
 }
 

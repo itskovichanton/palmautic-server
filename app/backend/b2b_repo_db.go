@@ -35,7 +35,7 @@ func (c *B2BDBRepoImpl) Init() {
 }
 
 func (c *B2BDBRepoImpl) Clear(table string) error {
-	_, err := c.MainService.QueryDomainDBForMap(fmt.Sprintf("delete from b2b where b2b.Table='%v'", table), nil, nil)
+	_, err := c.MainService.QueryDomainDBForMap("delete from b2b where b2b.Table=:TABLE", map[string]interface{}{"TABLE": table}, nil)
 	return err
 }
 
@@ -43,7 +43,7 @@ func (c *B2BDBRepoImpl) FindById(id entities.ID) (entities.MapWithId, error) {
 	//db, obj, cancel := c.model("", entities.MapWithId{"Id": id})
 	//defer cancel()
 	//err := db.First(obj).Error
-	q, err := c.MainService.QueryDomainDBForMap(fmt.Sprintf("select * from b2b where b2b.Id=%v", id), nil, nil)
+	q, err := c.MainService.QueryDomainDBForMap("select * from b2b where b2b.Id=:ID", map[string]interface{}{"ID": id}, nil)
 	if err != nil {
 		return nil, err
 	}
