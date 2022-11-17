@@ -68,7 +68,7 @@ func (c *PalmauticServerApp) tests() {
 	//	},
 	//	Action:    "send_email",
 	//	Body:      "<body>Hello, Anton!</body>",
-	//	Subject:   "Deliver me!",
+	//	Subjects:   "Deliver me!",
 	//	Alertness: "",
 	//})
 	//c.UserRepo.Accounts()[1001].Contact = &entities.Contact{

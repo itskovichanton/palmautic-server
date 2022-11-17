@@ -9,16 +9,12 @@ func TaskUpdatedEventTopic(taskId entities.ID) string {
 	return fmt.Sprintf("task-updated:task-%v", taskId)
 }
 
-func InMailReceivedEventTopic(sequenceId, contactId entities.ID) string {
-	return fmt.Sprintf("inmail-received:seq-%v:cont-%v", sequenceId, contactId)
+func InMailReceivedEventTopic(creds FindEmailOrderCreds) string {
+	return fmt.Sprintf("inmail-received:%v", creds.String())
 }
 
-func InMailBouncedEventTopic(sequenceId, contactId entities.ID) string {
-	return fmt.Sprintf("inmail-bounced:seq-%v:cont-%v", sequenceId, contactId)
-}
-
-func StopInMailScanEventTopic(sequenceId, contactId entities.ID) string {
-	return fmt.Sprintf("inmail-stop-scan:seq-%v:cont-%v", sequenceId, contactId)
+func InMailBouncedEventTopic(creds FindEmailOrderCreds) string {
+	return fmt.Sprintf("inmail-bounced:%v", creds.String())
 }
 
 const EmailReplyReceivedEventTopic = "inmail-received"
@@ -38,3 +34,4 @@ const AccountRegisteredEventTopic = "account-registered"
 const AccountDeletedEventTopic = "account-deleted"
 const AccountBeforeDeletedEventTopic = "account-before-delete"
 const EmailSenderSlowedDownEventTopic = "email-sender-slowed-down"
+const AccountUpdatedEventTopic = "account-updated"

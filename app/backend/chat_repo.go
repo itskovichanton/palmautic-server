@@ -125,6 +125,7 @@ func (c *ChatRepoImpl) CreateOrUpdate(contact *entities.Contact, m *entities.Cha
 		chatForMsg.Msgs[storedMsgIndex] = m
 	}
 
+	chatForMsg.Subject = m.Subject
 	return chatForMsg, created
 }
 

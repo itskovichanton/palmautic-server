@@ -9,11 +9,12 @@ import (
 	"github.com/itskovichanton/core/pkg/core/frmclient"
 	"github.com/itskovichanton/echo-http"
 	"net/http"
+	"salespalm/server/app/entities"
 	"strings"
 )
 
 type IJavaToolClient interface {
-	FindEmail(params *FindEmailParams) ([]*FindEmailResult, error)
+	FindEmail(params *FindEmailParams) (map[string]FindEmailResults, error)
 	CheckAccess(access *EmailAccess) error
 }
 
@@ -30,9 +31,19 @@ type EmailAccess struct {
 	Port                    int
 }
 
+func NewEmailAccessFromInMailSettings(emailSettings *entities.InMailSettings) *EmailAccess {
+	return &EmailAccess{
+		Login:    emailSettings.Login,
+		Password: emailSettings.Password,
+		Server:   emailSettings.ImapHost,
+		Port:     emailSettings.ImapPort,
+	}
+}
+
 type FindEmailOrder struct {
-	Subject, From []string
-	MaxCount      int
+	Subjects, From []string
+	MaxCount       int
+	Instant        bool
 }
 
 type FindEmailResult struct {
@@ -40,7 +51,7 @@ type FindEmailResult struct {
 	ContentParts  []*ContentPart
 }
 
-func (r FindEmailResult) DetectBounce() bool {
+func (r *FindEmailResult) DetectBounce() bool {
 
 	if strings.Contains(strings.ToUpper(r.From), "DAEMON") {
 		return true
@@ -55,7 +66,7 @@ func (r FindEmailResult) DetectBounce() bool {
 	return false
 }
 
-func (r FindEmailResult) PlainContent() string {
+func (r *FindEmailResult) PlainContent() string {
 	if len(r.ContentParts) == 0 {
 		return ""
 	}
@@ -72,17 +83,27 @@ type ContentPart struct {
 
 type FindEmailParams struct {
 	Access *EmailAccess
-	Order  *FindEmailOrder
+	Orders map[string]*FindEmailOrder
 }
 
 func (c *JavaToolClientImpl) Init() {
 	c.url = c.Config.GetStr("java-tools", "url")
 }
 
-func (c *JavaToolClientImpl) FindEmail(params *FindEmailParams) ([]*FindEmailResult, error) {
+type FindEmailResults []*FindEmailResult
+
+func (r FindEmailResults) DetectBounce() bool {
+	for _, result := range r {
+		if result.DetectBounce() {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *JavaToolClientImpl) FindEmail(params *FindEmailParams) (map[string]FindEmailResults, error) {
 	b := new(bytes.Buffer)
 	err := json.NewEncoder(b).Encode(params)
-	//println(string(b.Bytes()))
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +117,10 @@ func (c *JavaToolClientImpl) FindEmail(params *FindEmailParams) ([]*FindEmailRes
 		return nil, err
 	}
 
-	var r []*FindEmailResult
+	var r map[string]FindEmailResults
+	if params.Orders == nil || len(params.Orders) == 0 {
+		return r, nil
+	}
 	_, err = frmclient.ExecuteWidthFrmAPI(resp, &r)
 	return r, err
 }
@@ -104,7 +128,6 @@ func (c *JavaToolClientImpl) FindEmail(params *FindEmailParams) ([]*FindEmailRes
 func (c *JavaToolClientImpl) CheckAccess(access *EmailAccess) error {
 	b := new(bytes.Buffer)
 	err := json.NewEncoder(b).Encode(access)
-	println(string(b.Bytes()))
 	if err != nil {
 		return err
 	}

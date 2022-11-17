@@ -5,6 +5,7 @@ import (
 	"github.com/asaskevich/EventBus"
 	"github.com/itskovichanton/core/pkg/core/frmclient"
 	"github.com/itskovichanton/goava/pkg/goava/errs"
+	"github.com/itskovichanton/server/pkg/server"
 	"net/url"
 	"salespalm/server/app/entities"
 	"time"
@@ -39,6 +40,7 @@ type TaskServiceImpl struct {
 	TaskExecutorService ITaskExecutorService
 	SequenceRepo        ISequenceRepo
 	EventBus            EventBus.Bus
+	Config              *server.Config
 }
 
 func (c *TaskServiceImpl) Init() {
@@ -235,7 +237,10 @@ func (c *TaskServiceImpl) Execute(task *entities.Task) (*entities.Task, error) {
 
 		// Обновили задачу в БД в соответствии с тем, что хочет отправить юзер
 		storedTask.Body = task.Body
-		storedTask.Subject = fmt.Sprintf("%v [Задача #%v, Аккаунт=%v]", task.Subject, task.Id, task.AccountId)
+		storedTask.Subject = task.Subject
+		if !c.Config.CoreConfig.IsProfileProd() {
+			storedTask.Subject = fmt.Sprintf("%v [Задача #%v, Аккаунт=%v]", storedTask.Subject, task.Id, task.AccountId)
+		}
 		c.TaskExecutorService.Execute(storedTask) // пока не проверяю статус выполнения
 		storedTask.Status = entities.TaskStatusCompleted
 		storedTask.ExecTime = time.Now()

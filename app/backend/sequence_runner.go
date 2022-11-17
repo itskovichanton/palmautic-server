@@ -127,7 +127,6 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 
 	go func() {
 
-		// запускаем сканер ответов
 		logger.Result(ld, "Готово к выполнению")
 		logger.Print(lg, ld)
 
@@ -136,8 +135,9 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 		taskUpdateChan := make(chan bool)
 
 		c.EventBus.SubscribeAsync(
-			InMailBouncedEventTopic(sequence.Id, contact.Id),
-			func(m *FindEmailResult) {
+			InMailBouncedEventTopic(NewFindEmailOrderCreds(&EntityIds{SequenceId: sequence.Id, ContactId: contact.Id, AccountId: sequence.AccountId})),
+			func(results FindEmailResults) {
+				m := results[0]
 				ld2 := logger.NewLD()
 				logger.Action(ld2, "BOUNCED inMail!")
 				logger.Args(ld2, fmt.Sprintf("contact=%v, mail-subject=%v", contact.Name, m.Subject))
@@ -168,8 +168,9 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			true)
 
 		c.EventBus.SubscribeAsync(
-			InMailReceivedEventTopic(sequence.Id, contact.Id),
-			func(m *FindEmailResult) {
+			InMailReceivedEventTopic(NewFindEmailOrderCreds(&EntityIds{SequenceId: sequence.Id, ContactId: contact.Id, AccountId: sequence.AccountId})),
+			func(result FindEmailResults) {
+				m := result[0]
 				ld2 := logger.NewLD()
 				logger.Action(ld2, "Получен inMail!")
 				logger.Args(ld2, fmt.Sprintf("contact=%v, mail-subject=%v", contact.Name, m.Subject))
@@ -199,13 +200,12 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			},
 			true)
 
-		// Запускаем сканер почты от контакта
-		go c.EmailScannerService.Run(sequence, contact)
+		// Запускаем сканер почты от контакта, ориентируясь только на его емейл
+		c.enqueueInMail(sequence, contact)
 
 		defer func() {
 			// После окончания процесса - отписываемся от событий
-			c.EventBus.Publish(StopInMailScanEventTopic(sequence.Id, contact.Id))
-			c.EventBus.UnsubscribeAll(InMailReceivedEventTopic(sequence.Id, contact.Id))
+			c.EventBus.UnsubscribeAll(InMailReceivedEventTopic(NewFindEmailOrderCreds(&EntityIds{SequenceId: sequence.Id, ContactId: contact.Id, AccountId: sequence.AccountId})))
 			//close(taskUpdateChan)s
 			//taskUpdateChan = nil
 		}()
@@ -281,7 +281,6 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			logger.Print(lg, ld)
 
 			// К этому моменту currentTask.status=started
-
 			c.EventBus.SubscribeAsync(TaskUpdatedEventTopic(currentTask.Id), func(updated *entities.Task) {
 
 				currentTask = updated
@@ -435,8 +434,10 @@ func (c *SequenceRunnerServiceImpl) deleteTasksInContactProcess(lg *log.Logger, 
 			ld2 := logger.NewLD()
 			logger.Action(ld2, "Удаляю все таски")
 			c.TaskService.Delete(t)
-			c.EventBus.UnsubscribeAll(InMailReceivedEventTopic(t.Sequence.Id, t.Contact.Id))
-			c.EventBus.UnsubscribeAll(InMailBouncedEventTopic(t.Sequence.Id, t.Contact.Id))
+			findEmailOrderCreds := NewFindEmailOrderCreds(&EntityIds{AccountId: t.AccountId, ContactId: t.Contact.Id, SequenceId: t.Sequence.Id})
+			c.EmailScannerService.Dequeue(findEmailOrderCreds)
+			c.EventBus.UnsubscribeAll(InMailReceivedEventTopic(findEmailOrderCreds))
+			c.EventBus.UnsubscribeAll(InMailBouncedEventTopic(findEmailOrderCreds))
 			c.EventBus.UnsubscribeAll(TaskUpdatedEventTopic(t.Id))
 			logger.Result(ld2, fmt.Sprintf("Удален таск #%v", t.Id))
 			logger.Print(lg, ld2)
@@ -444,4 +445,15 @@ func (c *SequenceRunnerServiceImpl) deleteTasksInContactProcess(lg *log.Logger, 
 	}
 	contactProcess.Tasks = []*entities.Task{}
 	return deletedTasks
+}
+
+func (c *SequenceRunnerServiceImpl) enqueueInMail(sequence *entities.Sequence, contact *entities.Contact) {
+	c.EmailScannerService.Enqueue(NewFindEmailOrderCreds(
+		&EntityIds{SequenceId: sequence.Id, AccountId: sequence.AccountId, ContactId: contact.Id}),
+		&FindEmailOrder{
+			MaxCount: 1,
+			//Subjects: c.getSubjectNames(sequence, contact, currentTask), // просто ждем мейл от контакта
+			From: []string{contact.Email, "daemon"}, //contact.Email,
+		},
+	)
 }

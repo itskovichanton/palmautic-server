@@ -51,7 +51,7 @@ func (c *ChatServiceImpl) Init() {
 
 	for accountId, _ := range c.AccountService.Accounts() {
 		for _, chat := range c.ChatRepo.Chats(accountId) {
-			c.startAnswerScan(chat.Contact)
+			c.startAnswerScanning(chat)
 		}
 	}
 }
@@ -98,21 +98,27 @@ func (c *ChatServiceImpl) DeleteChats(accountId entities.ID) {
 
 func (c *ChatServiceImpl) ClearChat(filter *entities.Chat) {
 	c.ChatRepo.ClearChat(filter)
-	c.EmailScannerService.Stop(filter.Id())
+	c.EmailScannerService.Dequeue(c.findEmailOrderCreds(filter))
 }
 
 func (c *ChatServiceImpl) Search(filter *entities.ChatMsg) []*entities.ChatMsg {
 	return c.ChatRepo.SearchMsgs(filter)
 }
 
-func (c *ChatServiceImpl) OnInMailReceived(contact *entities.Contact, inMail *FindEmailResult) {
-	c.addMsg(contact.BaseEntity, &entities.ChatMsg{
-		BaseEntity:     entities.BaseEntity{AccountId: contact.AccountId},
-		Body:           inMail.ContentParts[0].Content,
-		PlainBodyShort: inMail.PlainContent(),
-		ChatId:         contact.Id,
-		Attachments:    getAttachments(inMail),
-	}, false, false)
+func (c *ChatServiceImpl) OnInMailReceived(creds FindEmailOrderCreds, inMailResults FindEmailResults) {
+	contact := c.ContactService.FindFirst(&entities.Contact{BaseEntity: entities.BaseEntity{AccountId: creds.AccountId(), Id: creds.ContactId()}})
+	for _, inMail := range inMailResults {
+		if contact != nil {
+			c.addMsg(contact.BaseEntity, &entities.ChatMsg{
+				Subject:        inMail.Subject,
+				BaseEntity:     entities.BaseEntity{AccountId: contact.AccountId},
+				Body:           inMail.ContentParts[0].Content,
+				PlainBodyShort: inMail.PlainContent(),
+				ChatId:         contact.Id,
+				Attachments:    getAttachments(inMail),
+			}, false, false)
+		}
+	}
 }
 
 func getAttachments(mail *FindEmailResult) []*entities.Attachment {
@@ -170,7 +176,7 @@ func (c *ChatServiceImpl) addMsg(contactCreds entities.BaseEntity, m *entities.C
 			Event:     EmailOpenedEventChatMsg,
 			Params: core.Params{
 				From:        c.AccountService.FindById(contactCreds.AccountId).Email(),
-				To:          []string{ /*contact.Email*/ "itskovichae@gmail.com"},
+				To:          []string{contact.Email},
 				Subject:     chat.Subject,
 				Body:        m.Body,
 				Attachments: getAttachmentFiles(m.Attachments),
@@ -226,8 +232,8 @@ func (c *ChatServiceImpl) CreateOrUpdate(contact *entities.Contact, m *entities.
 	chatResult.Msgs = []*entities.ChatMsg{m}
 	c.EventBus.Publish(NewChatMsgEventTopic, chatResult)
 
-	// Стартуем сканер ответов для котакта с кем общаемся в чате - если запущен то не перезапустится
-	c.startAnswerScan(chat.Contact)
+	// Стартуем сканер ответов для контакта с кем общаемся в чате - если запущен то не перезапустится
+	c.startAnswerScanning(chat)
 
 	return chat
 }
@@ -236,8 +242,15 @@ func (c *ChatServiceImpl) Chats(accountId entities.ID) []*entities.Chat {
 	return c.ChatRepo.Chats(accountId)
 }
 
-func (c *ChatServiceImpl) startAnswerScan(contact *entities.Contact) {
-	go c.EmailScannerService.RunOnContact(contact)
+func (c *ChatServiceImpl) startAnswerScanning(chat *entities.Chat) {
+	c.EmailScannerService.Enqueue(
+		c.findEmailOrderCreds(chat),
+		&FindEmailOrder{
+			Instant:  true,
+			MaxCount: 1,
+			//Subjects: []string{chat.Subject},
+			From: []string{chat.Contact.Email, "daemon"}, //contact.Email,
+		})
 }
 
 func (c *ChatServiceImpl) onAccountDeleted(account *entities.User) {
@@ -245,6 +258,10 @@ func (c *ChatServiceImpl) onAccountDeleted(account *entities.User) {
 	for _, chat := range c.ChatRepo.Chats(accountId) {
 		c.ClearChat(chat)
 	}
+}
+
+func (c *ChatServiceImpl) findEmailOrderCreds(chat *entities.Chat) FindEmailOrderCreds {
+	return NewFindEmailOrderCreds(&EntityIds{AccountId: chat.Contact.AccountId, ContactId: chat.Contact.Id, ChatId: chat.Id(), SequenceId: chat.Sequence.Id})
 }
 
 func prepareMsg(m *entities.ChatMsg) {

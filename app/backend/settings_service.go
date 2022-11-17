@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"github.com/asaskevich/EventBus"
 	"github.com/itskovichanton/core/pkg/core/frmclient"
 	"github.com/itskovichanton/goava/pkg/goava/errs"
 	"salespalm/server/app/entities"
@@ -19,6 +20,7 @@ type AccountSettingsServiceImpl struct {
 	UserService         IAccountService
 	EmailService        IEmailService
 	JavaToolClient      IJavaToolClient
+	EventBus            EventBus.Bus
 }
 
 type EmailServer struct {
@@ -43,6 +45,8 @@ func (c *AccountSettingsServiceImpl) SetEmailSettings(accountId entities.ID, ema
 	}
 	account := c.UserService.FindById(accountId)
 	account.InMailSettings = emailSettings
+
+	c.EventBus.Publish(AccountUpdatedEventTopic, account)
 
 	return account, err
 

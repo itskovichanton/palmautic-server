@@ -217,7 +217,7 @@ func (c *DI) NewAccountService(ContactService backend.IContactService, EventBus 
 	return r
 }
 
-func (c *DI) NewEmailScannerService(EmailProcessorService backend.IEmailProcessorService, Config *server.Config, JavaToolClient backend.IJavaToolClient, EventBus EventBus.Bus, AccountService backend.IAccountService, LoggerService logger.ILoggerService) backend.IEmailScannerService {
+func (c *DI) NewEmailScannerService(ErrorHandler core.IErrorHandler, EmailProcessorService backend.IEmailProcessorService, Config *server.Config, JavaToolClient backend.IJavaToolClient, EventBus EventBus.Bus, AccountService backend.IAccountService, LoggerService logger.ILoggerService) backend.IEmailScannerService {
 	r := &backend.EmailScannerServiceImpl{
 		EmailProcessorService: EmailProcessorService,
 		AccountService:        AccountService,
@@ -225,6 +225,7 @@ func (c *DI) NewEmailScannerService(EmailProcessorService backend.IEmailProcesso
 		EventBus:              EventBus,
 		JavaToolClient:        JavaToolClient,
 		Config:                Config,
+		ErrorHandler:          ErrorHandler,
 	}
 	r.Init()
 	return r
@@ -681,10 +682,11 @@ func (c *DI) NewSearchContactAction(contactService backend.IContactService, Sequ
 	}
 }
 
-func (c *DI) NewAccountSettingsService(JavaToolClient backend.IJavaToolClient, UserService backend.IAccountService) backend.IAccountSettingsService {
+func (c *DI) NewAccountSettingsService(EventBus EventBus.Bus, JavaToolClient backend.IJavaToolClient, UserService backend.IAccountService) backend.IAccountSettingsService {
 	r := &backend.AccountSettingsServiceImpl{
 		JavaToolClient: JavaToolClient,
 		UserService:    UserService,
+		EventBus:       EventBus,
 	}
 	r.Init()
 	return r
@@ -737,13 +739,14 @@ func (c *DI) NewClearTemplatesAction(TemplateService backend.ITemplateService) *
 	}
 }
 
-func (c *DI) NewTaskService(EventBus EventBus.Bus, SequenceRepo backend.ISequenceRepo, TaskExecutorService backend.ITaskExecutorService, taskRepo backend.ITaskRepo, TemplateService backend.ITemplateService, UserService backend.IAccountService) backend.ITaskService {
+func (c *DI) NewTaskService(Config *server.Config, EventBus EventBus.Bus, SequenceRepo backend.ISequenceRepo, TaskExecutorService backend.ITaskExecutorService, taskRepo backend.ITaskRepo, TemplateService backend.ITemplateService, UserService backend.IAccountService) backend.ITaskService {
 	r := &backend.TaskServiceImpl{
 		TaskRepo:            taskRepo,
 		TemplateService:     TemplateService,
 		AccountService:      UserService,
 		TaskExecutorService: TaskExecutorService,
 		SequenceRepo:        SequenceRepo,
+		Config:              Config,
 		EventBus:            EventBus,
 	}
 	r.Init()

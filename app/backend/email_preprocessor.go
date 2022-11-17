@@ -12,7 +12,7 @@ import (
 )
 
 type IEmailProcessorService interface {
-	Process(result *FindEmailResult, accountId entities.ID)
+	Process(result FindEmailResults, accountId entities.ID)
 }
 
 type EmailProcessorServiceImpl struct {
@@ -46,15 +46,17 @@ func (c *EmailProcessorServiceImpl) replace(n *html.Node, accountId entities.ID)
 	}
 }
 
-func (c *EmailProcessorServiceImpl) Process(result *FindEmailResult, accountId entities.ID) {
-	htmlPart := result.ContentParts[0].Content
-	root, err := html.Parse(strings.NewReader(htmlPart))
-	if err != nil {
-		return
-	}
-	c.replace(root, accountId)
-	buf := &bytes.Buffer{}
-	if err = html.Render(buf, root); err == nil {
-		result.ContentParts[0].Content = utils.HtmlUnescaper.Replace(buf.String())
+func (c *EmailProcessorServiceImpl) Process(results FindEmailResults, accountId entities.ID) {
+	for _, result := range results {
+		htmlPart := result.ContentParts[0].Content
+		root, err := html.Parse(strings.NewReader(htmlPart))
+		if err != nil {
+			return
+		}
+		c.replace(root, accountId)
+		buf := &bytes.Buffer{}
+		if err = html.Render(buf, root); err == nil {
+			result.ContentParts[0].Content = utils.HtmlUnescaper.Replace(buf.String())
+		}
 	}
 }

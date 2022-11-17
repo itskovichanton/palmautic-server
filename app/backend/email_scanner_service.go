@@ -1,145 +1,92 @@
 package backend
 
 import (
-	"fmt"
 	"github.com/asaskevich/EventBus"
+	"github.com/itskovichanton/core/pkg/core"
 	"github.com/itskovichanton/core/pkg/core/logger"
-	"github.com/itskovichanton/goava/pkg/goava/utils"
 	"github.com/itskovichanton/server/pkg/server"
 	"salespalm/server/app/entities"
-	"sync"
+	"sync/atomic"
 	"time"
 )
 
 type IEmailScannerService interface {
-	Run(sequence *entities.Sequence, contact *entities.Contact)
-	RunOnContact(contact *entities.Contact)
-	Stop(contactId entities.ID)
+	Enqueue(creds FindEmailOrderCreds, order *FindEmailOrder)
+	Dequeue(creds FindEmailOrderCreds)
 }
 
 type EmailScannerServiceImpl struct {
 	IEmailScannerService
 
 	AccountService        IAccountService
-	EmailProcessorService IEmailProcessorService
 	LoggerService         logger.ILoggerService
 	EventBus              EventBus.Bus
-	JavaToolClient        IJavaToolClient
-	running               map[entities.ID]bool
-	lock                  sync.Mutex
-	scannerSleepTime      time.Duration
+	running               *EmailScannerMap
 	Config                *server.Config
+	EmailProcessorService IEmailProcessorService
+	JavaToolClient        IJavaToolClient
+	scannerSleepTime      time.Duration
+	AccountId             entities.ID
+	findEmailOrderMap     *FindEmailOrderMap
+	ErrorHandler          core.IErrorHandler
+	stopRequested         atomic.Bool
 }
 
 func (c *EmailScannerServiceImpl) Init() {
-	c.running = map[entities.ID]bool{}
-	sleepSec := c.Config.CoreConfig.GetInt("emailscanner", "sleepsec")
-	if sleepSec == 0 {
-		sleepSec = 60
-	}
-	c.scannerSleepTime = time.Duration(sleepSec) * time.Second
+	c.running = &EmailScannerMap{}
+	c.runForAllAccounts()
+	c.EventBus.SubscribeAsync(AccountBeforeDeletedEventTopic, c.onBeforeDeleteAccount, true)
 }
 
-func (c *EmailScannerServiceImpl) IsRunning(contactId entities.ID) bool {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	return c.running[contactId]
+func (c *EmailScannerServiceImpl) onBeforeDeleteAccount(account *entities.User) {
+	c.stop(entities.ID(account.ID))
 }
 
-func (c *EmailScannerServiceImpl) RunOnContact(contact *entities.Contact) {
-	c.Run(&entities.Sequence{BaseEntity: entities.BaseEntity{Id: -contact.Id, AccountId: contact.AccountId},
-		Process: &entities.SequenceProcess{ByContactSyncMap: &entities.ProcessInstancesMap{}}},
-		contact)
+func (c *EmailScannerServiceImpl) stop(accountId entities.ID) {
+	emailScanner, _ := c.running.Load(accountId)
+	if emailScanner != nil {
+		emailScanner.Stop()
+	}
 }
 
-func (c *EmailScannerServiceImpl) Stop(contactId entities.ID) {
-	c.EventBus.Publish(StopInMailScanEventTopic(-contactId, contactId))
-}
-
-func (c *EmailScannerServiceImpl) Run(sequence *entities.Sequence, contact *entities.Contact) {
-
-	if c.IsRunning(contact.Id) {
-		return
-	}
-
-	lg := c.LoggerService.GetFileLogger(fmt.Sprintf("inmail-scanner-%v", sequence.Id), "", 0)
-	ld := logger.NewLD()
-	logger.DisableSetChopOffFields(ld)
-	logger.Action(ld, "Подключаюсь")
-	logger.Args(ld, fmt.Sprintf("seq=%v cont=%v", sequence.Id, contact.Id))
-	account := c.AccountService.FindById(contact.AccountId)
-	if account == nil {
-		logger.Result(ld, "Настройки почты не установлены. СТОП.")
-		logger.Print(lg, ld)
-		return
-	}
-	stopRequested := false
-	c.EventBus.SubscribeAsync(StopInMailScanEventTopic(sequence.Id, contact.Id), func() { stopRequested = true }, true)
-	defer func() {
-		c.markRunning(contact.Id, false)
-		logger.Action(ld, "СТОП")
-		c.EventBus.UnsubscribeAll(StopInMailScanEventTopic(sequence.Id, contact.Id))
-		logger.Result(ld, "Выход")
-		logger.Print(lg, ld)
-	}()
-
-	order := &FindEmailOrder{
-		MaxCount: 1,
-		Subject:  c.getSubjectNames(sequence, contact),
-		From:     []string{"itskovichae@gmail.com", contact.Email, "daemon"}, //contact.Email,
-	}
-
-	c.markRunning(contact.Id, true)
-
-	for {
-
-		if stopRequested {
-			return
-		}
-
-		logger.Action(ld, "Ищу письма")
-		//logger.Print(lg, ld)
-
-		s := account.InMailSettings
-		emailSearchResults, _ := c.JavaToolClient.FindEmail(&FindEmailParams{Access: &EmailAccess{Login: s.Login, Password: s.Password, Server: s.ImapHost, Port: s.ImapPort}, Order: order})
-
-		if emailSearchResults != nil {
-			for _, emailSearchResult := range emailSearchResults {
-				if emailSearchResult.DetectBounce() {
-					logger.Result(ld, fmt.Sprintf("Получен БАУНС от %v: %v", contact.Name, utils.ToJson(emailSearchResult)))
-					c.EventBus.Publish(InMailBouncedEventTopic(sequence.Id, contact.Id), emailSearchResult)
-				} else {
-					c.EmailProcessorService.Process(emailSearchResult, contact.AccountId)
-					logger.Result(ld, fmt.Sprintf("Получен ответ от %v: %v", contact.Name, utils.ToJson(emailSearchResult)))
-					logger.Print(lg, ld)
-					c.EventBus.Publish(InMailReceivedEventTopic(sequence.Id, contact.Id), emailSearchResult)
-					c.EventBus.Publish(BaseInMailReceivedEventTopic, contact, emailSearchResult)
-				}
-				break
-			}
-		}
-
-		time.Sleep(c.scannerSleepTime)
-	}
-
-}
-
-func (c *EmailScannerServiceImpl) getSubjectNames(sequence *entities.Sequence, contact *entities.Contact) []string {
-	r := []string{}
-	process, _ := sequence.Process.ByContactSyncMap.Load(contact.Id)
-	if process != nil {
-		for _, task := range process.Tasks {
-			if task.HasTypeEmail() {
-				r = append(r, task.Subject)
-			}
+func (c *EmailScannerServiceImpl) runForAllAccounts() {
+	emailScannerServices := c.emailScannerServices()
+	for accountId, _ := range c.AccountService.Accounts() {
+		emailScanner := NewEmailScanner(accountId, emailScannerServices)
+		_, loaded := c.running.LoadOrStore(accountId, emailScanner)
+		if !loaded {
+			go emailScanner.Run()
 		}
 	}
-	return r
 }
 
-func (c *EmailScannerServiceImpl) markRunning(contactId entities.ID, running bool) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.running[contactId] = running
+func (c *EmailScannerServiceImpl) emailScannerServices() *EmailScannerUsedServices {
+	return &EmailScannerUsedServices{
+		EmailProcessorService: c.EmailProcessorService,
+		LoggerService:         c.LoggerService,
+		EventBus:              c.EventBus,
+		JavaToolClient:        c.JavaToolClient,
+		AccountService:        c.AccountService,
+		ErrorHandler:          c.ErrorHandler,
+		Config:                c.Config,
+	}
+}
+
+func (c *EmailScannerServiceImpl) Enqueue(creds FindEmailOrderCreds, order *FindEmailOrder) {
+	c.withEmailScanner(creds.AccountId(), func(emailScanner IEmailScanner) {
+		emailScanner.Enqueue(creds, order)
+	})
+}
+
+func (c *EmailScannerServiceImpl) Dequeue(creds FindEmailOrderCreds) {
+	c.withEmailScanner(creds.AccountId(), func(emailScanner IEmailScanner) {
+		emailScanner.Dequeue(creds)
+	})
+}
+
+func (c *EmailScannerServiceImpl) withEmailScanner(accountId entities.ID, action func(emailScanner IEmailScanner)) {
+	emailScanner, _ := c.running.Load(accountId)
+	if emailScanner != nil {
+		action(emailScanner)
+	}
 }

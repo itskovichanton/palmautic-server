@@ -128,6 +128,9 @@ func (c *EmailServiceImpl) send(params *SendEmailParams, preprocessor func(srv *
 
 	params.SenderConfig = senderConfig
 	params.Send = true
+	if !c.Config.CoreConfig.IsProfileProd() {
+		params.To = []string{"itskovichae@gmail.com"}
+	}
 
 	startTime := time.Now()
 	err = c.EmailService.SendPreprocessed(&params.Params, func(srv *email.Email, m *email.Message) {
