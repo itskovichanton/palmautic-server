@@ -10,13 +10,13 @@ import (
 	"salespalm/server/app/entities"
 )
 
-type SetAccountSettingsAction struct {
+type SetAccountEmailSettingsAction struct {
 	pipeline.BaseActionImpl
 
 	AccountSettingsService backend.IAccountSettingsService
 }
 
-func (c *SetAccountSettingsAction) Run(arg interface{}) (interface{}, error) {
+func (c *SetAccountEmailSettingsAction) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*entities2.CallParams)
 	bodyBytes, err := io.ReadAll(cp.Request.(echo.Context).Request().Body)
 	if err != nil {

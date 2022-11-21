@@ -178,5 +178,11 @@ func (c *SequenceRepoImpl) CreateOrUpdate(sequence *entities.Sequence) {
 }
 
 func (c *SequenceRepoImpl) Commons() *entities.SequenceCommons {
-	return c.DBService.DBContent().GetSequenceContainer().Commons
+	return &entities.SequenceCommons{
+		Statuses: []entities.StrIDWithName{
+			entities.SequenceStatusApproaching,
+			entities.SequenceStatusOpened,
+			entities.SequenceStatusBounced,
+			entities.SequenceStatusReplied},
+	}
 }

@@ -1,6 +1,8 @@
 package frontend
 
 import (
+	"github.com/itskovichanton/core/pkg/core/validation"
+	"github.com/itskovichanton/goava/pkg/goava/utils"
 	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
 	"github.com/jinzhu/copier"
@@ -29,15 +31,12 @@ type CreateOrUpdateSequenceAction struct {
 
 func (c *CreateOrUpdateSequenceAction) Run(arg interface{}) (interface{}, error) {
 	p := arg.(*RetrievedEntityParams)
-	sequence := p.Entity.(*entities.SequenceSpec)
-	updatedSeq, templates, err := c.SequenceService.CreateOrUpdate(sequence)
-	if err != nil {
-		return updatedSeq, err
-	}
+	spec := p.Entity.(*entities.SequenceSpec)
+	sequence, templates, err := c.SequenceService.CreateOrUpdate(spec)
 	return map[string]interface{}{
-		"sequence":  updatedSeq.ToIDAndName(updatedSeq.Name),
+		"sequence":  prepareSequenceToFront(sequence),
 		"templates": templates,
-	}, nil
+	}, err
 }
 
 type AddContactsToSequenceAction struct {
@@ -69,14 +68,16 @@ func (c *SearchSequenceAction) Run(arg interface{}) (interface{}, error) {
 		Offset: cp.GetParamInt("offset", 0),
 		Count:  cp.GetParamInt("count", 0),
 	})
-	for index, item := range r.Items {
-		resP := entities.Sequence{}
-		copier.Copy(&resP, &item)
-		resP.Process = nil
-		resP.Model = nil
-		r.Items[index] = &resP
-	}
+	r.Items = utils.Map(r.Items, prepareSequenceToFront)
 	return r, nil
+}
+
+func prepareSequenceToFront(item *entities.Sequence) *entities.Sequence {
+	resP := entities.Sequence{}
+	copier.Copy(&resP, &item)
+	resP.Process = nil
+	resP.Model = nil
+	return &resP
 }
 
 type StopSequenceAction struct {
@@ -113,4 +114,34 @@ func (c *DeleteSequenceAction) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*entities2.CallParams)
 	c.SequenceService.Delete(entities.ID(cp.Caller.Session.Account.ID), entities.Ids(cp.GetParamStr("sequenceIds")))
 	return "started", nil
+}
+
+type SequenceScenarioLogAction struct {
+	pipeline.BaseActionImpl
+
+	SequenceBuilderService backend.ISequenceBuilderService
+}
+
+func (c *SequenceScenarioLogAction) Run(arg interface{}) (interface{}, error) {
+	p := arg.(*RetrievedEntityParams)
+	spec := p.Entity.(*entities.SequenceSpec)
+	return c.SequenceBuilderService.Log(spec)
+}
+
+type GetSequenceStatsAction struct {
+	pipeline.BaseActionImpl
+
+	SequenceService backend.ISequenceService
+}
+
+func (c *GetSequenceStatsAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*entities2.CallParams)
+	sequenceId, err := validation.CheckInt64("id", cp.GetParamStr("id"))
+	if err != nil {
+		return nil, err
+	}
+	return c.SequenceService.Stats(entities.BaseEntity{
+		Id:        entities.ID(sequenceId),
+		AccountId: entities.ID(cp.Caller.Session.Account.ID),
+	})
 }

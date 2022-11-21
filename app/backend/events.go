@@ -17,6 +17,7 @@ func InMailBouncedEventTopic(creds FindEmailOrderCreds) string {
 	return fmt.Sprintf("inmail-bounced:%v", creds.String())
 }
 
+const ContactDeletedEventTopic = "contact-deleted"
 const EmailReplyReceivedEventTopic = "inmail-received"
 const SequenceFinishedEventTopic = "sequence-finished"
 const EmailBouncedEventTopic = "email-bounced"
@@ -33,5 +34,5 @@ const IncomingChatMsgEventTopic = "incoming-chat-msg"
 const AccountRegisteredEventTopic = "account-registered"
 const AccountDeletedEventTopic = "account-deleted"
 const AccountBeforeDeletedEventTopic = "account-before-delete"
-const EmailSenderSlowedDownEventTopic = "email-sender-slowed-down"
+const EmailSenderSlowingDownDetectedEventTopic = "email-sender-slowed-down"
 const AccountUpdatedEventTopic = "account-updated"

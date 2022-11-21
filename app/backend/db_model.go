@@ -57,7 +57,6 @@ type ChatsContainer struct {
 
 type SequencesContainer struct {
 	Sequences AccountSequencesMap
-	Commons   *entities.SequenceCommons
 }
 
 type TaskContainer struct {
@@ -90,7 +89,6 @@ func (c *DBContent) GetSequenceContainer() *SequencesContainer {
 	if c.SequenceContainer == nil {
 		c.SequenceContainer = &SequencesContainer{
 			Sequences: AccountSequencesMap{},
-			Commons:   &entities.SequenceCommons{},
 		}
 	}
 	return c.SequenceContainer

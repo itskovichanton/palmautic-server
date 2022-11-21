@@ -12,6 +12,7 @@ type Sequence struct {
 	People                                                 int
 	Stopped                                                bool
 	EmailSendingCount, EmailBouncedCount, EmailOpenedCount int
+	Spec                                                   *SequenceSpec
 }
 
 func (s *Sequence) CountTasksByFilter(filter func(t *Task) bool) int {
@@ -132,6 +133,11 @@ func (s *Sequence) ResetStats() {
 	s.BounceRate = 0
 }
 
+func (s *Sequence) HasContact(contactId ID) bool {
+	_, exists := s.Process.ByContactSyncMap.Load(contactId)
+	return exists
+}
+
 func (s *SequenceInstance) StatusTask() (*Task, int) {
 	for i := len(s.Tasks) - 1; i >= 0; i-- {
 		t := s.Tasks[i]
@@ -209,10 +215,31 @@ func (p *SequenceProcess) Prepare() {
 
 type SequenceInstance struct {
 	Tasks []*Task
+	Stats SequenceInstanceStats
+}
+
+type SequenceInstanceStats struct {
+	Delivered, Opened, Replied, Bounced int
+}
+
+func SequenceStatus(stats *SequenceInstanceStats) StrIDWithName {
+	if stats.Replied > 0 {
+		return SequenceStatusReplied
+	}
+	if stats.Opened > 0 {
+		return SequenceStatusOpened
+	}
+	if stats.Bounced > 0 {
+		return SequenceStatusBounced
+	}
+	return SequenceStatusApproaching
 }
 
 type SequenceCommons struct {
-	//Types    []*TaskType
-	//Statuses []string
-	//Stats    *TaskStats
+	Statuses []StrIDWithName
 }
+
+var SequenceStatusApproaching = StrIDWithName{Name: "Approaching", Id: "approaching"}
+var SequenceStatusReplied = StrIDWithName{Name: "Replied", Id: "replied"}
+var SequenceStatusOpened = StrIDWithName{Name: "Opened", Id: "opened"}
+var SequenceStatusBounced = StrIDWithName{Name: "Bounce", Id: "bounce"}

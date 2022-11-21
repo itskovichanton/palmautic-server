@@ -2,16 +2,18 @@ package backend
 
 import (
 	"github.com/asaskevich/EventBus"
+	"github.com/itskovichanton/core/pkg/core/frmclient"
 	"github.com/itskovichanton/goava/pkg/goava/errs"
 	"github.com/itskovichanton/goava/pkg/goava/utils"
 	"github.com/jinzhu/copier"
 	"golang.org/x/exp/rand"
+	"golang.org/x/exp/slices"
 	"salespalm/server/app/entities"
 	"time"
 )
 
 type ISequenceService interface {
-	CreateOrUpdate(sequence *entities.SequenceSpec) (*entities.Sequence, TemplatesMap, error)
+	CreateOrUpdate(spec *entities.SequenceSpec) (*entities.Sequence, TemplatesMap, error)
 	Commons(accountId entities.ID) *entities.SequenceCommons
 	GetByIndex(accountId entities.ID, index int) *entities.Sequence
 	Search(filter *entities.Sequence, settings *SequenceSearchSettings) *SequenceSearchResult
@@ -22,16 +24,25 @@ type ISequenceService interface {
 	Delete(accountId entities.ID, sequenceIds []entities.ID)
 	SearchAll(accountId entities.ID) *SequenceSearchResult
 	StopAll(accountId entities.ID)
+	Stats(sequenceCreds entities.BaseEntity) ([]*ContactStats, error)
+}
+
+type ContactStats struct {
+	Contact   *entities.Contact
+	Stats     *entities.SequenceInstanceStats
+	StepIndex int
+	Status    entities.StrIDWithName
 }
 
 type SequenceServiceImpl struct {
 	ISequenceService
 
-	SequenceRepo          ISequenceRepo
-	ContactService        IContactService
-	SequenceRunnerService ISequenceRunnerService
-	TemplateService       ITemplateService
-	EventBus              EventBus.Bus
+	SequenceRepo           ISequenceRepo
+	ContactService         IContactService
+	SequenceRunnerService  ISequenceRunnerService
+	TemplateService        ITemplateService
+	EventBus               EventBus.Bus
+	SequenceBuilderService ISequenceBuilderService
 }
 
 func (c *SequenceServiceImpl) GetByIndex(accountId entities.ID, index int) *entities.Sequence {
@@ -56,7 +67,7 @@ func (c *SequenceServiceImpl) AddContacts(sequenceCreds entities.BaseEntity, con
 
 	sequence := c.SequenceRepo.FindFirst(&entities.Sequence{BaseEntity: sequenceCreds})
 	if sequence == nil {
-		return errs.NewBaseError("Последовательность не найдена")
+		return errs.NewBaseErrorWithReason("Последовательность не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
 	}
 
 	var contactFilters []*entities.Contact
@@ -65,7 +76,7 @@ func (c *SequenceServiceImpl) AddContacts(sequenceCreds entities.BaseEntity, con
 	}
 
 	go func() {
-		contactsToAdd := c.ContactService.SearchAll(contactFilters)
+		contactsToAdd := c.calcContactsToAdd(contactFilters, sequence)
 		for _, contact := range contactsToAdd {
 			c.SequenceRunnerService.Run(sequence, contact, false)
 			time.Sleep(3 * time.Second)
@@ -109,7 +120,6 @@ func (c *SequenceServiceImpl) Start(accountId entities.ID, sequenceIds []entitie
 					})
 				}
 			}()
-
 		}
 	}
 }
@@ -129,7 +139,25 @@ func (c *SequenceServiceImpl) Delete(accountId entities.ID, sequenceIds []entiti
 	c.SequenceRepo.Delete(accountId, sequenceIds)
 }
 
-func (c *SequenceServiceImpl) CreateOrUpdate(sequence *entities.SequenceSpec) (*entities.Sequence, TemplatesMap, error) {
+func (c *SequenceServiceImpl) CreateOrUpdate(spec *entities.SequenceSpec) (*entities.Sequence, TemplatesMap, error) {
+
+	var sequence *entities.Sequence
+	if spec.ReadyForSearch() {
+		sequence = c.SequenceRepo.FindFirst(&entities.Sequence{BaseEntity: spec.BaseEntity})
+		if sequence == nil {
+			return nil, nil, errs.NewBaseErrorWithReason("Последовательность не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
+		}
+		sequence.Spec = spec
+	} else {
+		sequence = &entities.Sequence{BaseEntity: spec.BaseEntity, Spec: spec}
+		c.SequenceRepo.CreateOrUpdate(sequence)
+	}
+	updatedTemplates, err := c.SequenceBuilderService.Rebuild(sequence)
+
+	if err == nil {
+		err = c.AddContacts(sequence.BaseEntity, spec.Model.ContactIds)
+	}
+	return sequence, updatedTemplates, err
 	//
 	//// сохраняем как есть
 	//c.SequenceRepo.CreateOrUpdate(sequence)
@@ -152,7 +180,6 @@ func (c *SequenceServiceImpl) CreateOrUpdate(sequence *entities.SequenceSpec) (*
 	//c.SequenceRepo.CreateOrUpdate(sequence)
 	//return sequence, usedTemplates, nil
 
-	return nil, nil, nil
 }
 
 func (c *SequenceServiceImpl) Init() {
@@ -196,4 +223,40 @@ func (c *SequenceServiceImpl) StopAll(accountId entities.ID) {
 
 func (c *SequenceServiceImpl) SearchAll(accountId entities.ID) *SequenceSearchResult {
 	return c.Search(&entities.Sequence{BaseEntity: entities.BaseEntity{AccountId: accountId}}, nil)
+}
+
+func (c *SequenceServiceImpl) calcContactsToAdd(contactFilters []*entities.Contact, sequence *entities.Sequence) []*entities.Contact {
+	r := c.ContactService.SearchAll(contactFilters)
+	// Удаляем из contactsToAdd те что уже есть в последовательности
+	sequence.Process.ByContactSyncMap.Range(func(key entities.ID, _ *entities.SequenceInstance) bool {
+		index := slices.IndexFunc(r, func(a *entities.Contact) bool { return key == a.Id })
+		if index >= 0 {
+			slices.Delete(r, index, index)
+		}
+		return true
+	})
+	return r
+}
+
+func (c *SequenceServiceImpl) Stats(sequenceCreds entities.BaseEntity) ([]*ContactStats, error) {
+	sequence := c.SequenceRepo.FindFirst(&entities.Sequence{BaseEntity: sequenceCreds})
+	if sequence == nil {
+		return nil, errs.NewBaseErrorWithReason("Последовательность не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
+	}
+
+	var r []*ContactStats
+	sequence.Process.ByContactSyncMap.Range(func(contactId entities.ID, si *entities.SequenceInstance) bool {
+		contact := c.ContactService.FindFirst(&entities.Contact{BaseEntity: entities.BaseEntity{AccountId: sequenceCreds.AccountId, Id: contactId}})
+		if contact != nil {
+			_, currentTaskIndex := si.FindFirstNonFinalTask()
+			r = append(r, &ContactStats{
+				Contact:   contact,
+				Stats:     &si.Stats,
+				StepIndex: currentTaskIndex,
+				Status:    entities.SequenceStatus(&si.Stats),
+			})
+		}
+		return true
+	})
+	return r, nil
 }

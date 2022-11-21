@@ -48,6 +48,10 @@ func (c *BaseEntity) GetAccountId() ID {
 	return c.AccountId
 }
 
+func (c *BaseEntity) Equals(x BaseEntity) bool {
+	return c.Id == x.Id && c.AccountId == x.AccountId
+}
+
 type Contact struct {
 	BaseEntity
 

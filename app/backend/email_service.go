@@ -148,7 +148,7 @@ func (c *EmailServiceImpl) send(params *SendEmailParams, preprocessor func(srv *
 	}
 	elapsedTime := time.Now().Sub(startTime)
 	if elapsedTime > 10*time.Minute {
-		c.EventBus.Publish(EmailSenderSlowedDownEventTopic, params.AccountId, elapsedTime)
+		c.EventBus.Publish(EmailSenderSlowingDownDetectedEventTopic, params.AccountId, elapsedTime)
 	}
 
 	if err == nil {

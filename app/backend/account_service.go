@@ -2,6 +2,8 @@ package backend
 
 import (
 	"github.com/asaskevich/EventBus"
+	"github.com/itskovichanton/goava/pkg/goava/errs"
+	"github.com/itskovichanton/goava/pkg/goava/utils"
 	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"github.com/itskovichanton/server/pkg/server/users"
 	"salespalm/server/app/entities"
@@ -15,6 +17,8 @@ type IAccountService interface {
 	Accounts() Accounts
 	FindById(id entities.ID) *entities.User
 	Delete(id entities.ID) *entities.User
+	Update(data *entities.User, directorUserName string) *entities.User
+	DeleteSubordinate(accountId, subordinateId entities.ID) (*entities.User, error)
 }
 
 type AccountServiceImpl struct {
@@ -25,6 +29,41 @@ type AccountServiceImpl struct {
 	AccountingService IAccountingService
 	EventBus          EventBus.Bus
 	ContactService    IContactService
+}
+
+func (c *AccountServiceImpl) DeleteSubordinate(accountId, subordinateId entities.ID) (*entities.User, error) {
+	account := c.UserRepo.FindById(accountId)
+	subordinate := c.UserRepo.FindById(subordinateId)
+	if account == nil || subordinate == nil {
+		return nil, errs.NewBaseError("Аккаунт не найден")
+	}
+	utils.DeleteFromSliceFunc(account.Subordinates, func(a *entities.User) bool { return a.ID == subordinate.ID })
+
+	c.EventBus.Publish(AccountUpdatedEventTopic, account)
+
+	return subordinate, nil
+}
+
+func (c *AccountServiceImpl) Update(data *entities.User, directorUserName string) *entities.User {
+
+	account := c.UserRepo.FindById(entities.ID(data.ID))
+	if account == nil {
+		return nil
+	}
+
+	account.Company = data.Company
+	account.Username = data.Username
+	account.TimeZone = data.TimeZone
+	//c.AccountingService.AssignTariff(entities.ID(account.ID), TariffIDEnterprise) // устанавливаем новому юзеру тариф Basic
+
+	// привязываем его к директору
+	if len(directorUserName) > 0 {
+		c.UserRepo.BindToDirectorByUserName(account, directorUserName)
+	}
+
+	c.EventBus.Publish(AccountRegisteredEventTopic, account)
+
+	return account
 }
 
 func (c *AccountServiceImpl) Init() {

@@ -62,7 +62,7 @@ func (c *NotificationServiceImpl) Init() {
 	c.EventBus.SubscribeAsync(FeatureUnaccessableByTariff, c.OnFeatureUnaccessableByTariffReceived, true)
 	c.EventBus.SubscribeAsync(EmailOpenedEventTopic, c.OnEmailOpened, true)
 	c.EventBus.SubscribeAsync(IncomingChatMsgEventTopic, c.OnIncomingChatMsgReceived, true)
-	c.EventBus.SubscribeAsync(EmailSenderSlowedDownEventTopic, c.OnEmailSenderSlowedDown, true)
+	c.EventBus.SubscribeAsync(EmailSenderSlowingDownDetectedEventTopic, c.OnEmailSenderSlowedDown, true)
 
 }
 

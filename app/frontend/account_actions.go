@@ -1,6 +1,7 @@
 package frontend
 
 import (
+	"github.com/itskovichanton/core/pkg/core/validation"
 	"github.com/itskovichanton/goava/pkg/goava/errs"
 	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
@@ -8,6 +9,21 @@ import (
 	"salespalm/server/app/backend"
 	"salespalm/server/app/entities"
 )
+
+type DeleteSubordinateAction struct {
+	pipeline.BaseActionImpl
+
+	AccountService backend.IAccountService
+}
+
+func (c *DeleteSubordinateAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*entities2.CallParams)
+	subordinateId, err := validation.CheckInt("id", cp.GetParamStr("id"))
+	if err != nil {
+		return nil, err
+	}
+	return c.AccountService.DeleteSubordinate(entities.ID(cp.Caller.Session.Account.ID), entities.ID(subordinateId))
+}
 
 type DeleteAccountAction struct {
 	pipeline.BaseActionImpl

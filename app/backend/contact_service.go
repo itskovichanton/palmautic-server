@@ -3,6 +3,7 @@ package backend
 import (
 	"encoding/csv"
 	"fmt"
+	"github.com/asaskevich/EventBus"
 	"github.com/itskovichanton/server/pkg/server/filestorage"
 	"os"
 	"salespalm/server/app/entities"
@@ -24,6 +25,7 @@ type ContactServiceImpl struct {
 
 	ContactRepo        IContactRepo
 	FileStorageService filestorage.IFileStorageService
+	EventBus           EventBus.Bus
 }
 
 func (c *ContactServiceImpl) Clear(accountId entities.ID) {
@@ -55,6 +57,9 @@ func (c *ContactServiceImpl) Search(filter *entities.Contact, settings *ContactS
 
 func (c *ContactServiceImpl) Delete(accountId entities.ID, ids []entities.ID) {
 	c.ContactRepo.Delete(accountId, ids)
+	for _, id := range ids {
+		c.EventBus.Publish(ContactDeletedEventTopic, entities.BaseEntity{AccountId: accountId, Id: id})
+	}
 }
 
 func (c *ContactServiceImpl) CreateOrUpdate(contact *entities.Contact) error {

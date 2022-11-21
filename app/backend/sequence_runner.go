@@ -7,9 +7,11 @@ import (
 	"github.com/jinzhu/copier"
 	"golang.org/x/exp/slices"
 	"log"
+	"net/url"
 	"salespalm/server/app/entities"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -125,6 +127,8 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 
 	SetTasksVisibility(contactProcess.Tasks, true)
 
+	var stoppedForContact atomic.Bool
+
 	go func() {
 
 		logger.Result(ld, "Готово к выполнению")
@@ -139,14 +143,18 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			func(results FindEmailResults) {
 				m := results[0]
 				ld2 := logger.NewLD()
-				logger.Action(ld2, "BOUNCED inMail!")
+				logger.Action(ld2, "BOUNCED mail!")
 				logger.Args(ld2, fmt.Sprintf("contact=%v, mail-subject=%v", contact.Name, m.Subject))
 				var bouncedTask *entities.Task
-				println(strings.ToUpper(m.Subject))
+				//println(strings.ToUpper(m.Subject))
 				processInstance, _ := sequence.Process.ByContactSyncMap.Load(contact.Id)
+				if processInstance == nil {
+					return
+				}
+				processInstance.Stats.Bounced++
 				for _, t := range processInstance.Tasks {
 					if t.HasFinalStatus() && t.HasTypeEmail() {
-						println(strings.ToUpper("TO " + t.Subject))
+						//println(strings.ToUpper("TO " + t.Subject))
 						if bouncedTask == nil {
 							bouncedTask = t
 						}
@@ -175,11 +183,12 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 				logger.Action(ld2, "Получен inMail!")
 				logger.Args(ld2, fmt.Sprintf("contact=%v, mail-subject=%v", contact.Name, m.Subject))
 				var repliedTask *entities.Task
-				println(strings.ToUpper(m.Subject))
+				//println(strings.ToUpper(m.Subject))
 				processInstance, _ := sequence.Process.ByContactSyncMap.Load(contact.Id)
+				processInstance.Stats.Replied++ // увеличиваем счетчик принятых писем от контакта
 				for _, t := range processInstance.Tasks {
 					if t.HasFinalStatus() && t.HasTypeEmail() {
-						println(strings.ToUpper("TO " + t.Subject))
+						//println(strings.ToUpper("TO " + t.Subject))
 						if repliedTask == nil {
 							repliedTask = t
 						}
@@ -200,12 +209,47 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			},
 			true)
 
+		c.EventBus.SubscribeAsync(EmailSentEventTopic, func(task *entities.Task, sendingResult *SendEmailResult) {
+			if sendingResult.Error == nil && task.AccountId == sequence.AccountId {
+				processInstance, _ := sequence.Process.ByContactSyncMap.Load(contact.Id)
+				if processInstance != nil {
+					processInstance.Stats.Delivered++ // увеличиваем счетчик отправленных писем от контакта
+				}
+			}
+		}, true)
+		c.EventBus.SubscribeMultiAsync([]string{EmailOpenedEventTopic, EmailReopenedEventTopic}, func(q url.Values) {
+
+			if GetEmailOpenedEvent(q) != EmailOpenedEventChatMsg {
+				return
+			}
+
+			accountId := GetEmailOpenedEventAccountId(q)
+			sequenceId := GetEmailOpenedEventSequenceId(q)
+			if sequence.AccountId == accountId && sequence.Id == sequenceId {
+				processInstance, _ := sequence.Process.ByContactSyncMap.Load(contact.Id)
+				if processInstance != nil {
+					processInstance.Stats.Opened++ // увеличиваем счетчик прочитанных писем
+				}
+			}
+		}, true)
+
+		c.EventBus.SubscribeAsync(ContactDeletedEventTopic, func(contactCreds entities.BaseEntity) {
+			if contactCreds.Equals(contact.BaseEntity) {
+				stoppedForContact.Store(true) // Если контакт удален - останавливаем для него последовательность
+			}
+		}, true)
+
 		// Запускаем сканер почты от контакта, ориентируясь только на его емейл
 		c.enqueueInMail(sequence, contact)
 
 		defer func() {
 			// После окончания процесса - отписываемся от событий
-			c.EventBus.UnsubscribeAll(InMailReceivedEventTopic(NewFindEmailOrderCreds(&EntityIds{SequenceId: sequence.Id, ContactId: contact.Id, AccountId: sequence.AccountId})))
+			c.EventBus.UnsubscribeMultiAll(
+				[]string{
+					EmailSentEventTopic, EmailOpenedEventTopic, EmailReopenedEventTopic, ContactDeletedEventTopic,
+					InMailReceivedEventTopic(NewFindEmailOrderCreds(
+						&EntityIds{SequenceId: sequence.Id, ContactId: contact.Id, AccountId: sequence.AccountId}),
+					)})
 			//close(taskUpdateChan)s
 			//taskUpdateChan = nil
 		}()
@@ -214,7 +258,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 
 		for {
 
-			if sequence.Stopped {
+			if sequence.Stopped || stoppedForContact.Load() {
 				SetTasksVisibility(contactProcess.Tasks, false)
 				logger.Action(ld, "Останавливаю последовательность, скрываю ее таски")
 				logger.Result(ld, fmt.Sprintf("СТОП"))
@@ -303,7 +347,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 				break
 			}
 
-			if sequence.Stopped {
+			if sequence.Stopped || stoppedForContact.Load() {
 				continue
 			}
 
