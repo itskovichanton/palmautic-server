@@ -25,6 +25,8 @@ type ISequenceService interface {
 	SearchAll(accountId entities.ID) *SequenceSearchResult
 	StopAll(accountId entities.ID)
 	Stats(sequenceCreds entities.BaseEntity) ([]*ContactStats, error)
+	AddContact(sequenceCreds entities.BaseEntity, contact *entities.Contact) error
+	UploadContacts(sequenceCreds entities.BaseEntity, iterator ContactIterator) error
 }
 
 type ContactStats struct {
@@ -43,6 +45,26 @@ type SequenceServiceImpl struct {
 	TemplateService        ITemplateService
 	EventBus               EventBus.Bus
 	SequenceBuilderService ISequenceBuilderService
+}
+
+func (c *SequenceServiceImpl) UploadContacts(sequenceCreds entities.BaseEntity, iterator ContactIterator) error {
+	// Добавляем контакт в общую базу
+	createdContactIds, _ := c.ContactService.Upload(sequenceCreds.AccountId, iterator)
+	//if err != nil {
+	//	return err
+	//}
+	// Добавляем его в последовательность
+	return c.AddContacts(sequenceCreds, createdContactIds)
+}
+
+func (c *SequenceServiceImpl) AddContact(sequenceCreds entities.BaseEntity, contact *entities.Contact) error {
+	// Добавляем контакт в общую базу
+	err := c.ContactService.CreateOrUpdate(contact)
+	if err != nil {
+		return err
+	}
+	// Добавляем его в последовательность
+	return c.AddContacts(sequenceCreds, []entities.ID{contact.Id})
 }
 
 func (c *SequenceServiceImpl) GetByIndex(accountId entities.ID, index int) *entities.Sequence {

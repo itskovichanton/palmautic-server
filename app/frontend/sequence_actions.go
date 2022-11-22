@@ -6,6 +6,7 @@ import (
 	entities2 "github.com/itskovichanton/server/pkg/server/entities"
 	"github.com/itskovichanton/server/pkg/server/pipeline"
 	"github.com/jinzhu/copier"
+	"mime/multipart"
 	"salespalm/server/app/backend"
 	"salespalm/server/app/entities"
 )
@@ -144,4 +145,47 @@ func (c *GetSequenceStatsAction) Run(arg interface{}) (interface{}, error) {
 		Id:        entities.ID(sequenceId),
 		AccountId: entities.ID(cp.Caller.Session.Account.ID),
 	})
+}
+
+type AddContactToSequenceAction struct {
+	pipeline.BaseActionImpl
+
+	SequenceService backend.ISequenceService
+}
+
+func (c *AddContactToSequenceAction) Run(arg interface{}) (interface{}, error) {
+	p := arg.(*RetrievedEntityParams)
+	contact := p.Entity.(*entities.Contact)
+	sequenceId, err := validation.CheckInt64("id", p.CallParams.GetParamStr("id"))
+	if err != nil {
+		return nil, err
+	}
+	err = c.SequenceService.AddContact(entities.BaseEntity{
+		AccountId: entities.ID(p.CallParams.Caller.Session.Account.ID),
+		Id:        entities.ID(sequenceId),
+	}, contact)
+	return contact, err
+}
+
+type UploadContactsToSequenceAction struct {
+	pipeline.BaseActionImpl
+
+	SequenceService backend.ISequenceService
+}
+
+func (c *UploadContactsToSequenceAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*entities2.CallParams)
+	sequenceId, err := validation.CheckInt64("id", cp.GetParamStr("id"))
+	if err != nil {
+		return nil, err
+	}
+	f, err := cp.GetParamsUsingFirstValue()["f"].(*multipart.FileHeader).Open()
+	if err != nil {
+		return nil, err
+	}
+	return c.SequenceService.UploadContacts(
+		entities.BaseEntity{
+			AccountId: entities.ID(cp.Caller.Session.Account.ID),
+			Id:        entities.ID(sequenceId),
+		}, backend.NewContactCSVIterator(f)), nil
 }

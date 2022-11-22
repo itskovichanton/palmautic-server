@@ -37,7 +37,8 @@ func (c *AccountServiceImpl) DeleteSubordinate(accountId, subordinateId entities
 	if account == nil || subordinate == nil {
 		return nil, errs.NewBaseError("Аккаунт не найден")
 	}
-	utils.DeleteFromSliceFunc(account.Subordinates, func(a *entities.User) bool { return a.ID == subordinate.ID })
+
+	account.Subordinates, _ = utils.DeleteFromSliceFunc(account.Subordinates, func(a *entities.User) bool { return a.ID == subordinate.ID })
 
 	c.EventBus.Publish(AccountUpdatedEventTopic, account)
 

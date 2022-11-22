@@ -15,7 +15,7 @@ type IContactService interface {
 	FindFirst(filter *entities.Contact) *entities.Contact
 	Delete(accountId entities.ID, ids []entities.ID)
 	CreateOrUpdate(contact *entities.Contact) error
-	Upload(accountId entities.ID, iterator ContactIterator) (int, error)
+	Upload(accountId entities.ID, iterator ContactIterator) ([]entities.ID, error)
 	Export(accountId entities.ID) (string, *filestorage.FileInfo, error)
 	Clear(accountId entities.ID)
 }
@@ -67,8 +67,7 @@ func (c *ContactServiceImpl) CreateOrUpdate(contact *entities.Contact) error {
 	//	return err
 	//}
 
-	c.ContactRepo.CreateOrUpdate(contact)
-	return nil
+	return c.ContactRepo.CreateOrUpdate(contact)
 }
 
 func (c *ContactServiceImpl) Export(accountId entities.ID) (string, *filestorage.FileInfo, error) {
@@ -96,19 +95,21 @@ func (c *ContactServiceImpl) Export(accountId entities.ID) (string, *filestorage
 	return key, fileInfo, err
 }
 
-func (c *ContactServiceImpl) Upload(accountId entities.ID, iterator ContactIterator) (int, error) {
-	uploaded := 0
+func (c *ContactServiceImpl) Upload(accountId entities.ID, iterator ContactIterator) ([]entities.ID, error) {
+	var createdIds []entities.ID
 	for {
-		contract, err := iterator.Next()
-		if err != nil {
-			return uploaded, err
-		}
-		if contract == nil {
+		contact, err := iterator.Next()
+		//if err != nil {
+		//	return createdIds, nil
+		//}
+		if contact == nil {
 			break
 		}
-		contract.AccountId = accountId
-		c.ContactRepo.CreateOrUpdate(contract)
-		uploaded++
+		contact.AccountId = accountId
+		err = c.ContactRepo.CreateOrUpdate(contact)
+		if err != nil {
+			createdIds = append(createdIds, contact.Id)
+		}
 	}
-	return uploaded, nil
+	return createdIds, nil
 }
