@@ -31,6 +31,8 @@ func (c *DI) InitDI() {
 	container := dig.New()
 
 	container.Provide(c.NewApp)
+	container.Provide(c.NewTimeZoneRepo)
+	container.Provide(c.NewTimeZoneService)
 	container.Provide(c.NewUploadContactsToSequenceAction)
 	container.Provide(c.NewGetSequenceStatsAction)
 	container.Provide(c.NewSequenceBuilderService)
@@ -720,7 +722,22 @@ func (c *DI) NewAccountSettingsService(EventBus EventBus.Bus, JavaToolClient bac
 	return r
 }
 
-func (c *DI) NewCommonsService(TariffRepo backend.ITariffRepo, AccountSettingsService backend.IAccountSettingsService, ChatService backend.IChatService, FolderService backend.IFolderService, AccountService backend.IAccountService, TemplateService backend.ITemplateService, taskService backend.ITaskService, sequenceService backend.ISequenceService) backend.ICommonsService {
+func (c *DI) NewTimeZoneRepo(MainService backend.IMainServiceAPIClientService, DBService backend.IDBService) (backend.ITimeZoneRepo, error) {
+	r := &backend.TimeZoneRepoImpl{
+		DBService:   DBService,
+		MainService: MainService,
+	}
+	err := r.Init()
+	return r, err
+}
+
+func (c *DI) NewTimeZoneService(TimeZoneRepo backend.ITimeZoneRepo) backend.ITimeZoneService {
+	return &backend.TimeZoneServiceImpl{
+		TimeZoneRepo: TimeZoneRepo,
+	}
+}
+
+func (c *DI) NewCommonsService(TimeZoneService backend.ITimeZoneService, TariffRepo backend.ITariffRepo, AccountSettingsService backend.IAccountSettingsService, ChatService backend.IChatService, FolderService backend.IFolderService, AccountService backend.IAccountService, TemplateService backend.ITemplateService, taskService backend.ITaskService, sequenceService backend.ISequenceService) backend.ICommonsService {
 	return &backend.CommonsServiceImpl{
 		TaskService:            taskService,
 		AccountSettingsService: AccountSettingsService,
@@ -730,6 +747,7 @@ func (c *DI) NewCommonsService(TariffRepo backend.ITariffRepo, AccountSettingsSe
 		FolderService:          FolderService,
 		ChatService:            ChatService,
 		TariffRepo:             TariffRepo,
+		TimeZoneService:        TimeZoneService,
 	}
 }
 

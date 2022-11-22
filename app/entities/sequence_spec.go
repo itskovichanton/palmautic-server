@@ -15,7 +15,7 @@ type SequenceSpec struct {
 
 	Name, Description string
 	FolderID          ID
-	TimeZone          string
+	TimeZoneId        int
 	Model             *SequenceSpecModel
 	Schedule          []ScheduleItem
 	Settings          *Settings

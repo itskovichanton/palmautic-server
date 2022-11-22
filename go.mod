@@ -8,6 +8,7 @@ require (
 	github.com/go-co-op/gocron v1.17.1
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/grokify/html-strip-tags-go v0.0.1
+	github.com/igrmk/treemap/v2 v2.0.1
 	github.com/itskovichanton/core v1.0.4
 	github.com/itskovichanton/echo-http v1.0.2
 	github.com/itskovichanton/goava v1.0.6
@@ -16,7 +17,6 @@ require (
 	github.com/mitchellh/mapstructure v1.4.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/spf13/cast v1.5.0
-	github.com/viney-shih/go-lock v1.1.2
 	go.uber.org/dig v1.15.0
 	golang.org/x/exp v0.0.0-20220916125017-b168a2c6b86b
 	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f

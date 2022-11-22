@@ -54,7 +54,7 @@ func (c *AccountServiceImpl) Update(data *entities.User, directorUserName string
 
 	account.Company = data.Company
 	account.Username = data.Username
-	account.TimeZone = data.TimeZone
+	account.TimeZoneId = data.TimeZoneId
 	//c.AccountingService.AssignTariff(entities.ID(account.ID), TariffIDEnterprise) // устанавливаем новому юзеру тариф Basic
 
 	// привязываем его к директору

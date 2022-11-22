@@ -9,7 +9,7 @@ type User struct {
 	*entities.Account
 
 	InMailSettings *InMailSettings
-	TimeZone       int
+	TimeZoneId     int
 	Subordinates   []*User
 	Tariff         *Tariff
 	Phone, Company string
