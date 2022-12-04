@@ -4,9 +4,13 @@ import (
 	"encoding/csv"
 	"fmt"
 	"github.com/asaskevich/EventBus"
+	"github.com/itskovichanton/core/pkg/core/frmclient"
+	"github.com/itskovichanton/goava/pkg/goava/errs"
 	"github.com/itskovichanton/server/pkg/server/filestorage"
+	"golang.org/x/exp/slices"
 	"os"
 	"salespalm/server/app/entities"
+	"strings"
 )
 
 type IContactService interface {
@@ -18,6 +22,16 @@ type IContactService interface {
 	Upload(accountId entities.ID, iterator ContactIterator) ([]entities.ID, error)
 	Export(accountId entities.ID) (string, *filestorage.FileInfo, error)
 	Clear(accountId entities.ID)
+	Commons() *ContactCommons
+	DetectUploadingSchema(model []string) ([]*UploadSchemaItem, error)
+}
+
+type UploadSchemaItem struct {
+	FileField, Example, ContactFieldId string
+}
+
+type ContactCommons struct {
+	Fields []*entities.StrIDWithName
 }
 
 type ContactServiceImpl struct {
@@ -26,6 +40,23 @@ type ContactServiceImpl struct {
 	ContactRepo        IContactRepo
 	FileStorageService filestorage.IFileStorageService
 	EventBus           EventBus.Bus
+	Fields             []*entities.StrIDWithName
+}
+
+func (c *ContactServiceImpl) Init() {
+	c.Fields = []*entities.StrIDWithName{
+		{"Имя", "FirstName"},
+		{"Фамилия", "LastName"},
+		{"Компания", "Company"},
+		{"Должность", "Job"},
+		{"E-mail", "Email"},
+		{"Телефон", "Phone"},
+		{"Linkedin", "Linkedin"},
+	}
+}
+
+func (c *ContactServiceImpl) Commons() *ContactCommons {
+	return &ContactCommons{Fields: c.Fields}
 }
 
 func (c *ContactServiceImpl) Clear(accountId entities.ID) {
@@ -84,9 +115,9 @@ func (c *ContactServiceImpl) Export(accountId entities.ID) (string, *filestorage
 	}(csvFile)
 
 	csvwriter := csv.NewWriter(csvFile)
-	csvwriter.Write([]string{"Имя", "Должность", "Компания", "Email", "Телефон", "Linkedin"})
+	csvwriter.Write([]string{"Имя", "Фамилия", "Должность", "Компания", "Email", "Телефон", "Linkedin"})
 	for _, contact := range c.Search(&entities.Contact{BaseEntity: entities.BaseEntity{AccountId: accountId}}, nil).Items {
-		_ = csvwriter.Write([]string{contact.Name, contact.Job, contact.Company, contact.Email, contact.Phone, contact.Linkedin})
+		_ = csvwriter.Write([]string{contact.FirstName, contact.LastName, contact.Job, contact.Company, contact.Email, contact.Phone, contact.Linkedin})
 	}
 	csvwriter.Flush()
 	csvFile.Close()
@@ -112,4 +143,71 @@ func (c *ContactServiceImpl) Upload(accountId entities.ID, iterator ContactItera
 		}
 	}
 	return createdIds, nil
+}
+
+func (c *ContactServiceImpl) DetectUploadingSchema(model []string) ([]*UploadSchemaItem, error) {
+	if len(model) < 2 {
+		return nil, errs.NewBaseErrorWithReason("Видимо, файл пустой", frmclient.ReasonServerRespondedWithError)
+	}
+	header := model[0]
+	example := model[1]
+	separator := string(entities.DetectSeparator(header))
+
+	var r []*UploadSchemaItem
+	headerFields := strings.Split(header, separator)
+	exampleFields := strings.Split(example, separator)
+	exampleFieldLen := len(exampleFields)
+
+	for index, headerField := range headerFields {
+		exampleField := ""
+		if index < exampleFieldLen {
+			exampleField = exampleFields[index]
+		}
+		headerField = strings.TrimSpace(headerField)
+		exampleField = strings.TrimSpace(exampleField)
+		r = append(r, &UploadSchemaItem{
+			FileField:      headerField,
+			Example:        exampleField,
+			ContactFieldId: c.detectContactFieldId(headerField),
+		})
+	}
+
+	return r, nil
+}
+
+func (c *ContactServiceImpl) detectContactFieldId(fileField string) string {
+	index := slices.IndexFunc(c.Fields, func(f *entities.StrIDWithName) bool {
+		if strings.Contains(strings.ToUpper(fileField), strings.ToUpper(f.Name)) {
+			return true
+		}
+		if f.Id == "FirstName" && len(entities.DetectVariant(fileField, f.Id, "имя", "first", "фио", "first")) > 0 {
+			return true
+		}
+		if f.Id == "LastName" && len(entities.DetectVariant(fileField, f.Id, "фамилия", "last")) > 0 {
+			return true
+		}
+		if f.Id == "Job" && len(entities.DetectVariant(fileField, f.Id, "работ", "должн", "позици", "titl")) > 0 {
+			return true
+		}
+		if f.Id == "Phone" && len(entities.DetectVariant(fileField, f.Id, "телеф", "номер")) > 0 {
+			return true
+		}
+		if f.Id == "Phone" && len(entities.DetectVariant(fileField, f.Id, "телеф", "номер")) > 0 {
+			return true
+		}
+		if f.Id == "Email" && len(entities.DetectVariant(fileField, f.Id, "email", "emeil", "e-mail", "почта", "ящик")) > 0 {
+			return true
+		}
+		if f.Id == "Company" && len(entities.DetectVariant(fileField, f.Id, "компан", "фирм", "корпор")) > 0 {
+			return true
+		}
+		if f.Id == "Linkedin" && len(entities.DetectVariant(fileField, f.Id, "linkedin", "linked in")) > 0 {
+			return true
+		}
+		return false
+	})
+	if index < 0 {
+		return ""
+	}
+	return c.Fields[index].Id
 }

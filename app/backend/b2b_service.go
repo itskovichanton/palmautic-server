@@ -53,7 +53,8 @@ func (c *B2BServiceImpl) AddToContacts(accountId entities.ID, b2bItemIds []entit
 			newContact := &entities.Contact{
 				BaseEntity: entities.BaseEntity{AccountId: accountId},
 				Phone:      cast.ToString(item["Phone"]),
-				Name:       cast.ToString(item["Name"]),
+				FirstName:  cast.ToString(item["FirstName"]),
+				LastName:   cast.ToString(item["LastName"]),
 				Email:      cast.ToString(item["Email"]),
 				Company:    cast.ToString(item["Company"]),
 				Linkedin:   cast.ToString(item["Linkedin"]),
@@ -62,11 +63,11 @@ func (c *B2BServiceImpl) AddToContacts(accountId entities.ID, b2bItemIds []entit
 			//if len(newContact.Email) == 0 {
 			//	newContact.Email = "itskovichae@gmail.com"
 			//}
-			if len(newContact.Name) == 0 {
-				newContact.Name = newContact.Company
+			if len(newContact.FirstName) == 0 {
+				newContact.FirstName = newContact.Company
 			}
-			//if len(newContact.Name) == 0 {
-			//	newContact.Name = utils.MD5(fmt.Sprintf("%s%v", time.Now(), rand.Int()))
+			//if len(newContact.FirstName) == 0 {
+			//	newContact.FirstName = utils.MD5(fmt.Sprintf("%s%v", time.Now(), rand.Int()))
 			//}
 			c.ContactRepo.CreateOrUpdate(newContact)
 			if newContact.ReadyForSearch() {
@@ -102,7 +103,7 @@ func (c *B2BServiceImpl) UploadFromDir(table string, dirName string) (int, error
 			HasHeader:             true,
 			PostProcessor: func(m entities.MapWithId) {
 				if table == "persons" {
-					//m["City"] = strings.TrimSuffix(info.Name(), filepath.Ext(info.Name()))
+					//m["City"] = strings.TrimSuffix(info.FirstName(), filepath.Ext(info.FirstName()))
 					//m["Country"] = "Россия"
 				}
 			},

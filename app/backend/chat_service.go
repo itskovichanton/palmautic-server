@@ -81,7 +81,7 @@ func (c *ChatServiceImpl) OnEmailOpened(q url.Values) {
 func (c *ChatServiceImpl) OnSequenceReplied(sequence *entities.Sequence, sequenceTasks []*entities.Task, repliedTask *entities.Task) {
 
 	contactCreds := repliedTask.Contact.BaseEntity
-	c.AddInfoMsg(contactCreds, &entities.ChatMsg{Subject: repliedTask.Subject, Body: fmt.Sprintf(`Последовательность '%v' завершена для контакта %v. Теперь Вы можете переписываться с ним.`, sequence.Name, repliedTask.Contact.Name)})
+	c.AddInfoMsg(contactCreds, &entities.ChatMsg{Subject: repliedTask.Subject, Body: fmt.Sprintf(`Последовательность '%v' завершена для контакта %v. Теперь Вы можете переписываться с ним.`, sequence.Name, repliedTask.Contact.FullName())})
 
 	for _, task := range sequenceTasks {
 		if task.Status == entities.TaskStatusCompleted || task.Status == entities.TaskStatusReplied {
@@ -185,7 +185,7 @@ func (c *ChatServiceImpl) addMsg(contactCreds entities.BaseEntity, m *entities.C
 				"chatId":      int64(m.ChatId),
 				"msgId":       int64(m.Id),
 				"contactId":   int64(contact.Id),
-				"contactName": contact.Name,
+				"contactName": contact.FirstName,
 			},
 		}, nil)
 		if sendingResult.Error != nil {
@@ -219,7 +219,7 @@ func (c *ChatServiceImpl) CreateOrUpdate(contact *entities.Contact, m *entities.
 	} else {
 		m.Contact = contact
 	}
-	m.Contact = &entities.Contact{Name: m.Contact.Name, BaseEntity: m.Contact.BaseEntity}
+	m.Contact = &entities.Contact{FirstName: m.Contact.FirstName, BaseEntity: m.Contact.BaseEntity}
 
 	prepareMsg(m)
 

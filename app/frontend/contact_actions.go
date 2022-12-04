@@ -98,3 +98,23 @@ func (c *ExportContactsAction) Run(arg interface{}) (interface{}, error) {
 	getFileKey, _, err := c.ContactService.Export(entities.ID(cp.Caller.Session.Account.ID))
 	return getFileKey, err
 }
+
+type DetectUploadingSchemaAction struct {
+	pipeline.BaseActionImpl
+
+	ContactService backend.IContactService
+}
+
+func (c *DetectUploadingSchemaAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*entities2.CallParams)
+	bodyBytes, err := io.ReadAll(cp.Request.(echo.Context).Request().Body)
+	if err != nil {
+		return nil, err
+	}
+	var model []string
+	err = json.Unmarshal(bodyBytes, &model)
+	if err != nil {
+		return nil, err
+	}
+	return c.ContactService.DetectUploadingSchema(model)
+}

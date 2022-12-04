@@ -52,6 +52,7 @@ type PalmauticHttpController struct {
 	NotifyMessageOpenedAction      *frontend.NotifyMessageOpenedAction
 	AddToSequenceFromB2BAction     *frontend.AddToSequenceFromB2BAction
 	StartSequenceAction            *frontend.StartSequenceAction
+	DetectUploadingSchemaAction    *frontend.DetectUploadingSchemaAction
 	StopSequenceAction             *frontend.StopSequenceAction
 	DeleteSequenceAction           *frontend.DeleteSequenceAction
 	CreateOrUpdateFolderAction     *frontend.CreateOrUpdateFolderAction
@@ -135,6 +136,7 @@ func (c *PalmauticHttpController) Init() {
 	c.EchoEngine.POST("/contacts/search", c.GetDefaultHandler(c.prepareAction(true, c.readContact(), c.SearchContactAction)))
 	c.EchoEngine.POST("/contacts/delete", c.GetDefaultHandler(c.prepareAction(true, c.DeleteContactAction)))
 	c.EchoEngine.POST("/contacts/upload", c.GetDefaultHandler(c.prepareAction(true, c.UploadContactsAction)))
+	c.EchoEngine.POST("/contacts/upload/detectSchema", c.GetDefaultHandler(c.prepareAction(true, c.DetectUploadingSchemaAction)))
 	c.EchoEngine.GET("/contacts/export", c.GetDefaultHandler(c.prepareAction(true, c.ExportContactsAction)))
 
 	// b2b

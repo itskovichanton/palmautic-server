@@ -135,7 +135,7 @@ func (c *AccountServiceImpl) AsContact(accountId entities.ID) *entities.Contact 
 	return &entities.Contact{
 		BaseEntity: entities.BaseEntity{Id: entities.ID(r.ID), AccountId: accountId},
 		Phone:      r.Phone,
-		Name:       r.FullName,
+		FirstName:  r.FullName,
 		Email:      r.Username,
 		Company:    r.Company,
 	}

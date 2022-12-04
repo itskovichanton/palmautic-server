@@ -252,7 +252,7 @@ func calcDescription(t *Task) string {
 	case TaskTypeLinkedin.Creds.Name:
 		return calcLinkedinTaskDescription(t)
 	case TaskTypeManualEmail.Creds.Name:
-		return "Отправить письмо для {{.Contact.Name}} на {{.Contact.Email}}"
+		return "Отправить письмо для {{.Contact.FirstName}} {{.Contact.LastName}} на {{.Contact.Email}}"
 	}
 
 	return ""

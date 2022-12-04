@@ -157,7 +157,7 @@ func (c *ChatRepoImpl) searchInChat(chat *entities.Chat, q string) []*entities.C
 		if m.Contact == nil {
 			continue
 		}
-		if strings.Contains(strings.ToUpper(m.PlainBodyShort), q) || strings.Contains(strings.ToUpper(m.Contact.Name), q) {
+		if strings.Contains(strings.ToUpper(m.PlainBodyShort), q) || strings.Contains(strings.ToUpper(m.Contact.FullName()), q) {
 			r = append(r, m)
 		}
 	}

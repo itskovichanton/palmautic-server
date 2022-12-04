@@ -18,6 +18,7 @@ type Commons struct {
 	AccountSettings *AccountSettingsCommons
 	Tariffs         *TariffCommons
 	TimeZones       []*entities.IDWithName
+	Contacts        *ContactCommons
 }
 
 type CommonsServiceImpl struct {
@@ -32,6 +33,7 @@ type CommonsServiceImpl struct {
 	ChatService            IChatService
 	TariffRepo             ITariffRepo
 	TimeZoneService        ITimeZoneService
+	ContactService         IContactService
 }
 
 func (c *CommonsServiceImpl) Commons(accountId entities.ID) *Commons {
@@ -40,6 +42,7 @@ func (c *CommonsServiceImpl) Commons(accountId entities.ID) *Commons {
 			AccountSettings: c.AccountSettingsService.Commons(),
 			Tariffs:         c.TariffRepo.Commons(),
 			TimeZones:       c.TimeZoneService.All(),
+			Contacts:        c.ContactService.Commons(),
 		}
 	}
 	return &Commons{
@@ -52,5 +55,6 @@ func (c *CommonsServiceImpl) Commons(accountId entities.ID) *Commons {
 		AccountSettings: c.AccountSettingsService.Commons(),
 		Tariffs:         c.TariffRepo.Commons(),
 		TimeZones:       c.TimeZoneService.All(),
+		Contacts:        c.ContactService.Commons(),
 	}
 }

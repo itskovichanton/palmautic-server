@@ -29,8 +29,12 @@ func (c *TemplateCompilerServiceImpl) Init() {
 func (c *TemplateCompilerServiceImpl) variables() []*Variable {
 	return []*Variable{
 		{
-			Name:        "Contact.Name",
+			Name:        "Contact.FirstName",
 			Description: "Имя",
+		},
+		{
+			Name:        "Contact.LastName",
+			Description: "Фамилия",
 		},
 		{
 			Name:        "Contact.Linkedin",
@@ -48,10 +52,13 @@ func (c *TemplateCompilerServiceImpl) variables() []*Variable {
 			Name:        "Contact.Company",
 			Description: "Компания",
 		},
-
 		{
-			Name:        "Me.Name",
+			Name:        "Me.FirstName",
 			Description: "Мое имя",
+		},
+		{
+			Name:        "Me.LastName",
+			Description: "Моя фамилия",
 		},
 		{
 			Name:        "Me.Linkedin",
@@ -83,11 +90,12 @@ func (c *TemplateCompilerServiceImpl) variables() []*Variable {
 
 func (c *TemplateCompilerServiceImpl) stubContact() *entities.Contact {
 	return &entities.Contact{
-		Phone:    "+7 (999) 11-22-33",
-		Name:     "Александр",
-		Email:    "alex1987@gmail.com",
-		Company:  `ООО "Инвестброкер"`,
-		Linkedin: "https://www.linkedin.ru/alex1987",
+		Phone:     "+7 (999) 11-22-33",
+		FirstName: "Александр",
+		LastName:  "Васнецов",
+		Email:     "alex1987@gmail.com",
+		Company:   `ООО "Инвестброкер"`,
+		Linkedin:  "https://www.linkedin.ru/alex1987",
 	}
 }
 

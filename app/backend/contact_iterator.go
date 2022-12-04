@@ -42,12 +42,12 @@ func (c *CSVContactIteratorImpl) Next() (*entities.Contact, error) {
 		}
 	}
 	return &entities.Contact{
-		Job:      detectFieldIndex(data, c.fields.Job),
-		Phone:    detectFieldIndex(data, c.fields.Phone),
-		Name:     detectFieldIndex(data, c.fields.Name),
-		Email:    detectFieldIndex(data, c.fields.Email),
-		Company:  detectFieldIndex(data, c.fields.Company),
-		Linkedin: detectFieldIndex(data, c.fields.Linkedin),
+		Job:       detectFieldIndex(data, c.fields.Job),
+		Phone:     detectFieldIndex(data, c.fields.Phone),
+		FirstName: detectFieldIndex(data, c.fields.Name),
+		Email:     detectFieldIndex(data, c.fields.Email),
+		Company:   detectFieldIndex(data, c.fields.Company),
+		Linkedin:  detectFieldIndex(data, c.fields.Linkedin),
 	}, nil
 }
 

@@ -79,7 +79,7 @@ func (c *NotificationServiceImpl) OnEmailSenderSlowedDown(accountId entities.ID,
 
 func (c *NotificationServiceImpl) OnIncomingChatMsgReceived(msgChat *entities.Chat) {
 	c.Add(msgChat.Contact.AccountId, &Notification{
-		Subject:   fmt.Sprintf("Сообщение от %v", msgChat.Contact.Name),
+		Subject:   fmt.Sprintf("Сообщение от %v", msgChat.Contact.FullName()),
 		Message:   msgChat.Msgs[0].PlainBodyShort,
 		Alertness: "blue",
 	}, nil)
@@ -103,7 +103,7 @@ func (c *NotificationServiceImpl) OnEmailOpened(q url.Values) {
 					Id:        GetEmailOpenedContactId(q),
 					AccountId: accountId,
 				},
-				Name: GetEmailOpenedContactName(q),
+				FirstName: GetEmailOpenedContactName(q),
 			},
 			Opened: true,
 		},
@@ -139,7 +139,7 @@ func (c *NotificationServiceImpl) OnSequenceFinished(a *SequenceFinishedEventArg
 	}
 	c.Add(a.Sequence.AccountId, &Notification{
 		Subject:   "Последовательность финишировала",
-		Message:   fmt.Sprintf(`"%v" финишировала для контакта %v`, a.Sequence.Name, a.Contact.Name),
+		Message:   fmt.Sprintf(`"%v" финишировала для контакта %v`, a.Sequence.Name, a.Contact.FirstName),
 		Alertness: "green",
 	}, nil)
 }
@@ -154,7 +154,7 @@ func (c *NotificationServiceImpl) OnTaskInMailBounced(a *TaskInMailReplyReceived
 
 func (c *NotificationServiceImpl) OnTaskInMailReplyReceived(a *TaskInMailReplyReceivedEventArgs) {
 	c.Add(a.Task.AccountId, &Notification{
-		Subject:   a.Contact.Name + ":",
+		Subject:   a.Contact.FirstName + ":",
 		Message:   a.InMail.ContentParts[0].PlainContent,
 		Alertness: entities.TaskAlertnessBlue,
 	}, nil)
@@ -210,7 +210,7 @@ func (c *NotificationServiceImpl) Add(accountId entities.ID, a *Notification, se
 func (c *NotificationServiceImpl) OnNewChatMsg(chat *entities.Chat) {
 	c.Add(chat.Contact.AccountId, &Notification{
 		Type:      NotificationTypeChatMsg,
-		Subject:   fmt.Sprintf("Сообщение от %v", chat.Contact.Name),
+		Subject:   fmt.Sprintf("Сообщение от %v", chat.Contact.FirstName),
 		Message:   strip.StripTags(chat.Msgs[0].Body),
 		Alertness: "blue",
 		Object:    chat,

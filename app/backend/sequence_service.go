@@ -113,6 +113,11 @@ func (c *SequenceServiceImpl) AddContacts(sequenceCreds entities.BaseEntity, con
 
 	go func() {
 		contactsToAdd := c.calcContactsToAdd(contactFilters, sequence)
+
+		// добавляем контакты, но не запускаем для них последовательность
+		c.SequenceRunnerService.AddContacts(sequence, contactsToAdd)
+
+		// запускаем последовательности для контактов лесенкой - с делеем, а не скопом
 		for _, contact := range contactsToAdd {
 			c.SequenceRunnerService.Run(sequence, contact, false)
 			time.Sleep(3 * time.Second)

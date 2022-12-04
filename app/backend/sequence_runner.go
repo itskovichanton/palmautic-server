@@ -17,6 +17,7 @@ import (
 
 type ISequenceRunnerService interface {
 	Run(sequence *entities.Sequence, contact *entities.Contact, byRestore bool) bool
+	AddContacts(sequence *entities.Sequence, contacts []*entities.Contact)
 }
 
 type SequenceRunnerServiceImpl struct {
@@ -51,6 +52,12 @@ func (c *SequenceRunnerServiceImpl) Init() {
 	}
 }
 
+func (c *SequenceRunnerServiceImpl) AddContacts(sequence *entities.Sequence, contacts []*entities.Contact) {
+	for _, contact := range contacts {
+		sequence.Process.ByContactSyncMap.LoadOrStore(contact.Id, &entities.SequenceInstance{})
+	}
+}
+
 func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *entities.Contact, byRestore bool) bool {
 
 	if contact == nil || sequence.Stopped {
@@ -63,7 +70,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 	logger.DisableSetChopOffFields(ld)
 
 	logger.Action(ld, "**СТАРТ**")
-	logger.Args(ld, fmt.Sprintf("контакт %v", contact.Name))
+	logger.Args(ld, fmt.Sprintf("контакт %v", contact.FullName()))
 	logger.Result(ld, "Начал")
 	logger.Print(lg, ld)
 
@@ -144,7 +151,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 				m := results[0]
 				ld2 := logger.NewLD()
 				logger.Action(ld2, "BOUNCED mail!")
-				logger.Args(ld2, fmt.Sprintf("contact=%v, mail-subject=%v", contact.Name, m.Subject))
+				logger.Args(ld2, fmt.Sprintf("contact=%v, mail-subject=%v", contact.FirstName, m.Subject))
 				var bouncedTask *entities.Task
 				//println(strings.ToUpper(m.Subject))
 				processInstance, _ := sequence.Process.ByContactSyncMap.Load(contact.Id)
@@ -181,7 +188,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 				m := result[0]
 				ld2 := logger.NewLD()
 				logger.Action(ld2, "Получен inMail!")
-				logger.Args(ld2, fmt.Sprintf("contact=%v, mail-subject=%v", contact.Name, m.Subject))
+				logger.Args(ld2, fmt.Sprintf("contact=%v, mail-subject=%v", contact.FirstName, m.Subject))
 				var repliedTask *entities.Task
 				//println(strings.ToUpper(m.Subject))
 				processInstance, _ := sequence.Process.ByContactSyncMap.Load(contact.Id)
@@ -278,7 +285,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 
 			tasksCount := len(contactProcess.Tasks)
 			currentTaskNumber := currentTaskIndex + 1
-			logger.Args(ld, fmt.Sprintf("шаг %v/%v, контакт %v, задача %v:%v", currentTaskNumber, tasksCount, contact.Name, currentTask.Id, currentTask.Status))
+			logger.Args(ld, fmt.Sprintf("шаг %v/%v, контакт %v, задача %v:%v", currentTaskNumber, tasksCount, contact.FirstName, currentTask.Id, currentTask.Status))
 			logger.Result(ld, fmt.Sprintf("Буду выполнять %vй шаг", currentTaskNumber))
 			logger.Print(lg, ld)
 
@@ -296,7 +303,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 				contactProcess.Tasks[currentTaskIndex] = currentTask
 			}
 
-			logger.Args(ld, fmt.Sprintf("шаг %v/%v, контакт %v, задача %v:%v", currentTaskNumber, tasksCount, contact.Name, currentTask.Id, currentTask.Status))
+			logger.Args(ld, fmt.Sprintf("шаг %v/%v, контакт %v, задача %v:%v", currentTaskNumber, tasksCount, contact.FirstName, currentTask.Id, currentTask.Status))
 			logger.Result(ld, currentTask)
 			logger.Print(lg, ld)
 
@@ -321,7 +328,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			timeOutDuration := currentTask.DueTime.Sub(now)
 
 			logger.Action(ld, fmt.Sprintf("Начинаю ждать выполнения, timeout=%s", timeOutDuration))
-			logger.Args(ld, fmt.Sprintf("шаг %v/%v, контакт %v, задача %v:%v", currentTaskNumber, tasksCount, contact.Name, currentTask.Id, currentTask.Status))
+			logger.Args(ld, fmt.Sprintf("шаг %v/%v, контакт %v, задача %v:%v", currentTaskNumber, tasksCount, contact.FirstName, currentTask.Id, currentTask.Status))
 			logger.Print(lg, ld)
 
 			// К этому моменту currentTask.status=started
@@ -363,7 +370,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			} else {
 				logger.Result(ld, "Задача проигнорирована")
 			}
-			logger.Args(ld, fmt.Sprintf("шаг %v/%v, контакт %v, задача %v:%v", currentTaskNumber, tasksCount, contact.Name, currentTask.Id, currentTask.Status))
+			logger.Args(ld, fmt.Sprintf("шаг %v/%v, контакт %v, задача %v:%v", currentTaskNumber, tasksCount, contact.FirstName, currentTask.Id, currentTask.Status))
 			logger.Print(lg, ld)
 
 			// Смотрим на обновленную задачу
@@ -465,7 +472,7 @@ func (c *SequenceRunnerServiceImpl) refreshTasks(lg *log.Logger, action string, 
 		r = "<НЕТ ЗАДАЧ>"
 	}
 	logger.Result(ld, r)
-	logger.Action(ld, fmt.Sprintf("%v:контакт=%v", action, contact.Name))
+	logger.Action(ld, fmt.Sprintf("%v:контакт=%v", action, contact.FirstName))
 	logger.Print(lg, ld)
 }
 

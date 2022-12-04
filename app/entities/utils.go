@@ -129,3 +129,22 @@ func IndexOf(s []string, variants ...string) int {
 		return false
 	})
 }
+
+func DetectSeparator(s string) rune {
+	for _, ch := range s {
+		if ch == ';' || ch == ',' || ch == '\t' {
+			return ch
+		}
+	}
+	return ','
+}
+
+func DetectVariant(a string, answer string, variants ...string) string {
+	a = strings.ToUpper(a)
+	for _, x := range variants {
+		if strings.Contains(a, strings.ToUpper(x)) {
+			return answer
+		}
+	}
+	return ""
+}

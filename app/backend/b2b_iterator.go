@@ -68,17 +68,18 @@ func (c *CompanyMapperImpl) mapCompany2(data []string) (entities.MapWithId, erro
 		socials += ", " + data[16]
 	}
 	return entities.MapWithId{
-		"Name":     data[0],
-		"Category": data[8],
-		"ZipCode":  data[5],
-		"Address":  strings.ReplaceAll(data[6], ";", ","),
-		"Phone":    data[9],
-		"Email":    data[11],
-		"Website":  data[12],
-		"City":     data[4],
-		"Socials":  socials,
-		"Country":  data[2],
-		"Region":   data[3],
+		"FirstName": data[0],
+		"LastName":  data[13],
+		"Category":  data[8],
+		"ZipCode":   data[5],
+		"Address":   strings.ReplaceAll(data[6], ";", ","),
+		"Phone":     data[9],
+		"Email":     data[11],
+		"Website":   data[12],
+		"City":      data[4],
+		"Socials":   socials,
+		"Country":   data[2],
+		"Region":    data[3],
 	}, nil
 }
 
@@ -88,16 +89,16 @@ func (c *CompanyMapperImpl) mapCompany1(data []string) (entities.MapWithId, erro
 		socials += ", " + data[11]
 	}
 	return entities.MapWithId{
-		"Name":     data[1],
-		"Category": data[14],
-		"ZipCode":  data[5],
-		"Address":  data[3],
-		"Phone":    data[6],
-		"Email":    data[8],
-		"Website":  data[9],
-		"City":     data[2],
-		"Socials":  socials,
-		"Country":  "Россия",
+		"FirstName": data[1],
+		"Category":  data[14],
+		"ZipCode":   data[5],
+		"Address":   data[3],
+		"Phone":     data[6],
+		"Email":     data[8],
+		"Website":   data[9],
+		"City":      data[2],
+		"Socials":   socials,
+		"Country":   "Россия",
 	}, nil
 }
 
@@ -117,13 +118,13 @@ func (c *PersonMapperImpl) mapPersons1(data []string) (entities.MapWithId, error
 		return nil, io.EOF
 	}
 	return entities.MapWithId{
-		"Name":     data[0] + " " + data[1],
-		"Company":  data[3],
-		"Email":    data[4],
-		"Linkedin": data[5],
-		"Industry": data[6],
-		"Socials":  data[7],
-		"Phone":    data[8],
+		"FirstName": data[0] + " " + data[1],
+		"Company":   data[3],
+		"Email":     data[4],
+		"Linkedin":  data[5],
+		"Industry":  data[6],
+		"Socials":   data[7],
+		"Phone":     data[8],
 	}, nil
 }
 

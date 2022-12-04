@@ -56,7 +56,7 @@ func (c *ContactRepoImpl) FindById(id entities.ID) *entities.Contact {
 func (c *ContactRepoImpl) Search(filter *entities.Contact, settings *ContactSearchSettings) *ContactSearchResult {
 
 	r := &ContactSearchResult{Items: []*entities.Contact{}}
-	filter.Name = strings.ToUpper(filter.Name)
+	filter.FirstName = strings.ToUpper(filter.FullName())
 	if filter.Id != 0 {
 		r.Items = append(r.Items, c.FindById(filter.Id))
 		r.TotalCount = 1
@@ -64,8 +64,8 @@ func (c *ContactRepoImpl) Search(filter *entities.Contact, settings *ContactSear
 	}
 
 	whereClause := fmt.Sprintf("(AccountId=%v)", filter.AccountId)
-	if len(filter.Name) > 0 {
-		whereClause += fmt.Sprintf("and (upper(name) like '%%%v%%')", filter.Name)
+	if len(filter.FirstName) > 0 {
+		whereClause += fmt.Sprintf("and (upper(concat(firstName,lastName)) like '%%%v%%')", filter.FirstName)
 	}
 	limitClause := ""
 	if settings != nil {
@@ -89,11 +89,11 @@ func (c *ContactRepoImpl) Search(filter *entities.Contact, settings *ContactSear
 }
 
 func decodeContact(a map[string]interface{}) *entities.Contact {
-	var contact entities.Contact
-	mapstructure.Decode(a, &contact)
-	contact.AccountId = entities.ID(cast.ToInt64(a["AccountId"]))
-	contact.Id = entities.ID(cast.ToInt64(a["Id"]))
-	return &contact
+	var r entities.Contact
+	mapstructure.Decode(a, &r)
+	r.AccountId = entities.ID(cast.ToInt64(a["AccountId"]))
+	r.Id = entities.ID(cast.ToInt64(a["Id"]))
+	return &r
 }
 
 func (c *ContactRepoImpl) Delete(accountId entities.ID, ids []entities.ID) {
@@ -103,7 +103,7 @@ func (c *ContactRepoImpl) Delete(accountId entities.ID, ids []entities.ID) {
 
 func (c *ContactRepoImpl) CreateOrUpdate(a *entities.Contact) error {
 
-	q, err := c.MainService.QueryDomainDBForMap("SELECT createOrUpdateContact(:ACCOUNT_ID, :ID, :NAME, :PHONE, :EMAIL, :JOB, :COMPANY, :LINKEDIN) as id", map[string]interface{}{"ACCOUNT_ID": a.AccountId, "ID": a.Id, "NAME": a.Name, "PHONE": a.Phone, "EMAIL": a.Email, "JOB": a.Job, "COMPANY": a.Company, "LINKEDIN": a.Linkedin}, nil)
+	q, err := c.MainService.QueryDomainDBForMap("SELECT createOrUpdateContact(:ACCOUNT_ID, :ID, :FIRSTNAME, :LASTNAME, :PHONE, :EMAIL, :JOB, :COMPANY, :LINKEDIN) as id", map[string]interface{}{"ACCOUNT_ID": a.AccountId, "ID": a.Id, "FIRSTNAME": a.FirstName, "LASTNAME": a.LastName, "PHONE": a.Phone, "EMAIL": a.Email, "JOB": a.Job, "COMPANY": a.Company, "LINKEDIN": a.Linkedin}, nil)
 	if err != nil {
 		return err
 	}

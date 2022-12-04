@@ -21,5 +21,5 @@ func (c *SequenceBuilderServiceImpl) Rebuild(sequence *entities.Sequence) (Templ
 }
 
 func (c *SequenceBuilderServiceImpl) Log(spec *entities.SequenceSpec) (string, error) {
-	return fmt.Sprintf(`<h3>Name: %v</h3>`, spec.Name), nil
+	return fmt.Sprintf(`<h3>FirstName: %v</h3>`, spec.Name), nil
 }

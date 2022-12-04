@@ -84,12 +84,12 @@ func (c *B2BDBRepoImpl) Search(table string, filters map[string]interface{}, set
 		if strings.HasPrefix(fieldName, "has") {
 			fieldName = fieldName[3:]
 		}
-		whereClausePart := c.calcWhereClauseAndPart(f, fieldName, fieldValue)
+		whereClausePart := c.calcWhereClauseAndPart(f, fieldName, fieldValue, table)
 		if len(whereClausePart) > 0 {
 			whereClause += fmt.Sprintf(" and (%v)", whereClausePart)
 		}
 	}
-	results, err := c.queryResults(whereClause, settings) //m.Where(whereClause).Offset(settings.Offset).Limit(settings.Count).Find(&results).Error
+	results, err := c.queryResults(whereClause, settings)
 	if err != nil {
 		return r, err
 	}
@@ -103,24 +103,9 @@ func (c *B2BDBRepoImpl) Search(table string, filters map[string]interface{}, set
 	return r, nil
 }
 
-func (c *B2BDBRepoImpl) exportTable(table string) error {
-	t := c.Table(table)
-	return c.DBService.DB().Transaction(func(tx *gorm.DB) error {
-		tx = tx.Table("b2b")
-		for _, d := range t.Data {
-			d.SetId(0)
-			r := b2bModel{}
-			r.Table = table
-			mapstructure.Decode(d, &r)
-			tx.Create(r)
-		}
-		return nil
-	})
-}
-
 type b2bModel struct {
-	Id                                                                                                                                 int64
-	Phone, Category, Title, City, Email, Website, Socials, Linkedin, Address, ZipCode, Region, Country, Name, Industry, Company, Table string
+	Id                                                                                                                                                int64
+	Phone, Category, Title, City, Email, Website, Socials, Linkedin, Address, ZipCode, Region, Country, FirstName, LastName, Industry, Company, Table string
 }
 
 func (c *B2BDBRepoImpl) model(table string, a entities.MapWithId) (*gorm.DB, *b2bModel, context.CancelFunc) {
@@ -386,7 +371,7 @@ func (c *B2BDBRepoImpl) calcChoiceFilterVariants(t *entities.B2BTable, f1 *entit
 	return r
 }
 
-func (c *B2BDBRepoImpl) calcWhereClauseAndPart(f entities.IFilter, filterName string, filterValue interface{}) string {
+func (c *B2BDBRepoImpl) calcWhereClauseAndPart(f entities.IFilter, filterName string, filterValue interface{}, table string) string {
 	filterName = strings.Title(filterName)
 	switch f.(type) {
 	case *entities.FlagFilter:
@@ -397,6 +382,9 @@ func (c *B2BDBRepoImpl) calcWhereClauseAndPart(f entities.IFilter, filterName st
 	default:
 		filterValueStr := strings.ToUpper(cast.ToString(filterValue))
 		if len(filterValueStr) > 0 {
+			if strings.EqualFold(filterName, "name") && table == "persons" {
+				filterName = "concat(firstName,lastName)"
+			}
 			return fmt.Sprintf("UPPER(%v) like '%%%v%%'", filterName, filterValueStr)
 		}
 	}

@@ -55,21 +55,16 @@ func (c *BaseEntity) Equals(x BaseEntity) bool {
 type Contact struct {
 	BaseEntity
 
-	Job       string
-	Phone     string `check:"phone" json:"phone"`
-	Name      string `check:"notempty" json:"name"`
-	Email     string `check:"notempty,email" json:"email"`
-	Company   string `json:"company"`
-	Linkedin  string `json:"linkedin"`
-	Sequences []*IDWithName
+	Job, Phone, FirstName, LastName, Email, Company, Linkedin string
+	Sequences                                                 []*IDWithName
 }
 
 func (c Contact) SeemsLike(contact *Contact) bool {
-	return c.Name == contact.Name && (c.Email == contact.Email || c.Phone == contact.Phone || c.Linkedin == c.Linkedin)
+	return c.FirstName == contact.FirstName && (c.Email == contact.Email || c.Phone == contact.Phone || c.Linkedin == c.Linkedin)
 }
 
 func (c Contact) FullName() string {
-	return c.Name
+	return c.FirstName + " " + c.LastName
 }
 
 type NameAndTitle struct {

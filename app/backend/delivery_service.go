@@ -48,7 +48,7 @@ func (c *MsgDeliveryEmailServiceImpl) sendEmailFromTask(t *entities.Task) *SendE
 			"taskId":      int64(t.Id),
 			"sequenceId":  int64(t.Sequence.Id),
 			"contactId":   int64(t.Contact.Id),
-			"contactName": t.Contact.Name,
+			"contactName": t.Contact.FullName(),
 		},
 	}, func(srv *email.Email, m *email.Message) {
 		m.BodyHTML = c.TemplateService.Format(t.Body, t.AccountId, args)

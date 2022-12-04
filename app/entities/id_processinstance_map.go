@@ -66,3 +66,24 @@ func NewProcessInstancesMap(source map[ID]*SequenceInstance) *ProcessInstancesMa
 	}
 	return r
 }
+
+// LoadOrStore returns the existing value for the key if present.
+// Otherwise, it stores and returns the given value.
+// The loaded result is true if the value was loaded, false if stored.
+func (m *ProcessInstancesMap) LoadOrStore(key ID, value *SequenceInstance) (*SequenceInstance, bool) {
+	actual, loaded := (*SyncMap)(m).LoadOrStore(key, value)
+	if actual == nil {
+		return _nil_si_si_si_value, loaded
+	}
+	return actual.(*SequenceInstance), loaded
+}
+
+// LoadAndDelete deletes the value for a key, returning the previous value if any.
+// The loaded result reports whether the key was present.
+func (m *ProcessInstancesMap) LoadAndDelete(key ID) (value *SequenceInstance, loaded bool) {
+	actual, loaded := (*SyncMap)(m).LoadAndDelete(key)
+	if actual == nil {
+		return _nil_si_si_si_value, loaded
+	}
+	return actual.(*SequenceInstance), loaded
+}
