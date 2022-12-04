@@ -71,7 +71,7 @@ func (c *ContactRepoImpl) Search(filter *entities.Contact, settings *ContactSear
 	if settings != nil {
 		limitClause = fmt.Sprintf("limit %v, %v", settings.Offset, settings.Count)
 	}
-	q, err := c.MainService.QueryDomainDBForMaps(fmt.Sprintf(`select * from contacts where %v order by id desc %v`, whereClause, limitClause), nil, nil)
+	q, err := c.MainService.QueryDomainDBForMaps(fmt.Sprintf(`select * from contacts where %v Order by id desc %v`, whereClause, limitClause), nil, nil)
 	if err != nil {
 		println(err.Error())
 	} else {

@@ -80,7 +80,7 @@ func (c *EmailScannerImpl) Enqueue(creds FindEmailOrderCreds, emailOrder *FindEm
 	}
 	logger.Action(ld, "Добавлена заявка")
 	logger.Field(ld, "creds", creds.String())
-	logger.Field(ld, "order", emailOrder)
+	logger.Field(ld, "Order", emailOrder)
 
 	return c.findEmailOrderMap.LoadOrStore(creds, emailOrder)
 }

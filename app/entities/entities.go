@@ -68,6 +68,10 @@ func (c Contact) SeemsLike(contact *Contact) bool {
 	return c.Name == contact.Name && (c.Email == contact.Email || c.Phone == contact.Phone || c.Linkedin == c.Linkedin)
 }
 
+func (c Contact) FullName() string {
+	return c.Name
+}
+
 type NameAndTitle struct {
 	Name, Title string
 }

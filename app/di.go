@@ -32,6 +32,7 @@ func (c *DI) InitDI() {
 
 	container.Provide(c.NewApp)
 	container.Provide(c.NewTimeZoneRepo)
+	container.Provide(c.GetCommonsAction)
 	container.Provide(c.NewTimeZoneService)
 	container.Provide(c.NewUploadContactsToSequenceAction)
 	container.Provide(c.NewGetSequenceStatsAction)
@@ -100,7 +101,7 @@ func (c *DI) InitDI() {
 	container.Provide(c.NewContactService)
 	container.Provide(c.NewRegisterAccountAction)
 	container.Provide(c.NewTaskService)
-	container.Provide(c.NewGetCommonsAction)
+	container.Provide(c.GetCommonsByAccountAction)
 	container.Provide(c.NewCommonsService)
 	container.Provide(c.NewB2BService)
 	container.Provide(c.NewDeleteContactAction)
@@ -409,12 +410,14 @@ func (c *DI) NewTemplateCompilerService() backend.ITemplateCompilerService {
 	return r
 }
 
-func (c *DI) NewHttpController(UploadContactsToSequenceAction *frontend.UploadContactsToSequenceAction, AddContactToSequenceAction *frontend.AddContactToSequenceAction, DeleteSubordinateAction *frontend.DeleteSubordinateAction, SequenceScenarioLogAction *frontend.SequenceScenarioLogAction, StartSeqTestAction *frontend.StartSeqTestAction, DeleteChatsAction *frontend.DeleteChatsAction, AddToSequenceFromB2BAction *frontend.AddToSequenceFromB2BAction, ExportContactsAction *frontend.ExportContactsAction, DeleteAccountAction *frontend.DeleteAccountAction, MoveChatToFolderAction *frontend.MoveChatToFolderAction, GetTariffsAction *frontend.GetTariffsAction, WebhooksProcessorService backend.IWebhooksProcessorService, GetAccountStatsAction *frontend.GetAccountStatsAction, SetAccountSettingsAction *frontend.SetAccountEmailSettingsAction, FindAccountAction *frontend.FindAccountAction, RegisterAccountAction *frontend.RegisterAccountAction, ClearChatAction *frontend.ClearChatAction, SearchChatMsgsAction *frontend.SearchChatMsgsAction, SendChatMsgAction *frontend.SendChatMsgAction, CreateOrUpdateFolderAction *frontend.CreateOrUpdateFolderAction, SearchFolderAction *frontend.SearchFolderAction, DeleteFolderAction *frontend.DeleteFolderAction, DeleteSequenceAction *frontend.DeleteSequenceAction, StartSequenceAction *frontend.StartSequenceAction, StopSequenceAction *frontend.StopSequenceAction, NotifyMessageOpenedAction *frontend.NotifyMessageOpenedAction, GetNotificationsAction *frontend.GetNotificationsAction, SearchSequenceAction *frontend.SearchSequenceAction, MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactsToSequenceAction *frontend.AddContactsToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsAction *frontend.GetCommonsAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
+func (c *DI) NewHttpController(GetSequenceStatsAction *frontend.GetSequenceStatsAction, GetCommonsAction *frontend.GetCommonsAction, UploadContactsToSequenceAction *frontend.UploadContactsToSequenceAction, AddContactToSequenceAction *frontend.AddContactToSequenceAction, DeleteSubordinateAction *frontend.DeleteSubordinateAction, SequenceScenarioLogAction *frontend.SequenceScenarioLogAction, StartSeqTestAction *frontend.StartSeqTestAction, DeleteChatsAction *frontend.DeleteChatsAction, AddToSequenceFromB2BAction *frontend.AddToSequenceFromB2BAction, ExportContactsAction *frontend.ExportContactsAction, DeleteAccountAction *frontend.DeleteAccountAction, MoveChatToFolderAction *frontend.MoveChatToFolderAction, GetTariffsAction *frontend.GetTariffsAction, WebhooksProcessorService backend.IWebhooksProcessorService, GetAccountStatsAction *frontend.GetAccountStatsAction, SetAccountSettingsAction *frontend.SetAccountEmailSettingsAction, FindAccountAction *frontend.FindAccountAction, RegisterAccountAction *frontend.RegisterAccountAction, ClearChatAction *frontend.ClearChatAction, SearchChatMsgsAction *frontend.SearchChatMsgsAction, SendChatMsgAction *frontend.SendChatMsgAction, CreateOrUpdateFolderAction *frontend.CreateOrUpdateFolderAction, SearchFolderAction *frontend.SearchFolderAction, DeleteFolderAction *frontend.DeleteFolderAction, DeleteSequenceAction *frontend.DeleteSequenceAction, StartSequenceAction *frontend.StartSequenceAction, StopSequenceAction *frontend.StopSequenceAction, NotifyMessageOpenedAction *frontend.NotifyMessageOpenedAction, GetNotificationsAction *frontend.GetNotificationsAction, SearchSequenceAction *frontend.SearchSequenceAction, MarkRepliedTaskAction *frontend.MarkRepliedTaskAction, ClearTemplatesAction *frontend.ClearTemplatesAction, AddContactsToSequenceAction *frontend.AddContactsToSequenceAction, SkipTaskAction *frontend.SkipTaskAction, ExecuteTaskAction *frontend.ExecuteTaskAction, ClearTasksAction *frontend.ClearTasksAction, CreateOrUpdateSequenceAction *frontend.CreateOrUpdateSequenceAction, SearchTaskAction *frontend.SearchTaskAction, GetTaskStatsAction *frontend.GetTaskStatsAction, GetCommonsByAccountAction *frontend.GetCommonsByAccountAction, AddContactFromB2BAction *frontend.AddContactFromB2BAction, uploadFromFileB2BDataAction *frontend.UploadFromFileB2BDataAction, searchB2BAction *frontend.SearchB2BAction, clearB2BTableAction *frontend.ClearB2BTableAction, getB2BInfoAction *frontend.GetB2BInfoAction, uploadB2BDataAction *frontend.UploadB2BDataAction, uploadContactsAction *frontend.UploadContactsAction, searchContactAction *frontend.SearchContactAction, deleteContactAction *frontend.DeleteContactAction, createOrUpdateContactAction *frontend.CreateOrUpdateContactAction, httpController *pipeline.HttpControllerImpl) *http_server.PalmauticHttpController {
 	r := &http_server.PalmauticHttpController{
 		HttpControllerImpl:             *httpController,
 		UploadContactsToSequenceAction: UploadContactsToSequenceAction,
 		AddContactToSequenceAction:     AddContactToSequenceAction,
 		StartSeqTestAction:             StartSeqTestAction,
+		GetSequenceStatsAction:         GetSequenceStatsAction,
+		GetCommonsAction:               GetCommonsAction,
 		SequenceScenarioLogAction:      SequenceScenarioLogAction,
 		ExportContactsAction:           ExportContactsAction,
 		DeleteSubordinateAction:        DeleteSubordinateAction,
@@ -437,29 +440,30 @@ func (c *DI) NewHttpController(UploadContactsToSequenceAction *frontend.UploadCo
 		UploadFromFileB2BDataAction:    uploadFromFileB2BDataAction,
 		GetNotificationsAction:         GetNotificationsAction,
 		AddContactFromB2BAction:        AddContactFromB2BAction,
-		GetCommonsAction:               GetCommonsAction,
-		GetTaskStatsAction:             GetTaskStatsAction,
-		SearchTaskAction:               SearchTaskAction,
-		ClearTasksAction:               ClearTasksAction,
-		SkipTaskAction:                 SkipTaskAction,
-		ExecuteTaskAction:              ExecuteTaskAction,
-		MarkRepliedTaskAction:          MarkRepliedTaskAction,
-		SearchSequenceAction:           SearchSequenceAction,
-		NotifyMessageOpenedAction:      NotifyMessageOpenedAction,
-		AddToSequenceFromB2BAction:     AddToSequenceFromB2BAction,
-		StartSequenceAction:            StartSequenceAction,
-		StopSequenceAction:             StopSequenceAction,
-		DeleteSequenceAction:           DeleteSequenceAction,
-		CreateOrUpdateFolderAction:     CreateOrUpdateFolderAction,
-		SearchFolderAction:             SearchFolderAction,
-		DeleteFolderAction:             DeleteFolderAction,
-		SendChatMsgAction:              SendChatMsgAction,
-		SearchChatMsgsAction:           SearchChatMsgsAction,
-		ClearChatAction:                ClearChatAction,
-		RegisterAccountAction:          RegisterAccountAction,
-		FindAccountAction:              FindAccountAction,
-		SetAccountEmailSettingsAction:  SetAccountSettingsAction,
-		WebhooksProcessorService:       WebhooksProcessorService,
+		GetCommonsByAccountAction:      GetCommonsByAccountAction,
+
+		GetTaskStatsAction:            GetTaskStatsAction,
+		SearchTaskAction:              SearchTaskAction,
+		ClearTasksAction:              ClearTasksAction,
+		SkipTaskAction:                SkipTaskAction,
+		ExecuteTaskAction:             ExecuteTaskAction,
+		MarkRepliedTaskAction:         MarkRepliedTaskAction,
+		SearchSequenceAction:          SearchSequenceAction,
+		NotifyMessageOpenedAction:     NotifyMessageOpenedAction,
+		AddToSequenceFromB2BAction:    AddToSequenceFromB2BAction,
+		StartSequenceAction:           StartSequenceAction,
+		StopSequenceAction:            StopSequenceAction,
+		DeleteSequenceAction:          DeleteSequenceAction,
+		CreateOrUpdateFolderAction:    CreateOrUpdateFolderAction,
+		SearchFolderAction:            SearchFolderAction,
+		DeleteFolderAction:            DeleteFolderAction,
+		SendChatMsgAction:             SendChatMsgAction,
+		SearchChatMsgsAction:          SearchChatMsgsAction,
+		ClearChatAction:               ClearChatAction,
+		RegisterAccountAction:         RegisterAccountAction,
+		FindAccountAction:             FindAccountAction,
+		SetAccountEmailSettingsAction: SetAccountSettingsAction,
+		WebhooksProcessorService:      WebhooksProcessorService,
 	}
 	r.Init()
 	return r
@@ -651,7 +655,13 @@ func (c *DI) NewSearchB2BAction(b2bService backend.IB2BService) *frontend.Search
 	}
 }
 
-func (c *DI) NewGetCommonsAction(commonsService backend.ICommonsService) *frontend.GetCommonsAction {
+func (c *DI) GetCommonsByAccountAction(commonsService backend.ICommonsService) *frontend.GetCommonsByAccountAction {
+	return &frontend.GetCommonsByAccountAction{
+		CommonsService: commonsService,
+	}
+}
+
+func (c *DI) GetCommonsAction(commonsService backend.ICommonsService) *frontend.GetCommonsAction {
 	return &frontend.GetCommonsAction{
 		CommonsService: commonsService,
 	}

@@ -7,6 +7,17 @@ import (
 	"salespalm/server/app/entities"
 )
 
+type GetCommonsByAccountAction struct {
+	pipeline.BaseActionImpl
+
+	CommonsService backend.ICommonsService
+}
+
+func (c *GetCommonsByAccountAction) Run(arg interface{}) (interface{}, error) {
+	cp := arg.(*entities2.CallParams)
+	return c.CommonsService.Commons(entities.ID(cp.GetAccountId())), nil
+}
+
 type GetCommonsAction struct {
 	pipeline.BaseActionImpl
 
@@ -14,8 +25,7 @@ type GetCommonsAction struct {
 }
 
 func (c *GetCommonsAction) Run(arg interface{}) (interface{}, error) {
-	cp := arg.(*entities2.CallParams)
-	return c.CommonsService.Commons(entities.ID(cp.Caller.Session.Account.ID)), nil
+	return c.CommonsService.Commons(entities.ID(-1)), nil
 }
 
 type GetNotificationsAction struct {

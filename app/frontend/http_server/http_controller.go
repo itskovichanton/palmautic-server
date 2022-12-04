@@ -40,6 +40,7 @@ type PalmauticHttpController struct {
 	UploadFromFileB2BDataAction    *frontend.UploadFromFileB2BDataAction
 	GetNotificationsAction         *frontend.GetNotificationsAction
 	AddContactFromB2BAction        *frontend.AddContactFromB2BAction
+	GetCommonsByAccountAction      *frontend.GetCommonsByAccountAction
 	GetCommonsAction               *frontend.GetCommonsAction
 	GetTaskStatsAction             *frontend.GetTaskStatsAction
 	SearchTaskAction               *frontend.SearchTaskAction
@@ -103,7 +104,9 @@ func (c *PalmauticHttpController) Init() {
 	c.EchoEngine.GET("/templates/clear", c.GetDefaultHandler(c.prepareAction(true, c.ClearTemplatesAction)))
 
 	// other
-	c.EchoEngine.GET("/commons", c.GetDefaultHandler(c.prepareAction(true, c.GetCommonsAction)))
+	c.EchoEngine.GET("/commons", c.GetDefaultHandler(c.prepareAction(true, c.GetCommonsByAccountAction)))
+	c.EchoEngine.GET("/commons_noauth", c.GetDefaultHandler(c.prepareAction(false, c.GetCommonsAction)))
+
 	c.EchoEngine.GET("/notifications", c.GetDefaultHandler(c.prepareAction(true, c.GetNotificationsAction)))
 	c.EchoEngine.GET("/getFile", c.GetHandlerByActionPresenter(&pipeline.ChainedActionImpl{
 		Actions: []pipeline.IAction{c.GetFileAction},

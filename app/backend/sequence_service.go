@@ -9,6 +9,7 @@ import (
 	"golang.org/x/exp/rand"
 	"golang.org/x/exp/slices"
 	"salespalm/server/app/entities"
+	"strings"
 	"time"
 )
 
@@ -24,9 +25,21 @@ type ISequenceService interface {
 	Delete(accountId entities.ID, sequenceIds []entities.ID)
 	SearchAll(accountId entities.ID) *SequenceSearchResult
 	StopAll(accountId entities.ID)
-	Stats(sequenceCreds entities.BaseEntity) ([]*ContactStats, error)
+	Stats(sequenceStatsSearchSettings *SequenceStatsQuery) (*SequenceStatsSearchResult, error)
 	AddContact(sequenceCreds entities.BaseEntity, contact *entities.Contact) error
 	UploadContacts(sequenceCreds entities.BaseEntity, iterator ContactIterator) error
+}
+
+type SequenceStatsQuery struct {
+	Creds          entities.BaseEntity
+	SearchSettings *SearchSettings
+	StepIndex      int
+	StatusId       string
+}
+
+type SequenceStatsSearchResult struct {
+	Items      []*ContactStats
+	TotalCount int
 }
 
 type ContactStats struct {
@@ -34,6 +47,7 @@ type ContactStats struct {
 	Stats     *entities.SequenceInstanceStats
 	StepIndex int
 	Status    entities.StrIDWithName
+	Order     int
 }
 
 type SequenceServiceImpl struct {
@@ -260,25 +274,64 @@ func (c *SequenceServiceImpl) calcContactsToAdd(contactFilters []*entities.Conta
 	return r
 }
 
-func (c *SequenceServiceImpl) Stats(sequenceCreds entities.BaseEntity) ([]*ContactStats, error) {
-	sequence := c.SequenceRepo.FindFirst(&entities.Sequence{BaseEntity: sequenceCreds})
+func (c *SequenceServiceImpl) Stats(q *SequenceStatsQuery) (*SequenceStatsSearchResult, error) {
+	sequence := c.SequenceRepo.FindFirst(&entities.Sequence{BaseEntity: q.Creds})
 	if sequence == nil {
 		return nil, errs.NewBaseErrorWithReason("Последовательность не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
 	}
 
 	var r []*ContactStats
 	sequence.Process.ByContactSyncMap.Range(func(contactId entities.ID, si *entities.SequenceInstance) bool {
-		contact := c.ContactService.FindFirst(&entities.Contact{BaseEntity: entities.BaseEntity{AccountId: sequenceCreds.AccountId, Id: contactId}})
+		contact := c.ContactService.FindFirst(&entities.Contact{BaseEntity: entities.BaseEntity{AccountId: sequence.AccountId, Id: contactId}})
 		if contact != nil {
 			_, currentTaskIndex := si.FindFirstNonFinalTask()
-			r = append(r, &ContactStats{
+			s := &ContactStats{
+				Order:     si.Order,
 				Contact:   contact,
 				Stats:     &si.Stats,
 				StepIndex: currentTaskIndex,
 				Status:    entities.SequenceStatus(&si.Stats),
-			})
+			}
+			if s.StepIndex < 0 { // если задача еще не назначена, это "шаг 1"
+				s.StepIndex = 0
+			}
+			if fitsForSearch(q, s) {
+				r = append(r, s)
+			}
 		}
 		return true
 	})
-	return r, nil
+	return &SequenceStatsSearchResult{Items: prepareStats(r, q.SearchSettings), TotalCount: len(r)}, nil
+}
+
+func fitsForSearch(q *SequenceStatsQuery, s *ContactStats) bool {
+	if q.StepIndex >= 0 && s.StepIndex != q.StepIndex {
+		return false
+	}
+	if len(q.StatusId) > 0 && !strings.Contains(q.StatusId, s.Status.Id) {
+		return false
+	}
+	if q.SearchSettings != nil {
+		query := strings.ToUpper(q.SearchSettings.Query)
+		if len(query) > 0 && !strings.Contains(strings.ToUpper(s.Contact.FullName()), query) && !strings.Contains(strings.ToUpper(s.Contact.Email), query) {
+			return false
+		}
+	}
+	return true
+}
+
+func prepareStats(result []*ContactStats, settings *SearchSettings) []*ContactStats {
+
+	// Сортируем, тк из мапа вытащили не отсортировано
+	slices.SortFunc(result, func(a, b *ContactStats) bool { return a.Order < b.Order })
+
+	// Пагинация
+	lastElemIndex := settings.Offset + settings.Count
+	if settings.Count > 0 && lastElemIndex < len(result) {
+		return result[settings.Offset:lastElemIndex]
+	} else if settings.Offset < len(result) {
+		return result[settings.Offset:]
+	}
+
+	return []*ContactStats{}
 }

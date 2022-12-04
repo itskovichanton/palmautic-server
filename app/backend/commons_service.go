@@ -35,6 +35,13 @@ type CommonsServiceImpl struct {
 }
 
 func (c *CommonsServiceImpl) Commons(accountId entities.ID) *Commons {
+	if accountId <= 0 {
+		return &Commons{
+			AccountSettings: c.AccountSettingsService.Commons(),
+			Tariffs:         c.TariffRepo.Commons(),
+			TimeZones:       c.TimeZoneService.All(),
+		}
+	}
 	return &Commons{
 		Tasks:           c.TaskService.Commons(accountId),
 		Sequences:       c.SequenceService.Commons(accountId),

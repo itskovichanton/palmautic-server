@@ -137,13 +137,18 @@ type GetSequenceStatsAction struct {
 
 func (c *GetSequenceStatsAction) Run(arg interface{}) (interface{}, error) {
 	cp := arg.(*entities2.CallParams)
-	sequenceId, err := validation.CheckInt64("id", cp.GetParamStr("id"))
-	if err != nil {
-		return nil, err
-	}
-	return c.SequenceService.Stats(entities.BaseEntity{
-		Id:        entities.ID(sequenceId),
-		AccountId: entities.ID(cp.Caller.Session.Account.ID),
+	return c.SequenceService.Stats(&backend.SequenceStatsQuery{
+		Creds: entities.BaseEntity{
+			Id:        entities.ID(cp.GetParamInt64("id", -1)),
+			AccountId: entities.ID(cp.Caller.Session.Account.ID),
+		},
+		SearchSettings: &backend.SearchSettings{
+			Query:  cp.GetParamStr("q"),
+			Offset: cp.GetParamInt("offset", 0),
+			Count:  cp.GetParamInt("count", 0),
+		},
+		StepIndex: cp.GetParamInt("stepIndex", -1),
+		StatusId:  cp.GetParamStr("statusId"),
 	})
 }
 

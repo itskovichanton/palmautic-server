@@ -216,6 +216,7 @@ func (p *SequenceProcess) Prepare() {
 type SequenceInstance struct {
 	Tasks []*Task
 	Stats SequenceInstanceStats
+	Order int
 }
 
 type SequenceInstanceStats struct {
