@@ -23,7 +23,12 @@ type IContactService interface {
 	Export(accountId entities.ID) (string, *filestorage.FileInfo, error)
 	Clear(accountId entities.ID)
 	Commons() *ContactCommons
-	DetectUploadingSchema(model []string) ([]*UploadSchemaItem, error)
+	DetectUploadingSchema(model []string) (*UploadSchema, error)
+}
+
+type UploadSchema struct {
+	Items     []*UploadSchemaItem
+	Separator string
 }
 
 type UploadSchemaItem struct {
@@ -115,7 +120,7 @@ func (c *ContactServiceImpl) Export(accountId entities.ID) (string, *filestorage
 	}(csvFile)
 
 	csvwriter := csv.NewWriter(csvFile)
-	csvwriter.Write([]string{"Имя", "Фамилия", "Должность", "Компания", "Email", "Телефон", "Linkedin"})
+	csvwriter.Write([]string{"Имя", "Фамилия", "Должность", "Компания", "email", "Телефон", "linkedin"})
 	for _, contact := range c.Search(&entities.Contact{BaseEntity: entities.BaseEntity{AccountId: accountId}}, nil).Items {
 		_ = csvwriter.Write([]string{contact.FirstName, contact.LastName, contact.Job, contact.Company, contact.Email, contact.Phone, contact.Linkedin})
 	}
@@ -138,14 +143,14 @@ func (c *ContactServiceImpl) Upload(accountId entities.ID, iterator ContactItera
 		}
 		contact.AccountId = accountId
 		err = c.ContactRepo.CreateOrUpdate(contact)
-		if err != nil {
+		if err == nil {
 			createdIds = append(createdIds, contact.Id)
 		}
 	}
 	return createdIds, nil
 }
 
-func (c *ContactServiceImpl) DetectUploadingSchema(model []string) ([]*UploadSchemaItem, error) {
+func (c *ContactServiceImpl) DetectUploadingSchema(model []string) (*UploadSchema, error) {
 	if len(model) < 2 {
 		return nil, errs.NewBaseErrorWithReason("Видимо, файл пустой", frmclient.ReasonServerRespondedWithError)
 	}
@@ -172,12 +177,15 @@ func (c *ContactServiceImpl) DetectUploadingSchema(model []string) ([]*UploadSch
 		})
 	}
 
-	return r, nil
+	return &UploadSchema{Items: r, Separator: separator}, nil
 }
 
 func (c *ContactServiceImpl) detectContactFieldId(fileField string) string {
 	index := slices.IndexFunc(c.Fields, func(f *entities.StrIDWithName) bool {
-		if strings.Contains(strings.ToUpper(fileField), strings.ToUpper(f.Name)) {
+		if strings.Contains(strings.ToUpper(fileField), strings.ToUpper(f.Id)) || strings.Contains(strings.ToUpper(fileField), strings.ToUpper(f.Name)) {
+			return true
+		}
+		if len(entities.DetectVariant(fileField, f.Id, f.Id, f.Name)) > 0 {
 			return true
 		}
 		if f.Id == "FirstName" && len(entities.DetectVariant(fileField, f.Id, "имя", "first", "фио", "first")) > 0 {
@@ -187,9 +195,6 @@ func (c *ContactServiceImpl) detectContactFieldId(fileField string) string {
 			return true
 		}
 		if f.Id == "Job" && len(entities.DetectVariant(fileField, f.Id, "работ", "должн", "позици", "titl")) > 0 {
-			return true
-		}
-		if f.Id == "Phone" && len(entities.DetectVariant(fileField, f.Id, "телеф", "номер")) > 0 {
 			return true
 		}
 		if f.Id == "Phone" && len(entities.DetectVariant(fileField, f.Id, "телеф", "номер")) > 0 {

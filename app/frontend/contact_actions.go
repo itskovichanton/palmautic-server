@@ -84,7 +84,15 @@ func (c *UploadContactsAction) Run(arg interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.ContactService.Upload(entities.ID(cp.Caller.Session.Account.ID), backend.NewContactCSVIterator(f))
+
+	schemaStr := cp.GetParamStr("schema")
+	var schema backend.UploadSchema
+	err = json.Unmarshal([]byte(schemaStr), &schema)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.ContactService.Upload(entities.ID(cp.Caller.Session.Account.ID), backend.NewContactCSVIterator(f, &schema))
 }
 
 type ExportContactsAction struct {

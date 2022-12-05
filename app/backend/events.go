@@ -18,6 +18,7 @@ func InMailBouncedEventTopic(creds FindEmailOrderCreds) string {
 }
 
 const ContactDeletedEventTopic = "contact-deleted"
+const ContactRemovedFromSequenceEventTopic = "contact-removed-from-sequence"
 const EmailReplyReceivedEventTopic = "inmail-received"
 const SequenceFinishedEventTopic = "sequence-finished"
 const EmailBouncedEventTopic = "email-bounced"

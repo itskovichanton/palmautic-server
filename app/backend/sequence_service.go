@@ -28,6 +28,7 @@ type ISequenceService interface {
 	Stats(sequenceStatsSearchSettings *SequenceStatsQuery) (*SequenceStatsSearchResult, error)
 	AddContact(sequenceCreds entities.BaseEntity, contact *entities.Contact) error
 	UploadContacts(sequenceCreds entities.BaseEntity, iterator ContactIterator) error
+	RemoveContact(sequenceCreds entities.BaseEntity, contactIds []entities.ID) error
 }
 
 type SequenceStatsQuery struct {
@@ -111,12 +112,12 @@ func (c *SequenceServiceImpl) AddContacts(sequenceCreds entities.BaseEntity, con
 		contactFilters = append(contactFilters, &entities.Contact{BaseEntity: entities.BaseEntity{Id: contactId, AccountId: sequence.AccountId}})
 	}
 
+	contactsToAdd := c.calcContactsToAdd(contactFilters, sequence)
+
+	// добавляем контакты, но не запускаем для них последовательность
+	c.SequenceRunnerService.AddContacts(sequence, contactsToAdd)
+
 	go func() {
-		contactsToAdd := c.calcContactsToAdd(contactFilters, sequence)
-
-		// добавляем контакты, но не запускаем для них последовательность
-		c.SequenceRunnerService.AddContacts(sequence, contactsToAdd)
-
 		// запускаем последовательности для контактов лесенкой - с делеем, а не скопом
 		for _, contact := range contactsToAdd {
 			c.SequenceRunnerService.Run(sequence, contact, false)
@@ -339,4 +340,18 @@ func prepareStats(result []*ContactStats, settings *SearchSettings) []*ContactSt
 	}
 
 	return []*ContactStats{}
+}
+
+func (c *SequenceServiceImpl) RemoveContact(sequenceCreds entities.BaseEntity, contactIds []entities.ID) error {
+
+	sequence := c.SequenceRepo.FindFirst(&entities.Sequence{BaseEntity: sequenceCreds})
+	if sequence == nil {
+		return errs.NewBaseErrorWithReason("Последовательность не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
+	}
+
+	for _, contactId := range contactIds {
+		c.EventBus.Publish(ContactRemovedFromSequenceEventTopic, sequence, entities.BaseEntity{Id: contactId, AccountId: sequence.AccountId})
+	}
+
+	return nil
 }

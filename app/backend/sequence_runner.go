@@ -140,7 +140,6 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 
 		logger.Result(ld, "Готово к выполнению")
 		logger.Print(lg, ld)
-
 		logger.Subject(ld, "Касания")
 
 		taskUpdateChan := make(chan bool)
@@ -240,9 +239,10 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			}
 		}, true)
 
-		c.EventBus.SubscribeAsync(ContactDeletedEventTopic, func(contactCreds entities.BaseEntity) {
+		c.EventBus.SubscribeMultiAsync([]string{ContactRemovedFromSequenceEventTopic, ContactDeletedEventTopic}, func(contactCreds entities.BaseEntity) {
 			if contactCreds.Equals(contact.BaseEntity) {
-				stoppedForContact.Store(true) // Если контакт удален - останавливаем для него последовательность
+				// Если контакт удален - останавливаем для него последовательность
+				stoppedForContact.Store(true)
 			}
 		}, true)
 

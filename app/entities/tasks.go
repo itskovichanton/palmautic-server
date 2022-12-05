@@ -83,7 +83,7 @@ var (
 	TaskTypeAutoEmail = &TaskType{
 		Creds: &NameAndTitle{
 			Name:  "auto_email",
-			Title: "Автоматический Email",
+			Title: "Автоматический email",
 		},
 		Actions: []*TaskAction{{
 			Name:  "send_letter",
@@ -94,7 +94,7 @@ var (
 	TaskTypeManualEmail = &TaskType{
 		Creds: &NameAndTitle{
 			Name:  "manual_email",
-			Title: "Мануальный Email",
+			Title: "Мануальный email",
 		},
 		Actions: []*TaskAction{{
 			Name:  "send_letter",
@@ -138,7 +138,7 @@ var (
 	TaskTypeLinkedin = &TaskType{
 		Creds: &NameAndTitle{
 			Name:  "linkedin",
-			Title: "Linkedin",
+			Title: "linkedin",
 		},
 		Actions: []*TaskAction{{
 			Name:  "view_profile",
@@ -175,12 +175,12 @@ const (
 func calcLinkedinTaskDescription(t *Task) string {
 	switch t.Action {
 	case "view_profile":
-		return `Зайти на страницу профиля Linkedin и подписаться <a target="_blank" href="{{.Contact.Linkedin}}">{{.Contact.Linkedin}}</a>`
+		return `Зайти на страницу профиля linkedin и подписаться <a target="_blank" href="{{.Contact.linkedin}}">{{.Contact.linkedin}}</a>`
 	case "private_msg":
-		return `Написать личное сообщение профилю <a target="_blank" href="{{.Contact.Linkedin}}">{{.Contact.Linkedin}}</a>`
+		return `Написать личное сообщение профилю <a target="_blank" href="{{.Contact.linkedin}}">{{.Contact.linkedin}}</a>`
 	}
 
-	return `Зайти на страницу профиля Linkedin и написать InMail <a target="_blank" href="{{.Contact.Linkedin}}">{{.Contact.Linkedin}}</a>`
+	return `Зайти на страницу профиля linkedin и написать InMail <a target="_blank" href="{{.Contact.linkedin}}">{{.Contact.linkedin}}</a>`
 }
 
 func calcLinkedinTaskName(t *Task) string {
@@ -244,15 +244,15 @@ func calcDescription(t *Task) string {
 
 	switch t.Type {
 	case TaskTypeWhatsapp.Creds.Name:
-		return fmt.Sprintf(`Написать в личное сообщение Whatsapp: <a target="_blank" href="%v">{{.Contact.Phone}}</a>`, FormatUrl("https://wa.me", t.Contact.Phone))
+		return fmt.Sprintf(`Написать в личное сообщение Whatsapp: <a target="_blank" href="%v">{{.Contact.phone}}</a>`, FormatUrl("https://wa.me", t.Contact.Phone))
 	case TaskTypeTelegram.Creds.Name:
-		return fmt.Sprintf(`Написать в личное сообщение Telegram: <a target="_blank" href="%v">{{.Contact.Phone}}</a>`, FormatUrl("https://t.me", t.Contact.Phone))
+		return fmt.Sprintf(`Написать в личное сообщение Telegram: <a target="_blank" href="%v">{{.Contact.phone}}</a>`, FormatUrl("https://t.me", t.Contact.Phone))
 	case TaskTypeCall.Creds.Name:
-		return "Позвонить по номеру телефона {{.Contact.Phone}}. Настройся на продуктивный лад 😊"
+		return "Позвонить по номеру телефона {{.Contact.phone}}. Настройся на продуктивный лад 😊"
 	case TaskTypeLinkedin.Creds.Name:
 		return calcLinkedinTaskDescription(t)
 	case TaskTypeManualEmail.Creds.Name:
-		return "Отправить письмо для {{.Contact.FirstName}} {{.Contact.LastName}} на {{.Contact.Email}}"
+		return "Отправить письмо для {{.Contact.firstName}} {{.Contact.LastName}} на {{.Contact.email}}"
 	}
 
 	return ""

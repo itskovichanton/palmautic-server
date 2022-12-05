@@ -1,6 +1,7 @@
 package frontend
 
 import (
+	"encoding/json"
 	"github.com/itskovichanton/core/pkg/core/validation"
 	"github.com/itskovichanton/goava/pkg/goava/utils"
 	entities2 "github.com/itskovichanton/server/pkg/server/entities"
@@ -10,19 +11,6 @@ import (
 	"salespalm/server/app/backend"
 	"salespalm/server/app/entities"
 )
-
-//
-//type DeleteSequenceAction struct {
-//	pipeline.BaseActionImpl
-//
-//	SequenceService backend.ISequenceService
-//}
-//
-//func (c *DeleteSequenceAction) Run(arg interface{}) (interface{}, error) {
-//	p := arg.(*RetrievedEntityParams)
-//	Sequence := p.Entity.(*entities.Sequence)
-//	return c.SequenceService.Delete(Sequence)
-//}
 
 type CreateOrUpdateSequenceAction struct {
 	pipeline.BaseActionImpl
@@ -152,6 +140,28 @@ func (c *GetSequenceStatsAction) Run(arg interface{}) (interface{}, error) {
 	})
 }
 
+type RemoveContactFromSequenceAction struct {
+	pipeline.BaseActionImpl
+
+	SequenceService backend.ISequenceService
+}
+
+func (c *RemoveContactFromSequenceAction) Run(arg interface{}) (interface{}, error) {
+	p := arg.(*entities2.CallParams)
+	sequenceId, err := validation.CheckInt64("id", p.GetParamStr("id"))
+	if err != nil {
+		return nil, err
+	}
+	err = c.SequenceService.RemoveContact(
+		entities.BaseEntity{
+			AccountId: entities.ID(p.Caller.Session.Account.ID),
+			Id:        entities.ID(sequenceId),
+		},
+		entities.Ids(p.GetParamStr("contactIds")),
+	)
+	return "Контакты удалены из последовательности", err
+}
+
 type AddContactToSequenceAction struct {
 	pipeline.BaseActionImpl
 
@@ -179,6 +189,7 @@ type UploadContactsToSequenceAction struct {
 }
 
 func (c *UploadContactsToSequenceAction) Run(arg interface{}) (interface{}, error) {
+
 	cp := arg.(*entities2.CallParams)
 	sequenceId, err := validation.CheckInt64("id", cp.GetParamStr("id"))
 	if err != nil {
@@ -188,9 +199,19 @@ func (c *UploadContactsToSequenceAction) Run(arg interface{}) (interface{}, erro
 	if err != nil {
 		return nil, err
 	}
+
+	schemaStr := cp.GetParamStr("schema")
+	var schema backend.UploadSchema
+	err = json.Unmarshal([]byte(schemaStr), &schema)
+	if err != nil {
+		return nil, err
+	}
+
 	return c.SequenceService.UploadContacts(
 		entities.BaseEntity{
 			AccountId: entities.ID(cp.Caller.Session.Account.ID),
 			Id:        entities.ID(sequenceId),
-		}, backend.NewContactCSVIterator(f)), nil
+		},
+		backend.NewContactCSVIterator(f, &schema),
+	), nil
 }
