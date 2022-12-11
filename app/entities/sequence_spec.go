@@ -3,6 +3,8 @@ package entities
 type SequenceSpecModel struct {
 	Steps      []*Task
 	ContactIds []ID
+	Schedule   []ScheduleItem
+	Settings   *Settings
 }
 
 type ScheduleItem []string
@@ -17,6 +19,4 @@ type SequenceSpec struct {
 	FolderID          ID
 	TimeZoneId        int
 	Model             *SequenceSpecModel
-	Schedule          []ScheduleItem
-	Settings          *Settings
 }

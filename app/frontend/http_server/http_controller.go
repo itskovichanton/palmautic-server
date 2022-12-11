@@ -96,7 +96,7 @@ func (c *PalmauticHttpController) Init() {
 	c.EchoEngine.POST("/sequences/createOrUpdate", c.GetDefaultHandler(c.prepareAction(true, c.readSequenceSpec(), c.CreateOrUpdateSequenceAction)))
 	c.EchoEngine.POST("/sequences/create/log", c.GetDefaultHandler(c.prepareAction(true, c.readSequenceSpec(), c.SequenceScenarioLogAction)))
 	c.EchoEngine.GET("/sequences/addContacts", c.GetDefaultHandler(c.prepareAction(true, c.AddContactsToSequenceAction)))
-	c.EchoEngine.POST("/sequences/addContact", c.GetDefaultHandler(c.prepareAction(true, c.AddContactToSequenceAction)))
+	c.EchoEngine.POST("/sequences/addContact", c.GetDefaultHandler(c.prepareAction(true, c.readContact(), c.AddContactToSequenceAction)))
 	c.EchoEngine.POST("/sequences/search", c.GetDefaultHandler(c.prepareAction(true, c.readSequence(), c.SearchSequenceAction)))
 	c.EchoEngine.GET("/sequences/stop", c.GetDefaultHandler(c.prepareAction(true, c.StopSequenceAction)))
 	c.EchoEngine.GET("/sequences/start", c.GetDefaultHandler(c.prepareAction(true, c.StartSequenceAction)))

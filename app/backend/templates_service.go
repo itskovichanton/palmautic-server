@@ -18,7 +18,7 @@ import (
 type ITemplateService interface {
 	Format(template string, accountId entities.ID, args map[string]interface{}) string
 	Templates(accountId entities.ID) TemplatesMap
-	CreateOrUpdate(entity entities.IBaseEntity, body string, arg ...interface{}) string
+	CreateOrUpdate(entity entities.IBaseEntity, body string, arg ...interface{}) (string, error)
 	Clear(accountId entities.ID)
 	Commons(accountId entities.ID) *TemplateCommons
 }
@@ -40,7 +40,7 @@ func (c *TemplateServiceImpl) Clear(accountId entities.ID) {
 	c.templates.Delete(entities.IDStr(accountId))
 }
 
-func (c *TemplateServiceImpl) CreateOrUpdate(entity entities.IBaseEntity, body string, arg ...interface{}) string {
+func (c *TemplateServiceImpl) CreateOrUpdate(entity entities.IBaseEntity, body string, arg ...interface{}) (string, error) {
 
 	prefix := strings.ToLower(reflect.ValueOf(entity).Type().Elem().Name())
 	postfix := strings.Join(cast.ToStringSlice(arg), "_")
@@ -55,11 +55,11 @@ func (c *TemplateServiceImpl) CreateOrUpdate(entity entities.IBaseEntity, body s
 	templateFullFileName := filepath.Join(c.calcTemplateForAccountDir(entity), templateFileName)
 	err := os.WriteFile(templateFullFileName, []byte(body), 0755)
 	if err != nil {
-		templateFullFileName = ""
+		return templateFullFileName, err
 	}
 	templateName := calcTemplateName(templateFileName)
 	c.Templates(entity.GetAccountId())[templateName] = body
-	return templateName
+	return templateName, nil
 
 }
 

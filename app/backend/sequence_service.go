@@ -117,31 +117,17 @@ func (c *SequenceServiceImpl) AddContacts(sequenceCreds entities.BaseEntity, con
 	// добавляем контакты, но не запускаем для них последовательность
 	c.SequenceRunnerService.AddContacts(sequence, contactsToAdd)
 
-	go func() {
-		// запускаем последовательности для контактов лесенкой - с делеем, а не скопом
-		for _, contact := range contactsToAdd {
-			c.SequenceRunnerService.Run(sequence, contact, false)
-			time.Sleep(3 * time.Second)
-		}
-	}()
-
+	if len(contactsToAdd) > 0 {
+		go func() {
+			// запускаем последовательности для контактов лесенкой - с делеем, а не скопом
+			for _, contact := range contactsToAdd {
+				c.SequenceRunnerService.Run(sequence, contact, false)
+				time.Sleep(3 * time.Second)
+			}
+		}()
+	}
 	return nil
 }
-
-/*
-func (c *SequenceServiceImpl) Delete(filter *entities.Sequence) (*entities.Sequence, error) {
-	SequenceContainer := c.SequenceService.All(filter)
-	if len(SequenceContainer) == 0 {
-		return nil, errs.NewBaseErrorWithReason("Задача не найдена", frmclient.ReasonServerRespondedWithErrorNotFound)
-	}
-	Sequence := SequenceContainer[0]
-	if Sequence.Status == entities.SequenceStatusStarted {
-		return nil, errs.NewBaseErrorWithReason("Задача активна - ее нельзя удалить", frmclient.ReasonValidation)
-	}
-	deleted := c.SequenceService.Delete(Sequence)
-	return deleted, nil
-}
-*/
 
 func (c *SequenceServiceImpl) Start(accountId entities.ID, sequenceIds []entities.ID) {
 	for _, sequenceId := range sequenceIds {
@@ -191,37 +177,21 @@ func (c *SequenceServiceImpl) CreateOrUpdate(spec *entities.SequenceSpec) (*enti
 		}
 		sequence.Spec = spec
 	} else {
-		sequence = &entities.Sequence{BaseEntity: spec.BaseEntity, Spec: spec}
-		c.SequenceRepo.CreateOrUpdate(sequence)
+		sequence = &entities.Sequence{BaseEntity: spec.BaseEntity, Spec: spec, Name: spec.Name}
+		err := c.SequenceRepo.CreateOrUpdate(sequence)
+		if err != nil {
+			return sequence, nil, err
+		}
 	}
+
+	// Перестраиваем структуру
 	updatedTemplates, err := c.SequenceBuilderService.Rebuild(sequence)
 
 	if err == nil {
 		err = c.AddContacts(sequence.BaseEntity, spec.Model.ContactIds)
 	}
-	return sequence, updatedTemplates, err
-	//
-	//// сохраняем как есть
-	//c.SequenceRepo.CreateOrUpdate(sequence)
-	//
-	//// сохраняем все боди у писем в шаблоны
-	//usedTemplates := TemplatesMap{}
-	//for stepIndex, step := range sequence.Model.Steps {
-	//	if step.HasTypeEmail() {
-	//		if !strings.HasPrefix(step.Body, "template") {
-	//			// сохраняем шаблон в папку
-	//			templateName := c.TemplateService.CreateOrUpdate(sequence, step.Body, fmt.Sprintf("step%v", stepIndex))
-	//			usedTemplates[templateName] = step.Body
-	//			if len(templateName) > 0 {
-	//				step.Body = "template:" + templateName
-	//			}
-	//		}
-	//	}
-	//}
-	//
-	//c.SequenceRepo.CreateOrUpdate(sequence)
-	//return sequence, usedTemplates, nil
 
+	return sequence, updatedTemplates, err
 }
 
 func (c *SequenceServiceImpl) Init() {

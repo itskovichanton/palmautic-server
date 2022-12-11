@@ -8,6 +8,7 @@ import (
 type Task struct {
 	BaseEntity
 
+	Delay                                           int
 	Name                                            string
 	Description                                     string
 	Type                                            string

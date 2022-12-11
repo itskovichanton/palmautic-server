@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"github.com/itskovichanton/goava/pkg/goava/errs"
 	"golang.org/x/exp/maps"
 	"salespalm/server/app/entities"
 	"strings"
@@ -10,7 +11,7 @@ import (
 type ISequenceRepo interface {
 	Search(filter *entities.Sequence, settings *SequenceSearchSettings) *SequenceSearchResult
 	//Delete(filter *entities.Sequence) *entities.Sequence
-	CreateOrUpdate(sequence *entities.Sequence)
+	CreateOrUpdate(sequence *entities.Sequence) error
 	Commons() *entities.SequenceCommons
 	GetByIndex(accountId entities.ID, index int) *entities.Sequence
 	FindFirst(filter *entities.Sequence) *entities.Sequence
@@ -19,6 +20,7 @@ type ISequenceRepo interface {
 
 type SequenceSearchSettings struct {
 	Offset, Count int
+	Exact         bool
 }
 
 type SequenceRepoImpl struct {
@@ -91,10 +93,10 @@ func (c *SequenceRepoImpl) Search(filter *entities.Sequence, settings *SequenceS
 	if filter.AccountId == 0 {
 		for accountId, _ := range c.DBService.DBContent().GetSequenceContainer().Sequences {
 			filter.AccountId = accountId
-			r = append(r, c.searchForAccount(filter)...)
+			r = append(r, c.searchForAccount(filter, settings)...)
 		}
 	} else {
-		r = c.searchForAccount(filter)
+		r = c.searchForAccount(filter, settings)
 	}
 	return c.applySettings(r, settings)
 }
@@ -115,7 +117,7 @@ func (c *SequenceRepoImpl) applySettings(r []*entities.Sequence, settings *Seque
 	return result
 }
 
-func (c *SequenceRepoImpl) searchForAccount(filter *entities.Sequence) []*entities.Sequence {
+func (c *SequenceRepoImpl) searchForAccount(filter *entities.Sequence, settings *SequenceSearchSettings) []*entities.Sequence {
 
 	//c.lock2.Lock()
 	//defer c.lock2.Unlock()
@@ -143,8 +145,12 @@ func (c *SequenceRepoImpl) searchForAccount(filter *entities.Sequence) []*entiti
 			fits = false
 		} else if filter.FolderID > 0 && t.FolderID != filter.FolderID {
 			fits = false
-		} else if len(filter.Name) > 0 && !strings.Contains(strings.ToUpper(t.Name), strings.ToUpper(filter.Name)) {
-			fits = false
+		} else if len(filter.Name) > 0 {
+			if !settings.Exact && !strings.Contains(strings.ToUpper(t.Name), strings.ToUpper(filter.Name)) {
+				fits = false
+			} else if settings.Exact && !strings.EqualFold(t.Name, filter.Name) {
+				fits = false
+			}
 		}
 		if fits {
 			t.Refresh()
@@ -165,7 +171,12 @@ func (c *SequenceRepoImpl) searchForAccount(filter *entities.Sequence) []*entiti
 //	return deleted
 //}
 
-func (c *SequenceRepoImpl) CreateOrUpdate(sequence *entities.Sequence) {
+func (c *SequenceRepoImpl) CreateOrUpdate(sequence *entities.Sequence) error {
+
+	searchResult := c.Search(sequence, &SequenceSearchSettings{Exact: true})
+	if len(searchResult.Items) > 0 {
+		return errs.NewBaseError("Последовательность с этим именем уже существует")
+	}
 
 	c.Lock()
 	defer c.Unlock()
@@ -175,6 +186,8 @@ func (c *SequenceRepoImpl) CreateOrUpdate(sequence *entities.Sequence) {
 	}
 	c.DBService.DBContent().IDGenerator.AssignId(sequence)
 	c.DBService.DBContent().GetSequenceContainer().Sequences.ForAccount(sequence.AccountId)[sequence.Id] = sequence
+
+	return nil
 }
 
 func (c *SequenceRepoImpl) Commons() *entities.SequenceCommons {

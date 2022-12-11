@@ -50,6 +50,10 @@ func (c *SequenceRunnerServiceImpl) Init() {
 			return true
 		})
 	}
+
+	c.EventBus.SubscribeAsync(SequenceUpdatedEventTopic, func(updatedSequence *entities.Sequence) {
+		// если есть люди в последе - стопаем перестраиваем и запускаем
+	}, true)
 }
 
 func (c *SequenceRunnerServiceImpl) AddContacts(sequence *entities.Sequence, contacts []*entities.Contact) {
@@ -253,7 +257,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			// После окончания процесса - отписываемся от событий
 			c.EventBus.UnsubscribeMultiAll(
 				[]string{
-					EmailSentEventTopic, EmailOpenedEventTopic, EmailReopenedEventTopic, ContactDeletedEventTopic,
+					ContactRemovedFromSequenceEventTopic, EmailSentEventTopic, EmailOpenedEventTopic, EmailReopenedEventTopic, ContactDeletedEventTopic,
 					InMailReceivedEventTopic(NewFindEmailOrderCreds(
 						&EntityIds{SequenceId: sequence.Id, ContactId: contact.Id, AccountId: sequence.AccountId}),
 					)})
