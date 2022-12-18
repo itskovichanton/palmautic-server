@@ -4,6 +4,7 @@ import (
 	"github.com/itskovichanton/core/pkg/core/validation"
 	"github.com/itskovichanton/goava/pkg/goava/utils/case_insensitive"
 	"github.com/spf13/cast"
+	"strings"
 )
 
 type ID int64
@@ -64,7 +65,7 @@ func (c Contact) SeemsLike(contact *Contact) bool {
 }
 
 func (c Contact) FullName() string {
-	return c.FirstName + " " + c.LastName
+	return strings.TrimSpace(c.FirstName + " " + c.LastName)
 }
 
 type NameAndTitle struct {

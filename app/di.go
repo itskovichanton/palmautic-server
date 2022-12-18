@@ -797,13 +797,14 @@ func (c *DI) NewContactService(EventBus EventBus.Bus, FileStorageService filesto
 	return r
 }
 
-func (c *DI) NewSequenceService(SequenceBuilderService backend.ISequenceBuilderService, EventBus EventBus.Bus, TemplateService backend.ITemplateService, ContactService backend.IContactService, SequenceRunnerService backend.ISequenceRunnerService, sequenceRepo backend.ISequenceRepo) backend.ISequenceService {
+func (c *DI) NewSequenceService(Config *core.Config, SequenceBuilderService backend.ISequenceBuilderService, EventBus EventBus.Bus, TemplateService backend.ITemplateService, ContactService backend.IContactService, SequenceRunnerService backend.ISequenceRunnerService, sequenceRepo backend.ISequenceRepo) backend.ISequenceService {
 	r := &backend.SequenceServiceImpl{
 		SequenceRepo:           sequenceRepo,
 		ContactService:         ContactService,
 		SequenceRunnerService:  SequenceRunnerService,
 		TemplateService:        TemplateService,
 		SequenceBuilderService: SequenceBuilderService,
+		Config:                 Config,
 		EventBus:               EventBus,
 	}
 	r.Init()

@@ -76,7 +76,7 @@ func (c *DBServiceImpl) Init() error {
 	if err != nil {
 		return err
 	}
-	c.startPeriodicSavings()
+	//c.startPeriodicSavings()
 	return nil
 }
 

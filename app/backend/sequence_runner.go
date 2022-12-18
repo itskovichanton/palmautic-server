@@ -51,9 +51,6 @@ func (c *SequenceRunnerServiceImpl) Init() {
 		})
 	}
 
-	c.EventBus.SubscribeAsync(SequenceUpdatedEventTopic, func(updatedSequence *entities.Sequence) {
-		// если есть люди в последе - стопаем перестраиваем и запускаем
-	}, true)
 }
 
 func (c *SequenceRunnerServiceImpl) AddContacts(sequence *entities.Sequence, contacts []*entities.Contact) {
@@ -147,6 +144,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 		logger.Subject(ld, "Касания")
 
 		taskUpdateChan := make(chan bool)
+		stopChan := make(chan bool)
 
 		c.EventBus.SubscribeAsync(
 			InMailBouncedEventTopic(NewFindEmailOrderCreds(&EntityIds{SequenceId: sequence.Id, ContactId: contact.Id, AccountId: sequence.AccountId})),
@@ -246,6 +244,9 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 		c.EventBus.SubscribeMultiAsync([]string{ContactRemovedFromSequenceEventTopic, ContactDeletedEventTopic}, func(contactCreds entities.BaseEntity) {
 			if contactCreds.Equals(contact.BaseEntity) {
 				// Если контакт удален - останавливаем для него последовательность
+				if stopChan != nil {
+					stopChan <- true
+				}
 				stoppedForContact.Store(true)
 			}
 		}, true)
@@ -304,6 +305,7 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 				logger.Action(ld, fmt.Sprintf("Создание задачи для шага %v", currentTaskNumber))
 
 				currentTask, _ = c.TaskService.CreateOrUpdate(currentTask)
+				c.prepareTask(currentTask, sequence, currentTaskIndex, contactProcess.Tasks)
 				contactProcess.Tasks[currentTaskIndex] = currentTask
 			}
 
@@ -354,7 +356,9 @@ func (c *SequenceRunnerServiceImpl) Run(sequence *entities.Sequence, contact *en
 			case <-taskUpdateChan:
 				taskReactionReceived = true
 				break
-			case <-time.After(timeOutDuration):
+			//case <-time.After(timeOutDuration):
+			//	break
+			case <-stopChan:
 				break
 			}
 
@@ -429,7 +433,7 @@ func (c *SequenceRunnerServiceImpl) buildProcess(sequence *entities.Sequence, co
 	sequence.Process.ByContactSyncMap.Store(contact.Id, sequenceInstance)
 	steps := sequence.Model.Steps
 	stepsCount := len(steps)
-	var lastDueTime time.Time
+	//var lastDueTime time.Time
 
 	for stepIndex := 0; stepIndex < stepsCount; stepIndex++ {
 
@@ -447,15 +451,15 @@ func (c *SequenceRunnerServiceImpl) buildProcess(sequence *entities.Sequence, co
 		c.lock.Lock()
 		copier.Copy(currentTask, currentStep)
 		c.lock.Unlock()
-
-		timeForTask := currentStep.DueTime.Sub(currentStep.StartTime)
-		if stepIndex == 0 {
-			currentTask.StartTime = time.Now()
-		} else {
-			currentTask.StartTime = lastDueTime
-		}
-		currentTask.DueTime = currentTask.StartTime.Add(timeForTask)
-		lastDueTime = currentTask.DueTime
+		//
+		//timeForTask := currentStep.DueTime.Sub(currentStep.StartTime)
+		//if stepIndex == 0 {
+		//	currentTask.StartTime = time.Now() ---------------------- МОГУ УДЛАЛИТЬ?
+		//} else {
+		//	currentTask.StartTime = lastDueTime
+		//}
+		//currentTask.DueTime = currentTask.StartTime.Add(timeForTask)
+		//lastDueTime = currentTask.DueTime
 
 		// Добавляем таск
 		sequenceInstance.Tasks = append(sequenceInstance.Tasks, currentTask)
@@ -511,4 +515,16 @@ func (c *SequenceRunnerServiceImpl) enqueueInMail(sequence *entities.Sequence, c
 			From: []string{contact.Email, "daemon"}, //contact.Email,
 		},
 	)
+}
+
+func (c *SequenceRunnerServiceImpl) prepareTask(task *entities.Task, sequence *entities.Sequence, taskIndex int, tasks []*entities.Task) {
+	task.StartTime = time.Now()
+	if taskIndex == 0 {
+		task.StartTime = task.StartTime.Add(time.Duration(task.Delay) * time.Second)
+	}
+	timeForTask := time.Hour * 24 * 365
+	if taskIndex < len(tasks)-1 {
+		timeForTask = time.Duration(tasks[taskIndex+1].Delay) * time.Second
+	}
+	task.DueTime = sequence.Spec.Model.AdjustToSchedule(task.StartTime.Add(timeForTask))
 }

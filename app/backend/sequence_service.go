@@ -2,6 +2,7 @@ package backend
 
 import (
 	"github.com/asaskevich/EventBus"
+	"github.com/itskovichanton/core/pkg/core"
 	"github.com/itskovichanton/core/pkg/core/frmclient"
 	"github.com/itskovichanton/goava/pkg/goava/errs"
 	"github.com/itskovichanton/goava/pkg/goava/utils"
@@ -60,6 +61,7 @@ type SequenceServiceImpl struct {
 	TemplateService        ITemplateService
 	EventBus               EventBus.Bus
 	SequenceBuilderService ISequenceBuilderService
+	Config                 *core.Config
 }
 
 func (c *SequenceServiceImpl) UploadContacts(sequenceCreds entities.BaseEntity, iterator ContactIterator) error {
@@ -152,6 +154,12 @@ func (c *SequenceServiceImpl) Start(accountId entities.ID, sequenceIds []entitie
 	}
 }
 
+func (c *SequenceServiceImpl) Restart(accountId entities.ID, sequenceIds []entities.ID) {
+	c.Stop(accountId, sequenceIds)
+	time.Sleep(10 * time.Second)
+	c.Start(accountId, sequenceIds)
+}
+
 func (c *SequenceServiceImpl) Stop(accountId entities.ID, sequenceIds []entities.ID) {
 	for _, sequenceId := range sequenceIds {
 		seq := c.SequenceRepo.FindFirst(&entities.Sequence{BaseEntity: entities.BaseEntity{AccountId: accountId, Id: sequenceId}})
@@ -197,6 +205,11 @@ func (c *SequenceServiceImpl) CreateOrUpdate(spec *entities.SequenceSpec) (*enti
 func (c *SequenceServiceImpl) Init() {
 	c.EventBus.SubscribeAsync(AccountRegisteredEventTopic, c.onAccountRegistered, true)
 	c.EventBus.SubscribeAsync(AccountBeforeDeletedEventTopic, c.onBeforeAccountDeleted, true)
+	c.EventBus.SubscribeAsync(SequenceUpdatedEventTopic, c.onSequenceUpdated, true)
+}
+
+func (c *SequenceServiceImpl) onSequenceUpdated(sequence *entities.Sequence) {
+	c.Restart(sequence.AccountId, []entities.ID{sequence.Id})
 }
 
 func (c *SequenceServiceImpl) onBeforeAccountDeleted(a *entities.User) {
@@ -205,7 +218,11 @@ func (c *SequenceServiceImpl) onBeforeAccountDeleted(a *entities.User) {
 
 func (c *SequenceServiceImpl) onAccountRegistered(a *entities.User) {
 
-	// В проде снеси
+	if c.Config.IsProfileProd() {
+		return
+	}
+
+	// Добавлям последы у только что созданного аккаунта
 	seqs := c.SequenceRepo.Search(&entities.Sequence{BaseEntity: entities.BaseEntity{AccountId: 1001}}, nil)
 	names := []string{"Найм IT-специалистов", "Найм сотрудников в отдел продаж", "Привлечение контрагентов", "Привлечение руководителей компаний для размещения рекламы", "Привлечение строительных компаний"}
 	if seqs != nil {

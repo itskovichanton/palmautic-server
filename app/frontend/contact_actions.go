@@ -58,8 +58,8 @@ func (c *SearchContactAction) Run(arg interface{}) (interface{}, error) {
 	cp := p.CallParams
 	filter := p.Entity.(*entities.Contact)
 	foundContacts := c.ContactService.Search(filter, &backend.ContactSearchSettings{
-		Offset: cp.GetParamInt("offset", 0),
-		Count:  cp.GetParamInt("count", 0),
+		Offset: cp.GetParamInt("o5ffset", 0),
+		Count:  cp.GetParamInt("count", 100),
 	})
 	sequences := c.SequenceService.SearchAll(filter.AccountId).Items
 	for _, contact := range foundContacts.Items {
