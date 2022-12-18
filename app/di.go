@@ -252,7 +252,7 @@ func (c *DI) NewEventBus() EventBus.Bus {
 	return EventBus.New()
 }
 
-func (c *DI) NewSequenceRunnerService(NotificationService backend.INotificationService, EmailScannerService backend.IEmailScannerService, ContactService backend.IContactService, SequenceRepo backend.ISequenceRepo, LoggerService logger.ILoggerService, EventBus EventBus.Bus, TaskService backend.ITaskService) backend.ISequenceRunnerService {
+func (c *DI) NewSequenceRunnerService(TimeZoneService backend.ITimeZoneService, NotificationService backend.INotificationService, EmailScannerService backend.IEmailScannerService, ContactService backend.IContactService, SequenceRepo backend.ISequenceRepo, LoggerService logger.ILoggerService, EventBus EventBus.Bus, TaskService backend.ITaskService) backend.ISequenceRunnerService {
 	r := &backend.SequenceRunnerServiceImpl{
 		EmailScannerService: EmailScannerService,
 		TaskService:         TaskService,
@@ -260,6 +260,7 @@ func (c *DI) NewSequenceRunnerService(NotificationService backend.INotificationS
 		LoggerService:       LoggerService,
 		SequenceRepo:        SequenceRepo,
 		ContactService:      ContactService,
+		TimeZoneService:     TimeZoneService,
 	}
 	go r.Init()
 	return r

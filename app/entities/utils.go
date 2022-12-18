@@ -13,6 +13,7 @@ import (
 
 const TIME_FORMAT_FULL = "15:04:05"
 const DayDuration = 24 * time.Hour
+const YearDuration = 365 * DayDuration
 
 func Date0() time.Time {
 	return time.Date(0, time.January, 1, 0, 0, 0, 0, time.UTC)

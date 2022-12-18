@@ -32,6 +32,7 @@ type SequenceRunnerServiceImpl struct {
 	timeFormat          string
 	EmailScannerService IEmailScannerService
 	lock                sync.Mutex
+	TimeZoneService     ITimeZoneService
 }
 
 func (c *SequenceRunnerServiceImpl) Init() {
@@ -525,9 +526,13 @@ func (c *SequenceRunnerServiceImpl) prepareTask(task *entities.Task, sequence *e
 	if taskIndex == 0 {
 		task.StartTime = task.StartTime.Add(time.Duration(task.Delay) * time.Second)
 	}
-	timeForTask := entities.DayDuration * 365
+	timeForTask := entities.YearDuration
 	if taskIndex < len(tasks)-1 {
 		timeForTask = time.Duration(tasks[taskIndex+1].Delay) * time.Second
 	}
 	task.DueTime = sequence.Spec.Model.AdjustToSchedule(task.StartTime.Add(timeForTask), false)
+
+	//  сделай поправку для таймзоны
+	task.StartTime = c.TimeZoneService.AdjustTime(task.StartTime, sequence.Spec.TimeZoneId)
+	task.DueTime = c.TimeZoneService.AdjustTime(task.DueTime, sequence.Spec.TimeZoneId)
 }

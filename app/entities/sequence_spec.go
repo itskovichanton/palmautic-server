@@ -50,7 +50,7 @@ func (m *SequenceSpecModel) AdjustToSchedule(t time.Time, leftBound bool) time.T
 				return slot.getBound(t, leftBound)
 			}
 		}
-		t = t.Add(DayDuration)
+		t = utils.TruncateToDay(t.Add(DayDuration)) // не нашел в N-м дне - начинаем искать слоты с начала след
 		if t.Sub(start) > 10*DayDuration {
 			return t // цикл?
 		}
