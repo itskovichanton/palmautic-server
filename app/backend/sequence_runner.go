@@ -433,7 +433,7 @@ func (c *SequenceRunnerServiceImpl) buildProcess(sequence *entities.Sequence, co
 	sequence.Process.ByContactSyncMap.Store(contact.Id, sequenceInstance)
 	steps := sequence.Model.Steps
 	stepsCount := len(steps)
-	//var lastDueTime time.Time
+	var lastDueTime time.Time
 
 	for stepIndex := 0; stepIndex < stepsCount; stepIndex++ {
 
@@ -451,15 +451,15 @@ func (c *SequenceRunnerServiceImpl) buildProcess(sequence *entities.Sequence, co
 		c.lock.Lock()
 		copier.Copy(currentTask, currentStep)
 		c.lock.Unlock()
-		//
-		//timeForTask := currentStep.DueTime.Sub(currentStep.StartTime)
-		//if stepIndex == 0 {
-		//	currentTask.StartTime = time.Now() ---------------------- МОГУ УДЛАЛИТЬ?
-		//} else {
-		//	currentTask.StartTime = lastDueTime
-		//}
-		//currentTask.DueTime = currentTask.StartTime.Add(timeForTask)
-		//lastDueTime = currentTask.DueTime
+
+		timeForTask := currentStep.DueTime.Sub(currentStep.StartTime)
+		if stepIndex == 0 {
+			currentTask.StartTime = time.Now()
+		} else {
+			currentTask.StartTime = lastDueTime
+		}
+		currentTask.DueTime = currentTask.StartTime.Add(timeForTask)
+		lastDueTime = currentTask.DueTime
 
 		// Добавляем таск
 		sequenceInstance.Tasks = append(sequenceInstance.Tasks, currentTask)
@@ -519,12 +519,15 @@ func (c *SequenceRunnerServiceImpl) enqueueInMail(sequence *entities.Sequence, c
 
 func (c *SequenceRunnerServiceImpl) prepareTask(task *entities.Task, sequence *entities.Sequence, taskIndex int, tasks []*entities.Task) {
 	task.StartTime = time.Now()
+	if task.AutoExecutable() {
+		task.StartTime = sequence.Spec.Model.AdjustToSchedule(task.StartTime, true)
+	}
 	if taskIndex == 0 {
 		task.StartTime = task.StartTime.Add(time.Duration(task.Delay) * time.Second)
 	}
-	timeForTask := time.Hour * 24 * 365
+	timeForTask := entities.DayDuration * 365
 	if taskIndex < len(tasks)-1 {
 		timeForTask = time.Duration(tasks[taskIndex+1].Delay) * time.Second
 	}
-	task.DueTime = sequence.Spec.Model.AdjustToSchedule(task.StartTime.Add(timeForTask))
+	task.DueTime = sequence.Spec.Model.AdjustToSchedule(task.StartTime.Add(timeForTask), false)
 }

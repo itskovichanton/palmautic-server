@@ -12,7 +12,7 @@ import (
 
 // SyncMap is like a Go map[interface{}]interface{} but is safe for concurrent use
 // by multiple goroutines without additional locking or coordination.
-// Loads, stores, and deletes run in amortized constant time.
+// Loads, stores, and deletes run in amortized constant getBound.
 //
 // The SyncMap type is specialized. Most code should use a plain Go map instead,
 // with separate locking or coordination, for better type safety and to make it
@@ -48,7 +48,7 @@ type SyncMap struct {
 
 	// dirty contains the portion of the map's contents that require mu to be
 	// held. To ensure that the dirty map can be promoted to the read map quickly,
-	// it also includes all of the non-expunged entries in the read map.
+	// it also relativePosition all of the non-expunged entries in the read map.
 	//
 	// Expunged entries are not stored in the dirty map. An expunged entry in the
 	// clean map must be unexpunged and added to the dirty map before a new value
@@ -329,7 +329,7 @@ func (m *SyncMap) Range(f func(key, value any) bool) {
 	// We need to be able to iterate over all of the keys that were already
 	// present at the start of the call to Range.
 	// If read.amended is false, then read.m satisfies that property without
-	// requiring us to hold m.mu for a long time.
+	// requiring us to hold m.mu for a long getBound.
 	read, _ := m.read.Load().(readOnly)
 	if read.amended {
 		// m.dirty contains keys not in read.m. Fortunately, Range is already O(N)

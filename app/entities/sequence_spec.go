@@ -1,12 +1,32 @@
 package entities
 
 import (
+	"github.com/itskovichanton/goava/pkg/goava/utils"
 	"strings"
 	"time"
 )
 
 type ScheduleItem struct {
 	From, To time.Duration
+}
+
+func (i *ScheduleItem) relativePosition(t time.Time) int {
+	date := utils.TruncateToDay(t)
+	if t.After(date.Add(i.To)) {
+		return +1
+	}
+	if t.Before(date.Add(i.From)) {
+		return -1
+	}
+	return 0
+}
+
+func (i *ScheduleItem) getBound(t time.Time, leftBound bool) time.Time {
+	date := utils.TruncateToDay(t)
+	if leftBound {
+		return date.Add(i.From)
+	}
+	return date.Add(i.To)
 }
 
 type SequenceSpecModel struct {
@@ -17,8 +37,24 @@ type SequenceSpecModel struct {
 	ScheduleTimes []ScheduleItems
 }
 
-func (m *SequenceSpecModel) AdjustToSchedule(t time.Time) time.Time {
-	return t
+func (m *SequenceSpecModel) AdjustToSchedule(t time.Time, leftBound bool) time.Time {
+	start := t
+	for {
+		slots := m.ScheduleTimes[t.Weekday()]
+		for _, slot := range slots {
+			relPos := slot.relativePosition(t)
+			if relPos == 0 {
+				return t
+			}
+			if relPos < 0 {
+				return slot.getBound(t, leftBound)
+			}
+		}
+		t = t.Add(DayDuration)
+		if t.Sub(start) > 10*DayDuration {
+			return t // цикл?
+		}
+	}
 }
 
 type ScheduleItemStr []string // Слоты в одном дне как строки
@@ -67,4 +103,7 @@ func (s *SequenceSpec) Rebuild() {
 	for _, daySchedule := range m.Schedule {
 		m.ScheduleTimes = append(m.ScheduleTimes, daySchedule.compile())
 	}
+	// перекидываю воскресенье в начало
+	ts := m.ScheduleTimes
+	m.ScheduleTimes = append([]ScheduleItems{ts[len(ts)-1]}, ts[0:len(ts)-1]...)
 }
